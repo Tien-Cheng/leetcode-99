@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@leet99/contracts": "workspace:*",
+    "@leet99/supabase": "workspace:*",
     "lucide-react": "^0.469.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@leet99/config": "workspace:*",

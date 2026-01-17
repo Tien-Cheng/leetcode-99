@@ -32,6 +32,9 @@ importers:
       '@leet99/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@leet99/supabase':
+        specifier: workspace:*
+        version: link:../../packages/supabase
       lucide-react:
         specifier: ^0.469.0
         version: 0.469.0(react@19.2.3)
@@ -44,6 +47,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.3(react@19.2.3)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
       '@leet99/config':
         specifier: workspace:*
@@ -150,6 +156,9 @@ importers:
 
   packages/supabase:
     dependencies:
+      '@leet99/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@supabase/supabase-js':
         specifier: ^2.49.0
         version: 2.90.1
