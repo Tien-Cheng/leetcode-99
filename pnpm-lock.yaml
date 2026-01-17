@@ -143,6 +143,9 @@ importers:
       '@leet99/judge':
         specifier: workspace:*
         version: link:../judge
+      '@leet99/supabase':
+        specifier: workspace:*
+        version: link:../supabase
       partykit:
         specifier: 0.0.115
         version: 0.0.115
