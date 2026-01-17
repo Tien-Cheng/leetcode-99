@@ -38,11 +38,19 @@ export function getAllProblems(options?: {
  * Convert full problem to client view (removes hidden tests)
  */
 export function toClientView(problem: ProblemFull): ProblemClientView {
-  const { hiddenTests: _hiddenTests, solutionSketch: _solutionSketch, ...clientView } = problem;
-  return {
-    ...clientView,
-    hintCount: problem.hints?.length ?? 0,
-  };
+  if (problem.problemType === "code") {
+    const { hiddenTests: _hiddenTests, solutionSketch: _solutionSketch, ...clientView } = problem;
+    return {
+      ...clientView,
+      hintCount: problem.hints?.length ?? 0,
+    };
+  } else {
+    const { hiddenTests: _hiddenTests, correctAnswer: _correctAnswer, ...clientView } = problem;
+    return {
+      ...clientView,
+      hintCount: problem.hints?.length ?? 0,
+    };
+  }
 }
 
 /**

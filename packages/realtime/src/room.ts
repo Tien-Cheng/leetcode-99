@@ -769,7 +769,7 @@ export default class Room implements Party.Server {
 
       p.currentProblem = this.toClientView(current);
       p.queued = queued;
-      p.code = current.starterCode;
+      p.code = current.problemType === "code" ? current.starterCode : "";
       p.codeVersion = 1;
       p.revealedHints = [];
       p.stackSize = queued.length;
@@ -1140,6 +1140,12 @@ export default class Room implements Party.Server {
       return;
     }
 
+    // Run code is only for code problems, not MCQs
+    if (problem.problemType === "mcq") {
+      this.sendError(conn, "INVALID_PROBLEM_TYPE", "Run code is not available for MCQ problems", requestId);
+      return;
+    }
+
     // Get judge config
     const judgeConfig = getJudgeConfig();
     if (!judgeConfig) {
@@ -1206,22 +1212,36 @@ export default class Room implements Party.Server {
       return;
     }
 
-    // Get judge config
-    const judgeConfig = getJudgeConfig();
     let result: JudgeResult;
 
-    if (!judgeConfig) {
-      // No judge configured - simulate result for development
-      result = this.simulateJudgeResult("submit", problem, payload.code);
+    // Handle MCQ problems separately (no judge service needed)
+    if (problem.problemType === "mcq") {
+      // For MCQ, payload.code is the selected option ID
+      const passed = payload.code === problem.correctAnswer;
+      result = {
+        kind: "submit",
+        problemId: problem.problemId,
+        passed,
+        publicTests: [], // MCQs don't have test results
+        hiddenTestsPassed: passed,
+        hiddenFailureMessage: passed ? undefined : "Incorrect answer",
+      };
     } else {
-      // Run all tests via judge
-      try {
-        const { runAllTests } = await import("@leet99/judge");
-        result = await runAllTests(problem, payload.code, judgeConfig);
-      } catch (error) {
-        console.error(`[${this.state.roomId}] Judge error:`, error);
-        this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
-        return;
+      // Code problem - use judge service
+      const judgeConfig = getJudgeConfig();
+      if (!judgeConfig) {
+        // No judge configured - simulate result for development
+        result = this.simulateJudgeResult("submit", problem, payload.code);
+      } else {
+        // Run all tests via judge
+        try {
+          const { runAllTests } = await import("@leet99/judge");
+          result = await runAllTests(problem, payload.code, judgeConfig);
+        } catch (error) {
+          console.error(`[${this.state.roomId}] Judge error:`, error);
+          this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+          return;
+        }
       }
     }
 
@@ -2027,10 +2047,13 @@ export default class Room implements Party.Server {
       kind: "submit",
       problemId: problem.problemId,
       passed,
-      publicTests: problem.publicTests.map((_, index) => ({
-        index,
-        passed,
-      })),
+      publicTests:
+        problem.problemType === "code"
+          ? problem.publicTests.map((_, index) => ({
+              index,
+              passed,
+            }))
+          : [],
       hiddenTestsPassed: passed,
     };
 
@@ -2252,7 +2275,7 @@ export default class Room implements Party.Server {
 
     if (nextProblem) {
       player.currentProblem = this.toClientView(nextProblem);
-      player.code = nextProblem.starterCode;
+      player.code = nextProblem.problemType === "code" ? nextProblem.starterCode : "";
       player.codeVersion = 1;
       player.revealedHints = [];
     }
@@ -2514,15 +2537,25 @@ export default class Room implements Party.Server {
     problem: ProblemFull,
     code: string,
   ): JudgeResult {
-    // Simple simulation: pass if code contains the function name
-    const passed = code.includes(problem.functionName) && code.length > 50;
+    let passed = false;
 
-    const publicTests = problem.publicTests.map((_, index) => ({
-      index,
-      passed,
-      expected: passed ? undefined : "expected",
-      received: passed ? undefined : "received",
-    }));
+    if (problem.problemType === "mcq") {
+      // For MCQ, 'code' is the selected option ID
+      passed = code === problem.correctAnswer;
+    } else {
+      // Simple simulation: pass if code contains the function name
+      passed = code.includes(problem.functionName) && code.length > 50;
+    }
+
+    const publicTests =
+      problem.problemType === "code"
+        ? (problem.publicTests || []).map((_, index) => ({
+            index,
+            passed,
+            expected: passed ? undefined : "expected",
+            received: passed ? undefined : "received",
+          }))
+        : [];
 
     return {
       kind,
@@ -2923,11 +2956,19 @@ export default class Room implements Party.Server {
 
   private toClientView(problem: ProblemFull): ProblemClientView {
     // Strip hidden tests and server-only fields
-    const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
-    return {
-      ...clientView,
-      hintCount: hints?.length,
-    };
+    if (problem.problemType === "code") {
+      const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
+      return {
+        ...clientView,
+        hintCount: hints?.length,
+      };
+    } else {
+      const { hiddenTests: _hiddenTests, hints, correctAnswer: _correctAnswer, ...clientView } = problem;
+      return {
+        ...clientView,
+        hintCount: hints?.length,
+      };
+    }
   }
 
   async onAlarm() {
