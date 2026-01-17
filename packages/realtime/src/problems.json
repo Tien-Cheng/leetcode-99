@@ -1622,5 +1622,861 @@
         "correctAnswer": "a",
         "difficulty": "medium",
         "timeLimitMs": 7000
+    },
+    {
+        "problemId": "predict-output-concept-string-immutability",
+        "title": "Predict Output: String Immutability Effect",
+        "prompt": "What is the final value of variable s after these conceptual operations: start with s = \"hello\", then try to do s[0] = \"H\", then print s?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "\"Hello\""
+            },
+            {
+                "id": "b",
+                "text": "\"hello\""
+            },
+            {
+                "id": "c",
+                "text": "TypeError or runtime error"
+            },
+            {
+                "id": "d",
+                "text": "\"H ello\""
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "identify-bug-concept-default-args",
+        "title": "Identify Bug: Default Argument Pitfall",
+        "prompt": "A function has a default parameter that is a mutable object (like a list or dict). What is the most common dangerous consequence of this design?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "The function becomes extremely slow"
+            },
+            {
+                "id": "b",
+                "text": "Changes made to the default object persist between different calls"
+            },
+            {
+                "id": "c",
+                "text": "The function can only be called once"
+            },
+            {
+                "id": "d",
+                "text": "It automatically becomes a generator function"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "fix-one-line-concept-range-off-by-one",
+        "title": "Fix One Line: Range Off-by-One Concept",
+        "prompt": "A loop is meant to process numbers from 1 to n inclusive, but currently processes only up to n-1. What is the typical one-line fix in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Change range(1, n) to range(1, n+1)"
+            },
+            {
+                "id": "b",
+                "text": "Change range(1, n) to range(0, n)"
+            },
+            {
+                "id": "c",
+                "text": "Change range(1, n) to range(n, 0, -1)"
+            },
+            {
+                "id": "d",
+                "text": "Change range(1, n) to range(1, n-1)"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "choose-breaking-input-concept-list-index",
+        "title": "Choose Breaking Input: List Index Error Concept",
+        "prompt": "Which situation is most likely to cause an IndexError when accessing a list in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Accessing index 0 in an empty list"
+            },
+            {
+                "id": "b",
+                "text": "Accessing index -1 in a list with one element"
+            },
+            {
+                "id": "c",
+                "text": "Using len(my_list) as an index"
+            },
+            {
+                "id": "d",
+                "text": "Trying to access index 5 in a list of length 100"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "break-opponent-solution-concept-shallow-copy",
+        "title": "Break Opponent Solution: Shallow Copy Assumption",
+        "prompt": "Someone claims that using the assignment operator (=) creates a completely independent copy of a list of lists. Which operation would clearly prove them wrong?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Modifying a number inside a nested list affects both original and 'copy'"
+            },
+            {
+                "id": "b",
+                "text": "Appending to the top-level list affects both"
+            },
+            {
+                "id": "c",
+                "text": "Changing the order of the outer list affects both"
+            },
+            {
+                "id": "d",
+                "text": "The lengths become different"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "compare-implementations-concept-membership",
+        "title": "Compare Implementations: Membership Testing Performance",
+        "prompt": "For very frequent membership checks (\"is this value in the collection?\") on a large collection, which data structure usually gives dramatically better performance?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "list"
+            },
+            {
+                "id": "b",
+                "text": "tuple"
+            },
+            {
+                "id": "c",
+                "text": "set"
+            },
+            {
+                "id": "d",
+                "text": "string"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "micro-refactor-concept-early-return",
+        "title": "Micro-Refactor: Benefit of Early Return",
+        "prompt": "What is the primary advantage of using early return (guard clauses) instead of deep nesting in a function?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "It usually runs faster"
+            },
+            {
+                "id": "b",
+                "text": "It reduces indentation/nesting and improves readability"
+            },
+            {
+                "id": "c",
+                "text": "It automatically makes the function recursive"
+            },
+            {
+                "id": "d",
+                "text": "It prevents memory leaks"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "one-expression-solution-concept-clamp",
+        "title": "One-Expression Solution: Clamp Concept",
+        "prompt": "What is the cleanest single-expression way in Python to clamp a value between a minimum and maximum (inclusive)?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "max(min_val, min(value, max_val))"
+            },
+            {
+                "id": "b",
+                "text": "min(max_val, max(value, min_val))"
+            },
+            {
+                "id": "c",
+                "text": "value if min_val <= value <= max_val else min_val"
+            },
+            {
+                "id": "d",
+                "text": "(min_val + max_val) // 2"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "constraint-imposed-fix-concept-in-place-reverse",
+        "title": "Constraint-Imposed Fix: In-Place List Reversal",
+        "prompt": "You need to reverse a list in-place using O(1) extra space and without using slicing or built-in reverse(). What is the standard algorithmic approach?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Use two pointers starting from both ends and swap until they meet"
+            },
+            {
+                "id": "b",
+                "text": "Create a new list and copy elements backward"
+            },
+            {
+                "id": "c",
+                "text": "Use recursion to swap elements"
+            },
+            {
+                "id": "d",
+                "text": "Sort the list in reverse order"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "sudden-death-mcq-concept-truthy-falsy",
+        "title": "Sudden-Death MCQ: Truthy/Falsy Values",
+        "prompt": "Which of these Python values is considered falsy in a boolean context?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "0"
+            },
+            {
+                "id": "b",
+                "text": "\"0\""
+            },
+            {
+                "id": "c",
+                "text": "[False]"
+            },
+            {
+                "id": "d",
+                "text": "range(1,1)"
+            }
+        ],
+        "correctAnswer": "d",
+        "difficulty": "medium",
+        "timeLimitMs": 6000
+    },
+    {
+        "problemId": "identify-bottleneck-concept-list-vs-set-construction",
+        "title": "Identify Bottleneck: List vs Set Construction",
+        "prompt": "When creating a collection of unique items from a very large sequence (millions of elements), which operation is usually the performance bottleneck?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Creating an empty list"
+            },
+            {
+                "id": "b",
+                "text": "Building a set from the sequence (set(sequence))"
+            },
+            {
+                "id": "c",
+                "text": "Converting set back to list"
+            },
+            {
+                "id": "d",
+                "text": "Sorting the final list"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "choose-correct-algorithm-concept-two-pointers",
+        "title": "Choose Correct Algorithm: Two Pointers Use Case",
+        "prompt": "Which problem is classically and efficiently solved using the two-pointers technique?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Finding if a sorted array contains two numbers that sum to target"
+            },
+            {
+                "id": "b",
+                "text": "Counting vowels in a string"
+            },
+            {
+                "id": "c",
+                "text": "Sorting a list of integers"
+            },
+            {
+                "id": "d",
+                "text": "Finding the longest common prefix of strings"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-predict-output-boolean-ops",
+        "title": "Predict Output: Boolean Ops",
+        "prompt": "Given Python semantics, what is the result of evaluating the expression `True and not False`?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "True"
+            },
+            {
+                "id": "b",
+                "text": "False"
+            },
+            {
+                "id": "c",
+                "text": "None"
+            },
+            {
+                "id": "d",
+                "text": "Raises an error"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-identify-bug-infinite-loop",
+        "title": "Identify Bug: Infinite Loop",
+        "prompt": "A while-loop is supposed to terminate after processing each element of a list once, but it never stops. Which is the most likely bug?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "The list is too long"
+            },
+            {
+                "id": "b",
+                "text": "The loop condition never gets updated inside the loop"
+            },
+            {
+                "id": "c",
+                "text": "The list contains negative numbers"
+            },
+            {
+                "id": "d",
+                "text": "The function returns too early"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "mcq-fix-one-line-off-by-one-index",
+        "title": "Fix One Line: Index Error",
+        "prompt": "A loop is iterating over indices of a list and sometimes raises an IndexError on the last iteration. Which fix is most likely correct?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Change the loop to iterate until and including the list length"
+            },
+            {
+                "id": "b",
+                "text": "Change the loop to iterate strictly less than the list length"
+            },
+            {
+                "id": "c",
+                "text": "Increase the list length by one before the loop"
+            },
+            {
+                "id": "d",
+                "text": "Decrease the list length by one before the loop"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "mcq-fill-missing-line-counter-init",
+        "title": "Fill Missing Line: Counter Init",
+        "prompt": "A function counts how many items in a list satisfy a condition, but the result is always incorrect. The only missing line is the initialization of the counter variable. Which initialization is most appropriate?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Set the counter to 0 before the loop"
+            },
+            {
+                "id": "b",
+                "text": "Set the counter to 1 before the loop"
+            },
+            {
+                "id": "c",
+                "text": "Leave the counter uninitialized"
+            },
+            {
+                "id": "d",
+                "text": "Initialize the counter with the list length"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-choose-correct-algorithm-sorted-merge",
+        "title": "Choose Correct Algorithm: Merge Sorted Lists",
+        "prompt": "You must merge two already sorted lists of size n and m into one sorted list. Which algorithm is most appropriate to achieve O(n + m) time?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Insert all elements into a binary search tree"
+            },
+            {
+                "id": "b",
+                "text": "Concatenate the lists and sort the result"
+            },
+            {
+                "id": "c",
+                "text": "Use two pointers, advancing the smaller current element each time"
+            },
+            {
+                "id": "d",
+                "text": "Use linear search for each element"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-choose-correct-complexity-hashset-lookup",
+        "title": "Choose Correct Complexity: Hash Set Lookup",
+        "prompt": "What is the average-case time complexity of checking membership of an element in a well-implemented hash set?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "O(1)"
+            },
+            {
+                "id": "b",
+                "text": "O(log n)"
+            },
+            {
+                "id": "c",
+                "text": "O(n)"
+            },
+            {
+                "id": "d",
+                "text": "O(n log n)"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-choose-breaking-input-all-positive",
+        "title": "Choose Breaking Input: All Positive Assumption",
+        "prompt": "A function computes the minimum value in a list by starting from 0 and updating the minimum whenever a smaller value is found. For which kind of input list does this strategy fail?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Lists containing only positive numbers"
+            },
+            {
+                "id": "b",
+                "text": "Lists containing only negative numbers"
+            },
+            {
+                "id": "c",
+                "text": "Lists containing only zeros"
+            },
+            {
+                "id": "d",
+                "text": "Lists containing both positive and negative numbers"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-identify-edge-case-string-empty",
+        "title": "Identify Edge Case: Empty String",
+        "prompt": "You are implementing a function that returns the first character of a string. Which edge case is essential to handle to avoid an error?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "String with only lowercase letters"
+            },
+            {
+                "id": "b",
+                "text": "String with only uppercase letters"
+            },
+            {
+                "id": "c",
+                "text": "String with digits and letters"
+            },
+            {
+                "id": "d",
+                "text": "Empty string"
+            }
+        ],
+        "correctAnswer": "d",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-does-this-pass-boundaries",
+        "title": "Does This Pass? Array Boundaries",
+        "prompt": "A loop processes all elements of an array using indices from 0 up to and including the array length. Will this always avoid out-of-bounds errors?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "yes",
+                "text": "Yes, because indices start at 0 and end at the length"
+            },
+            {
+                "id": "no",
+                "text": "No, because the last valid index is one less than the length"
+            }
+        ],
+        "correctAnswer": "no",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-which-line-wrong-logic-or-and",
+        "title": "Which Line Is Wrong? OR vs AND",
+        "prompt": "A compound condition is meant to check that a value is within a closed interval [L, R]. The developer wrote a condition using OR instead of AND. What is the effect of using OR?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "No effect; OR and AND are equivalent here"
+            },
+            {
+                "id": "b",
+                "text": "The condition becomes always false"
+            },
+            {
+                "id": "c",
+                "text": "The condition becomes always true"
+            },
+            {
+                "id": "d",
+                "text": "Values outside the interval are incorrectly accepted"
+            }
+        ],
+        "correctAnswer": "d",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-fix-off-by-one-loop-inclusive",
+        "title": "Fix Off-by-One: Inclusive Loop",
+        "prompt": "You need a loop that processes all integers from 1 to n inclusive. Which loop bound description is most appropriate?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Start at 0 and stop before n"
+            },
+            {
+                "id": "b",
+                "text": "Start at 1 and stop before n"
+            },
+            {
+                "id": "c",
+                "text": "Start at 1 and stop after reaching n"
+            },
+            {
+                "id": "d",
+                "text": "Start at 0 and stop after reaching n"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-patch-edge-case-null-input",
+        "title": "Patch Edge Case: Null Input",
+        "prompt": "A function assumes its input list is never null and directly accesses its length. To safely handle a null input parameter, which behavior is generally most reasonable?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Crash the program immediately"
+            },
+            {
+                "id": "b",
+                "text": "Return a neutral value such as 0 or an empty list"
+            },
+            {
+                "id": "c",
+                "text": "Silently ignore the error and continue"
+            },
+            {
+                "id": "d",
+                "text": "Randomly choose a default length"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "medium",
+        "timeLimitMs": 6000
+    },
+    {
+        "problemId": "mcq-compare-implementations-time-space",
+        "title": "Compare Implementations: Time vs Space",
+        "prompt": "One implementation removes duplicates from a list by scanning it and storing seen elements in a set. Another implementation uses a nested loop and no extra data structures. Which is generally true?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "The set-based version uses more memory but is faster on large inputs"
+            },
+            {
+                "id": "b",
+                "text": "The nested-loop version uses more memory and is faster"
+            },
+            {
+                "id": "c",
+                "text": "Both have the same time and space complexity"
+            },
+            {
+                "id": "d",
+                "text": "The set-based version always has worse time complexity"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-identify-bottleneck-sorting",
+        "title": "Identify Bottleneck: Sorting Step",
+        "prompt": "A program reads a list from input, sorts it, and then prints each element once. For large inputs, which step is the primary performance bottleneck?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Reading input"
+            },
+            {
+                "id": "b",
+                "text": "Sorting the list"
+            },
+            {
+                "id": "c",
+                "text": "Printing elements"
+            },
+            {
+                "id": "d",
+                "text": "Declaring variables"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-break-opponent-solution-all-zeroes",
+        "title": "Break Opponent Solution: All Zeroes",
+        "prompt": "An opponent claims their function correctly detects if a list contains a positive number, but it initializes the answer to true and sets it to false only when it sees a negative number. Which type of input will break the claim?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "A list with at least one positive and one negative number"
+            },
+            {
+                "id": "b",
+                "text": "A list with only positive numbers"
+            },
+            {
+                "id": "c",
+                "text": "A list with only zeros"
+            },
+            {
+                "id": "d",
+                "text": "A list with only negative numbers"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-micro-refactor-early-return-empty",
+        "title": "Micro-Refactor: Early Return on Empty",
+        "prompt": "A function processes a collection and runs several expensive steps even when the collection is empty. What small refactor most directly avoids the unnecessary work?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Move expensive steps into a separate function"
+            },
+            {
+                "id": "b",
+                "text": "Add an early return when the collection is empty"
+            },
+            {
+                "id": "c",
+                "text": "Rename the function to indicate it may be slow"
+            },
+            {
+                "id": "d",
+                "text": "Increase the time limit of the program"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-one-expression-solution-max-three",
+        "title": "One-Expression Solution: Max of Three",
+        "prompt": "You need a single expression that computes the maximum of three numbers a, b, and c. Which description best fits a typical implementation in a language with a built-in max function?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Take the average of the three"
+            },
+            {
+                "id": "b",
+                "text": "Use max on a and b, then max on the result and c"
+            },
+            {
+                "id": "c",
+                "text": "Sort the three numbers and take the first"
+            },
+            {
+                "id": "d",
+                "text": "Always return c"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
+    },
+    {
+        "problemId": "mcq-constraint-imposed-fix-o1-space",
+        "title": "Constraint-Imposed Fix: O(1) Extra Space",
+        "prompt": "You must modify an algorithm so that it uses only constant extra space. Which type of change best satisfies this constraint?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Replace an auxiliary array with in-place updates on the original array"
+            },
+            {
+                "id": "b",
+                "text": "Add more temporary arrays but reuse some of them"
+            },
+            {
+                "id": "c",
+                "text": "Use recursion with deep call stacks"
+            },
+            {
+                "id": "d",
+                "text": "Store all intermediate results in a list"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-language-switch-snippet-loop",
+        "title": "Language Switch Snippet: Loop Semantics",
+        "prompt": "You are converting a simple \"for each element in list\" loop from Python to a C-like language. Which construct most closely matches the semantics?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "A while-loop that manually updates an index variable"
+            },
+            {
+                "id": "b",
+                "text": "A for-loop that updates an index from 0 to length-1 and accesses elements by index"
+            },
+            {
+                "id": "c",
+                "text": "A do-while loop that always executes at least once"
+            },
+            {
+                "id": "d",
+                "text": "A switch statement on the list length"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
+    },
+    {
+        "problemId": "mcq-sudden-death-short-circuiting",
+        "title": "Sudden-Death MCQ: Short-Circuiting",
+        "prompt": "In a short-circuiting logical AND expression A AND B, when is expression B evaluated?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Always"
+            },
+            {
+                "id": "b",
+                "text": "Only when A is true"
+            },
+            {
+                "id": "c",
+                "text": "Only when A is false"
+            },
+            {
+                "id": "d",
+                "text": "Never"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 4000
     }
 ]
