@@ -12,8 +12,12 @@ export function partyBaseUrl(): string {
   return process.env.PARTYKIT_HOST || "http://127.0.0.1:1999";
 }
 
-export function partyProject(): string {
-  return process.env.PARTYKIT_PROJECT || "leet99";
+export function partyName(): string {
+  return process.env.PARTYKIT_PARTY || "main";
+}
+
+function partyRoomPath(roomId: string): string {
+  return `/parties/${partyName()}/${roomId}`;
 }
 
 export function toWsUrl(roomId: string): string {
@@ -25,7 +29,7 @@ export function toWsUrl(roomId: string): string {
   const wsBase = new URL(base.origin);
   wsBase.protocol = wsProtocol;
 
-  return `${wsBase.origin}/parties/${partyProject()}/${roomId}`;
+  return `${wsBase.origin}${partyRoomPath(roomId)}`;
 }
 
 export type RegisterPartyPlayerOk = {
@@ -62,10 +66,7 @@ export async function registerPartyPlayer(
     };
   }
 
-  const url = new URL(
-    `/parties/${partyProject()}/${roomId}/register`,
-    partyBaseUrl(),
-  );
+  const url = new URL(`${partyRoomPath(roomId)}/register`, partyBaseUrl());
 
 
   let response: Response;
@@ -165,10 +166,7 @@ export type FetchRoomStateResult = FetchRoomStateOk | FetchRoomStateErr;
 export async function fetchRoomState(
   roomId: string,
 ): Promise<FetchRoomStateResult> {
-  const url = new URL(
-    `/parties/${partyProject()}/${roomId}/state`,
-    partyBaseUrl(),
-  );
+  const url = new URL(`${partyRoomPath(roomId)}/state`, partyBaseUrl());
 
   let response: Response;
   try {

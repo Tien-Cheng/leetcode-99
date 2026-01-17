@@ -519,6 +519,36 @@ export default class Room implements Party.Server {
     // Update connection
     player.connectionId = conn.id;
 
+    // Ensure there is a connected host; if not, promote the earliest connected player.
+    const connectedHost = Array.from(this.state.players.values()).find(
+      (p) => p.isHost && p.connectionId,
+    );
+    if (!connectedHost) {
+      let newHost: PlayerInternal | undefined;
+      for (const p of this.state.players.values()) {
+        if (
+          p.role === "player" &&
+          p.connectionId &&
+          (!newHost || p.joinOrder < newHost.joinOrder)
+        ) {
+          newHost = p;
+        }
+      }
+
+      if (newHost) {
+        const previousHost = Array.from(this.state.players.values()).find(
+          (p) => p.isHost,
+        );
+        for (const p of this.state.players.values()) {
+          p.isHost = p === newHost;
+        }
+        if (!previousHost || previousHost.playerId !== newHost.playerId) {
+          this.addSystemChat(`${newHost.username} is now the host`);
+        }
+        this.broadcastPlayerUpdate(newHost);
+      }
+    }
+
     // Send ROOM_SNAPSHOT
     const snapshot = this.buildRoomSnapshot(player);
     const msg: WSMessage<"ROOM_SNAPSHOT", RoomSnapshotPayload> = {
@@ -2236,18 +2266,19 @@ export default class Room implements Party.Server {
     }
 
     // Update host
-    for (const player of this.state.players.values()) {
-      player.isHost = player === newHost;
-    }
-
     if (newHost) {
+      for (const player of this.state.players.values()) {
+        player.isHost = player === newHost;
+      }
       console.log(
         `[${this.state.roomId}] Host transferred to: ${newHost.username}`,
       );
       this.addSystemChat(`${newHost.username} is now the host`);
     } else {
-      // No connected human players remain
-      console.log(`[${this.state.roomId}] No connected players, host is null`);
+      // No connected human players remain; keep existing host assignment.
+      console.log(
+        `[${this.state.roomId}] No connected players, host unchanged`,
+      );
     }
   }
 
