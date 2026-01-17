@@ -65,26 +65,26 @@
     "solutionSketch": "Push open brackets to stack, pop and match on close brackets."
   },
   {
-    "problemId": "max-subarray",
-    "title": "Maximum Subarray",
-    "prompt": "Given an integer array `nums`, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.",
-    "functionName": "max_subarray",
-    "signature": "def max_subarray(nums: list[int]) -> int",
-    "starterCode": "def max_subarray(nums: list[int]) -> int:\n    # Your code here\n    pass",
+    "problemId": "find-max",
+    "title": "Find Maximum",
+    "prompt": "Given an integer array `nums`, return the maximum value in the array.",
+    "functionName": "find_max",
+    "signature": "def find_max(nums: list[int]) -> int",
+    "starterCode": "def find_max(nums: list[int]) -> int:\n    # Your code here\n    pass",
     "publicTests": [
-      { "input": [[-2, 1, -3, 4, -1, 2, 1, -5, 4]], "output": 6 },
-      { "input": [[1]], "output": 1 }
+      { "input": [[1, 3, 2]], "output": 3 },
+      { "input": [[-1, -5, -3]], "output": -1 }
     ],
     "hiddenTests": [
-      { "input": [[5, 4, -1, 7, 8]], "output": 23 },
-      { "input": [[-1]], "output": -1 },
-      { "input": [[-2, -1]], "output": -1 }
+      { "input": [[5]], "output": 5 },
+      { "input": [[0, 0, 0]], "output": 0 },
+      { "input": [[10, 20, 5, 15]], "output": 20 }
     ],
-    "difficulty": "medium",
+    "difficulty": "easy",
     "timeLimitMs": 5000,
     "isGarbage": false,
-    "hints": ["Kadane's algorithm: track current sum and max sum."],
-    "solutionSketch": "Kadane's algorithm: current_sum = max(num, current_sum + num), track global max."
+    "hints": ["Use the built-in max() function or iterate through the array."],
+    "solutionSketch": "return max(nums) or iterate and track maximum value."
   },
   {
     "problemId": "climbing-stairs",
@@ -136,47 +136,184 @@
     "solutionSketch": "Two pointers, compare heads, append smaller, handle remaining."
   },
   {
-    "problemId": "product-except-self",
-    "title": "Product of Array Except Self",
-    "prompt": "Given an integer array `nums`, return an array `answer` such that `answer[i]` is equal to the product of all the elements of `nums` except `nums[i]`.\n\nYou must write an algorithm that runs in O(n) time and without using division.",
-    "functionName": "product_except_self",
-    "signature": "def product_except_self(nums: list[int]) -> list[int]",
-    "starterCode": "def product_except_self(nums: list[int]) -> list[int]:\n    # Your code here\n    pass",
+    "problemId": "count-char",
+    "title": "Count Character",
+    "prompt": "Given a string `s` and a character `c`, return the number of times `c` appears in `s`.",
+    "functionName": "count_char",
+    "signature": "def count_char(s: str, c: str) -> int",
+    "starterCode": "def count_char(s: str, c: str) -> int:\n    # Your code here\n    pass",
     "publicTests": [
-      { "input": [[1, 2, 3, 4]], "output": [24, 12, 8, 6] },
-      { "input": [[-1, 1, 0, -3, 3]], "output": [0, 0, 9, 0, 0] }
+      { "input": ["hello", "l"], "output": 2 },
+      { "input": ["python", "p"], "output": 1 }
     ],
     "hiddenTests": [
-      { "input": [[2, 3]], "output": [3, 2] },
-      { "input": [[1, 1, 1, 1]], "output": [1, 1, 1, 1] }
+      { "input": ["aaaa", "a"], "output": 4 },
+      { "input": ["test", "x"], "output": 0 },
+      { "input": ["", "a"], "output": 0 }
     ],
-    "difficulty": "medium",
+    "difficulty": "easy",
     "timeLimitMs": 5000,
     "isGarbage": false,
-    "hints": ["Build prefix and suffix product arrays."],
-    "solutionSketch": "Two passes: left products, then right products multiplied in."
+    "hints": ["Use the count() method or iterate through the string."],
+    "solutionSketch": "return s.count(c) or iterate and count matches."
   },
   {
-    "problemId": "longest-palindrome-substring",
-    "title": "Longest Palindromic Substring",
-    "prompt": "Given a string `s`, return the longest palindromic substring in `s`.",
-    "functionName": "longest_palindrome",
-    "signature": "def longest_palindrome(s: str) -> str",
-    "starterCode": "def longest_palindrome(s: str) -> str:\n    # Your code here\n    pass",
+    "problemId": "is-palindrome",
+    "title": "Is Palindrome",
+    "prompt": "Given a string `s`, return `True` if it is a palindrome (reads the same forwards and backwards), otherwise return `False`. Ignore case.",
+    "functionName": "is_palindrome",
+    "signature": "def is_palindrome(s: str) -> bool",
+    "starterCode": "def is_palindrome(s: str) -> bool:\n    # Your code here\n    pass",
     "publicTests": [
-      { "input": ["babad"], "output": "bab" },
-      { "input": ["cbbd"], "output": "bb" }
+      { "input": ["racecar"], "output": true },
+      { "input": ["hello"], "output": false },
+      { "input": ["A"], "output": true }
     ],
     "hiddenTests": [
-      { "input": ["a"], "output": "a" },
-      { "input": ["ac"], "output": "a" },
-      { "input": ["racecar"], "output": "racecar" }
+      { "input": [""], "output": true },
+      { "input": ["Aa"], "output": true },
+      { "input": ["ab"], "output": false }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Compare the string with its reverse. Use lower() to ignore case."],
+    "solutionSketch": "s_lower = s.lower(); return s_lower == s_lower[::-1]"
+  },
+  {
+    "problemId": "remove-duplicates",
+    "title": "Remove Duplicates",
+    "prompt": "Given a list of integers `nums`, return a new list with duplicates removed, preserving order of first occurrence.",
+    "functionName": "remove_duplicates",
+    "signature": "def remove_duplicates(nums: list[int]) -> list[int]",
+    "starterCode": "def remove_duplicates(nums: list[int]) -> list[int]:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[1, 2, 2, 3]], "output": [1, 2, 3] },
+      { "input": [[1, 1, 1]], "output": [1] }
+    ],
+    "hiddenTests": [
+      { "input": [[]], "output": [] },
+      { "input": [[1, 2, 3]], "output": [1, 2, 3] },
+      { "input": [[3, 1, 3, 2, 1]], "output": [3, 1, 2] }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use a set to track seen values, or use dict.fromkeys() to preserve order."],
+    "solutionSketch": "Use a set to track seen values, append to result if not seen."
+  },
+  {
+    "problemId": "contains-duplicate",
+    "title": "Contains Duplicate",
+    "prompt": "Given an integer array `nums`, return `True` if any value appears at least twice, otherwise return `False`.",
+    "functionName": "contains_duplicate",
+    "signature": "def contains_duplicate(nums: list[int]) -> bool",
+    "starterCode": "def contains_duplicate(nums: list[int]) -> bool:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[1, 2, 3, 1]], "output": true },
+      { "input": [[1, 2, 3, 4]], "output": false }
+    ],
+    "hiddenTests": [
+      { "input": [[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]], "output": true },
+      { "input": [[1]], "output": false },
+      { "input": [[]], "output": false }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use a set to check for duplicates."],
+    "solutionSketch": "Compare len(nums) with len(set(nums))."
+  },
+  {
+    "problemId": "fibonacci",
+    "title": "Fibonacci Number",
+    "prompt": "Given an integer `n`, return the nth Fibonacci number. F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2).",
+    "functionName": "fibonacci",
+    "signature": "def fibonacci(n: int) -> int",
+    "starterCode": "def fibonacci(n: int) -> int:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [2], "output": 1 },
+      { "input": [3], "output": 2 },
+      { "input": [4], "output": 3 }
+    ],
+    "hiddenTests": [
+      { "input": [0], "output": 0 },
+      { "input": [1], "output": 1 },
+      { "input": [5], "output": 5 }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use iteration or recursion. Handle base cases n=0 and n=1."],
+    "solutionSketch": "Base cases: if n <= 1 return n. Otherwise iterate from 2 to n, building up values."
+  },
+  {
+    "problemId": "two-sum-simple",
+    "title": "Two Sum (Simple)",
+    "prompt": "Given an array of integers `nums` and an integer `target`, return `True` if there exist two numbers that add up to `target`, otherwise return `False`.",
+    "functionName": "two_sum_exists",
+    "signature": "def two_sum_exists(nums: list[int], target: int) -> bool",
+    "starterCode": "def two_sum_exists(nums: list[int], target: int) -> bool:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[2, 7, 11, 15], 9], "output": true },
+      { "input": [[3, 2, 4], 6], "output": true },
+      { "input": [[1, 2, 3], 7], "output": false }
+    ],
+    "hiddenTests": [
+      { "input": [[1, 1], 2], "output": true },
+      { "input": [[], 0], "output": false },
+      { "input": [[-1, -2], -3], "output": true }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use nested loops or a set to check for complement values."],
+    "solutionSketch": "For each num, check if (target - num) exists in the rest of the array."
+  },
+  {
+    "problemId": "reverse-integer",
+    "title": "Reverse Integer",
+    "prompt": "Given an integer `n`, reverse its digits and return the result. If reversing causes overflow, return 0. Assume we're dealing with 32-bit integers.",
+    "functionName": "reverse_integer",
+    "signature": "def reverse_integer(n: int) -> int",
+    "starterCode": "def reverse_integer(n: int) -> int:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [123], "output": 321 },
+      { "input": [-123], "output": -321 },
+      { "input": [120], "output": 21 }
+    ],
+    "hiddenTests": [
+      { "input": [0], "output": 0 },
+      { "input": [1534236469], "output": 0 },
+      { "input": [-2147483648], "output": 0 }
     ],
     "difficulty": "medium",
     "timeLimitMs": 5000,
     "isGarbage": false,
-    "hints": ["Expand around center for each position."],
-    "solutionSketch": "Expand around center: check odd and even length palindromes at each position."
+    "hints": ["Convert to string and reverse, or use modulo/division. Check for overflow."],
+    "solutionSketch": "Handle sign, reverse digits, check if result is within 32-bit range."
+  },
+  {
+    "problemId": "anagram-check",
+    "title": "Valid Anagram",
+    "prompt": "Given two strings `s` and `t`, return `True` if `t` is an anagram of `s`, otherwise return `False`. An anagram is a word formed by rearranging letters.",
+    "functionName": "is_anagram",
+    "signature": "def is_anagram(s: str, t: str) -> bool",
+    "starterCode": "def is_anagram(s: str, t: str) -> bool:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": ["anagram", "nagaram"], "output": true },
+      { "input": ["rat", "car"], "output": false }
+    ],
+    "hiddenTests": [
+      { "input": ["", ""], "output": true },
+      { "input": ["a", "a"], "output": true },
+      { "input": ["listen", "silent"], "output": true }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Compare sorted versions of both strings, or count character frequencies."],
+    "solutionSketch": "return sorted(s) == sorted(t) or use Counter to compare frequencies."
   },
   {
     "problemId": "garbage-count-vowels",
