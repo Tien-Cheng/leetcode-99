@@ -44,6 +44,7 @@ export function TargetingModal({
             // Number keys 1-5 for quick selection
             const num = parseInt(e.key);
             if (num >= 1 && num <= modes.length) {
+                e.preventDefault();
                 const mode = modes[num - 1];
                 if (mode) {
                     onSelect(mode.id);

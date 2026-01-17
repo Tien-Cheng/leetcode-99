@@ -33,13 +33,18 @@ export function useKeyboardShortcuts({
       // Disable shortcuts when input is focused (except modal-level shortcuts)
       if (disableWhenInputFocused) {
         const target = e.target as HTMLElement;
-        if (
+        const isInput =
           target instanceof HTMLInputElement ||
           target instanceof HTMLTextAreaElement ||
-          target instanceof HTMLSelectElement
-        ) {
-          // Allow Escape to work even in inputs
-          if (e.key !== "Escape") {
+          target instanceof HTMLSelectElement ||
+          target.isContentEditable ||
+          target.closest(".monaco-editor");
+
+        if (isInput) {
+          // Allow shortcuts with modifiers (Alt, Ctrl, Meta) or special keys like Escape
+          // to bypass the focus check. This ensures Alt+R works while typing code.
+          const hasModifier = e.altKey || e.ctrlKey || e.metaKey;
+          if (e.key !== "Escape" && !hasModifier) {
             return;
           }
         }
