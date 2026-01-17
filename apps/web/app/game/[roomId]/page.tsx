@@ -17,6 +17,7 @@ import {
   EffectsOverlay,
   ScoreDisplay,
   useGameEffects,
+  Toast,
 } from "@leet99/ui";
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
@@ -37,6 +38,7 @@ function GamePageContent() {
     currentProblem,
     problemStack,
     activeDebuff,
+    activeBuff,
     score,
     solveStreak,
     eventLog,
@@ -54,6 +56,10 @@ function GamePageContent() {
     updateCode,
     playerId,
     isHost,
+    shopCatalog,
+    shopCooldowns,
+    playerPrivateState,
+    debugAddScore,
   } = useGameState();
 
   // Effects system
@@ -69,6 +75,8 @@ function GamePageContent() {
   const [codeVersion, setCodeVersion] = useState(1);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
+  const [shopError, setShopError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -167,15 +175,41 @@ function GamePageContent() {
     if (!targetingOpen) setShopOpen(false);
   };
 
+  // Handle debug add score (testing only)
+  const handleDebugAddScore = () => {
+    debugAddScore(500);
+  };
+
   // Register global shortcuts
   useKeyboardShortcuts({
     shortcuts: [
       ...(currentProblem?.problemType === "code"
         ? [{ key: "r", altKey: true, action: handleRun, description: "Run Code" }]
         : []),
-      { key: "s", altKey: true, action: handleSubmit, description: "Submit Code" },
-      { key: "b", altKey: true, action: handleShopToggle, description: "Toggle Shop" },
-      { key: "t", altKey: true, action: handleTargetingToggle, description: "Targeting Mode" },
+      {
+        key: "s",
+        altKey: true,
+        action: handleSubmit,
+        description: "Submit Code",
+      },
+      {
+        key: "b",
+        altKey: true,
+        action: handleShopToggle,
+        description: "Toggle Shop",
+      },
+      {
+        key: "t",
+        altKey: true,
+        action: handleTargetingToggle,
+        description: "Targeting Mode",
+      },
+      {
+        key: "$",
+        shiftKey: true,
+        action: handleDebugAddScore,
+        description: "[DEBUG] Add 500 Points",
+      },
     ],
     enabled: true,
   });
@@ -314,6 +348,68 @@ function GamePageContent() {
     timestamp: new Date(entry.at).toLocaleTimeString(),
   }));
 
+  // Map shop catalog to modal items
+  const mapShopItems = () => {
+    if (!shopCatalog.length) {
+      return []; // Fallback during loading
+    }
+
+    const now = serverTime ? new Date(serverTime).getTime() : Date.now();
+    const hotkeys = ["1", "2", "3", "4"];
+    const descriptions: Record<string, string> = {
+      clearDebuff: "Remove current debuff immediately",
+      memoryDefrag: "Remove all garbage problems from stack",
+      skipProblem: "Discard current problem and draw next (resets streak)",
+      rateLimiter: "Double incoming problem interval for 30s",
+      // hint: "Reveal next hint for current problem", // Disabled for now
+    };
+    const labels: Record<string, string> = {
+      clearDebuff: "Clear Debuff",
+      memoryDefrag: "Memory Defrag",
+      skipProblem: "Skip Problem",
+      rateLimiter: "Rate Limiter",
+      // hint: "Hint", // Disabled for now
+    };
+
+    return shopCatalog.map((catalogItem, index) => {
+      const cooldownEndsAt = shopCooldowns?.[catalogItem.item];
+      const cooldownRemaining = cooldownEndsAt
+        ? Math.max(0, Math.ceil((cooldownEndsAt - now) / 1000))
+        : undefined;
+
+      // Check if item should be disabled (grayed out but visible)
+      let isDisabled = false;
+      if (catalogItem.item === "clearDebuff" && !activeDebuff) {
+        isDisabled = true;
+      }
+      if (
+        catalogItem.item === "memoryDefrag" &&
+        !problemStack.some((p) => p.isGarbage)
+      ) {
+        isDisabled = true;
+      }
+      // Hint disabled for now
+      // if (
+      //   catalogItem.item === "hint" &&
+      //   (!currentProblem?.hintCount ||
+      //     (playerPrivateState?.revealedHints?.length ?? 0) >=
+      //       (currentProblem?.hintCount ?? 0))
+      // ) {
+      //   isDisabled = true;
+      // }
+
+      return {
+        id: catalogItem.item,
+        name: labels[catalogItem.item] || catalogItem.item,
+        cost: catalogItem.cost,
+        description: descriptions[catalogItem.item],
+        cooldownRemaining,
+        isDisabled,
+        hotkey: hotkeys[index] || String(index + 1),
+      };
+    });
+  };
+
   // If match ended, show leaderboard instead of game
   if (matchPhase === "ended") {
     return (
@@ -386,45 +482,45 @@ function GamePageContent() {
                 signature:
                   currentProblem.problemType === "code"
                     ? (currentProblem as Extract<
-                        typeof currentProblem,
-                        { problemType: "code" }
-                      >).signature
+                      typeof currentProblem,
+                      { problemType: "code" }
+                    >).signature
                     : "",
                 publicTests:
                   currentProblem.problemType === "code"
                     ? (
-                        currentProblem as Extract<
-                          typeof currentProblem,
-                          { problemType: "code" }
-                        >
-                      ).publicTests.map((t) => ({
-                        input: String(t.input ?? ""),
-                        output: String(t.output ?? ""),
-                      }))
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "code" }
+                      >
+                    ).publicTests.map((t) => ({
+                      input: String(t.input ?? ""),
+                      output: String(t.output ?? ""),
+                    }))
                     : [],
                 isGarbage: currentProblem.isGarbage,
                 problemType: currentProblem.problemType,
                 options:
                   currentProblem.problemType === "mcq"
                     ? (
-                        currentProblem as Extract<
-                          typeof currentProblem,
-                          { problemType: "mcq" }
-                        >
-                      ).options
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "mcq" }
+                      >
+                    ).options
                     : undefined,
                 selectedOptionId: selectedOptionId || undefined,
                 onOptionSelect: (id) => setSelectedOptionId(id),
               }}
               testResults={
                 lastJudgeResult &&
-                lastJudgeResult.problemId === currentProblem.problemId
+                  lastJudgeResult.problemId === currentProblem.problemId
                   ? lastJudgeResult.publicTests.map((t) => ({
-                      index: t.index,
-                      passed: t.passed,
-                      expected: t.expected ? String(t.expected) : undefined,
-                      received: t.received ? String(t.received) : undefined,
-                    }))
+                    index: t.index,
+                    passed: t.passed,
+                    expected: t.expected ? String(t.expected) : undefined,
+                    received: t.received ? String(t.received) : undefined,
+                  }))
                   : []
               }
             />
@@ -533,6 +629,23 @@ function GamePageContent() {
             {/* Score Display with animations */}
             <ScoreDisplay score={score} streak={solveStreak} />
 
+            {/* Buff Indicator */}
+            {activeBuff && (
+              <div className="text-xs font-mono">
+                <span className="text-warning">
+                  [RATE LIMITER]{" "}
+                  {Math.max(
+                    0,
+                    Math.ceil(
+                      (new Date(activeBuff.endsAt).getTime() - Date.now()) /
+                      1000,
+                    ),
+                  )}
+                  s
+                </span>
+              </div>
+            )}
+
             <div className="font-mono text-xs text-muted max-w-[120px] truncate text-right">
               T:{" "}
               <span className="text-primary">
@@ -573,18 +686,55 @@ function GamePageContent() {
       <ShopModal
         isOpen={shopOpen}
         score={score}
-        items={[
-          { id: "clearDebuff", name: "Clear Debuff", cost: 10, hotkey: "1" },
-          { id: "memoryDefrag", name: "Memory Defrag", cost: 10, hotkey: "2" },
-          { id: "skipProblem", name: "Skip Problem", cost: 15, hotkey: "3" },
-          { id: "rateLimiter", name: "Rate Limiter", cost: 10, hotkey: "4" },
-          { id: "hint", name: "Hint", cost: 5, hotkey: "5" },
-        ]}
+        items={mapShopItems()}
+        error={shopError}
         onPurchase={(itemId) => {
+          setShopError(null);
+
+          const item = mapShopItems().find((i) => i.id === itemId);
+          if (!item) {
+            setShopError("Item not found");
+            return;
+          }
+
+          // Client-side validation
+          if (score < item.cost) {
+            setShopError(`Insufficient score (need ${item.cost} pts)`);
+            return;
+          }
+
+          if (item.cooldownRemaining && item.cooldownRemaining > 0) {
+            setShopError(
+              `Item on cooldown (${item.cooldownRemaining}s remaining)`,
+            );
+            return;
+          }
+
+          if (item.isDisabled) {
+            const reasons: Record<string, string> = {
+              clearDebuff: "No active debuff to clear",
+              memoryDefrag: "No garbage in stack",
+              hint: "No more hints available",
+            };
+            setShopError(reasons[itemId] || "Item not available");
+            return;
+          }
+
+          // Send purchase
           purchaseItem(itemId as any);
+
+          // Show success toast
+          setToast({
+            message: `Purchased ${item.name} (-${item.cost} pts)`,
+            type: "success",
+          });
+
+          // Keep shop open for multiple purchases
+        }}
+        onClose={() => {
+          setShopError(null);
           setShopOpen(false);
         }}
-        onClose={() => setShopOpen(false)}
       />
 
       {/* Targeting Modal */}
@@ -596,6 +746,15 @@ function GamePageContent() {
         }}
         onClose={() => setTargetingOpen(false)}
       />
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </main>
   );
 }

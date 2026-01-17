@@ -25,6 +25,7 @@ export * from "./match-results-modal";
 // Dynamic effects components
 export * from "./effects-overlay";
 export * from "./score-display";
+export * from "./toast";
 
 // Editor wrapper
 export * from "./editor-wrapper";

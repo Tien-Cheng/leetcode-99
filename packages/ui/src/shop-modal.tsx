@@ -14,18 +14,20 @@ export interface ShopModalProps {
   isOpen: boolean;
   score: number;
   items: ShopItem[];
+  error?: string | null;
   onPurchase: (itemId: string) => void;
   onClose: () => void;
 }
 
 /**
  * Shop Modal component - overlay for purchasing power-ups
- * Keyboard shortcuts 1-5 for quick purchase
+ * Keyboard shortcuts 1-4 for quick purchase
  */
 export function ShopModal({
   isOpen,
   score,
   items,
+  error,
   onPurchase,
   onClose,
 }: ShopModalProps) {
@@ -80,6 +82,13 @@ export function ShopModal({
         <div className="mb-4 font-mono text-sm">
           Your Score: <span className="text-accent">{score}</span>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 p-2 border border-error bg-error/10 font-mono text-sm text-error">
+            {error}
+          </div>
+        )}
 
         {/* Items */}
         <div className="space-y-2">

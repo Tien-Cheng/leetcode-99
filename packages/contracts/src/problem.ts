@@ -132,6 +132,7 @@ export const PlayerPrivateStateSchema = z.object({
   code: z.string(),
   codeVersion: z.number().int().min(1),
   revealedHints: z.array(z.string()),
+  shopCooldowns: z.record(z.string(), z.number()).optional(),
 });
 export type PlayerPrivateState = z.infer<typeof PlayerPrivateStateSchema>;
 

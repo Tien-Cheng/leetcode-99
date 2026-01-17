@@ -417,6 +417,14 @@ export default class Room implements Party.Server {
           await this.handleStopSpectate(sender, parsed.requestId);
           break;
 
+        case "DEBUG_ADD_SCORE":
+          await this.handleDebugAddScore(
+            sender,
+            parsed.payload as { amount: number },
+            parsed.requestId,
+          );
+          break;
+
         default:
           this.sendError(
             sender,
@@ -1531,6 +1539,35 @@ export default class Room implements Party.Server {
   }
 
   // ============================================================================
+  // Debug Commands
+  // ============================================================================
+
+  private async handleDebugAddScore(
+    conn: Party.Connection,
+    payload: { amount: number },
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Add score
+    player.score += payload.amount;
+
+    // Log the cheat
+    this.addEventLog("info", `[DEBUG] ${player.username} added ${payload.amount} points (total: ${player.score})`);
+
+    // Broadcast player update
+    this.broadcastPlayerUpdate(player);
+
+    // Send updated snapshot
+    const snapshot = this.buildRoomSnapshot(player);
+    conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+  }
+
+  // ============================================================================
   // Attack System
   // ============================================================================
 
@@ -2127,6 +2164,9 @@ export default class Room implements Party.Server {
         code: forPlayer.code ?? "",
         codeVersion: forPlayer.codeVersion ?? 1,
         revealedHints: forPlayer.revealedHints ?? [],
+        shopCooldowns: forPlayer.shopCooldowns
+          ? Object.fromEntries(forPlayer.shopCooldowns)
+          : undefined,
       };
     }
 
