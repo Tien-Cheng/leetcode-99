@@ -1401,6 +1401,7 @@ export default class Room implements Party.Server {
           return false; // No debuff to clear
         }
         player.activeDebuff = null;
+        player.debuffGraceEndsAt = Date.now() + DEBUFF_GRACE_PERIOD_MS;
         player.status = "coding";
         return true;
 

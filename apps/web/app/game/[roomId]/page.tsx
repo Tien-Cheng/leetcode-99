@@ -54,6 +54,7 @@ function GamePageContent() {
     updateCode,
     playerId,
     isHost,
+    __debugSetDebuff,
   } = useGameState();
 
   // Effects system
@@ -153,6 +154,69 @@ function GamePageContent() {
     if (!targetingOpen) setShopOpen(false);
   };
 
+  // Secret debug handlers to trigger debuffs (for testing)
+  // Durations reduced to half for faster testing
+  const triggerDebuffDDOS = useCallback(() => {
+    const endsAt = new Date(Date.now() + 6000).toISOString();
+    __debugSetDebuff({ type: "ddos", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered DDOS debuff (6s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const triggerDebuffFlashbang = useCallback(() => {
+    const endsAt = new Date(Date.now() + 12500).toISOString();
+    __debugSetDebuff({ type: "flashbang", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered Flashbang debuff (12.5s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const triggerDebuffVimLock = useCallback(() => {
+    const endsAt = new Date(Date.now() + 6000).toISOString();
+    __debugSetDebuff({ type: "vimLock", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered Vim Lock debuff (6s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const triggerDebuffMemoryLeak = useCallback(() => {
+    const endsAt = new Date(Date.now() + 15000).toISOString();
+    __debugSetDebuff({ type: "memoryLeak", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered Memory Leak debuff (15s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const clearDebuffManual = useCallback(() => {
+    __debugSetDebuff(null);
+    console.log("[DEBUG] Cleared all debuffs");
+  }, [__debugSetDebuff]);
+
+  // Log debug shortcuts on mount
+  useEffect(() => {
+    console.log(
+      "%c🎮 DEBUG SHORTCUTS ENABLED",
+      "color: #00ffd5; font-weight: bold; font-size: 14px;",
+    );
+    console.log(
+      "%cCtrl+Shift+1: Trigger DDOS (blocks Run button for 6s)",
+      "color: #ff6b6b;",
+    );
+    console.log(
+      "%cCtrl+Shift+2: Trigger Flashbang (inverts theme for 12.5s)",
+      "color: #ffd93d;",
+    );
+    console.log(
+      "%cCtrl+Shift+3: Trigger Vim Lock (forces Vim mode for 6s)",
+      "color: #00ffd5;",
+    );
+    console.log(
+      "%cCtrl+Shift+4: Trigger Memory Leak (glitch effects for 15s)",
+      "color: #ffd93d;",
+    );
+    console.log(
+      "%cCtrl+Shift+0: Clear all debuffs",
+      "color: #6bcf7f;",
+    );
+  }, []);
+
   // Register global shortcuts
   useKeyboardShortcuts({
     shortcuts: [
@@ -174,6 +238,42 @@ function GamePageContent() {
         altKey: true,
         action: handleTargetingToggle,
         description: "Targeting Mode",
+      },
+      // SECRET DEBUG SHORTCUTS (Ctrl+Shift+[key])
+      {
+        key: "1",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffDDOS,
+        description: "[DEBUG] Trigger DDOS",
+      },
+      {
+        key: "2",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffFlashbang,
+        description: "[DEBUG] Trigger Flashbang",
+      },
+      {
+        key: "3",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffVimLock,
+        description: "[DEBUG] Trigger Vim Lock",
+      },
+      {
+        key: "4",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffMemoryLeak,
+        description: "[DEBUG] Trigger Memory Leak",
+      },
+      {
+        key: "0",
+        shiftKey: true,
+        ctrlKey: true,
+        action: clearDebuffManual,
+        description: "[DEBUG] Clear All Debuffs",
       },
     ],
     enabled: true,

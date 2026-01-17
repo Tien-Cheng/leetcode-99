@@ -72,6 +72,9 @@ interface GameStateContextValue {
   startMatch: () => void;
   addBots: (count: number) => void;
   returnToLobby: () => void;
+
+  // Debug actions (for testing)
+  __debugSetDebuff: (debuff: ActiveDebuff | null) => void;
 }
 
 const GameStateContext = createContext<GameStateContextValue | undefined>(
@@ -415,6 +418,9 @@ export function GameStateProvider({
     startMatch: ws.startMatch,
     addBots: ws.addBots,
     returnToLobby: ws.returnToLobby,
+
+    // Debug actions
+    __debugSetDebuff: setActiveDebuff,
   };
 
   return (
