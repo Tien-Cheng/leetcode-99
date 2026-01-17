@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from "react";
 import { useWebSocket } from "../hooks/use-websocket";
 import type {
   MatchEndPayload,
@@ -79,7 +86,7 @@ interface GameStateContextValue {
 }
 
 const GameStateContext = createContext<GameStateContextValue | undefined>(
-  undefined
+  undefined,
 );
 
 interface GameStateProviderProps {
@@ -102,8 +109,9 @@ export function GameStateProvider({
   const [roomSettings, setRoomSettings] = useState<RoomSettings | null>(null);
   const [matchPhase, setMatchPhase] = useState<MatchPhase>("lobby");
   const [matchEndAt, setMatchEndAt] = useState<string | null>(null);
-  const [matchEndResult, setMatchEndResult] =
-    useState<MatchEndPayload | null>(null);
+  const [matchEndResult, setMatchEndResult] = useState<MatchEndPayload | null>(
+    null,
+  );
 
   // Player state
   const [username, setUsername] = useState<string | null>(null);
@@ -124,12 +132,14 @@ export function GameStateProvider({
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
   const [lastJudgeResult, setLastJudgeResult] = useState<JudgeResult | null>(
-    null
+    null,
   );
 
   // Shop
   const [shopCatalog, setShopCatalog] = useState<ShopCatalogItem[]>([]);
-  const [shopCooldowns, setShopCooldowns] = useState<Record<string, number>>({});
+  const [shopCooldowns, setShopCooldowns] = useState<Record<string, number>>(
+    {},
+  );
 
   // Derived state
   const currentProblem = playerPrivateState?.currentProblem ?? null;
@@ -142,7 +152,12 @@ export function GameStateProvider({
 
   // WebSocket handlers
   const handleRoomSnapshot = useCallback((payload: RoomSnapshotPayload) => {
-    console.log("[WS] Received ROOM_SNAPSHOT, phase:", payload.match.phase, "standings:", !!payload.match.standings);
+    console.log(
+      "[WS] Received ROOM_SNAPSHOT, phase:",
+      payload.match.phase,
+      "standings:",
+      !!payload.match.standings,
+    );
     setRoomId(payload.roomId);
     setServerTime(payload.serverTime);
     setPlayersPublic(payload.players);
@@ -154,8 +169,10 @@ export function GameStateProvider({
       setMatchEndResult({
         matchId: payload.match.matchId || "",
         endReason: payload.match.endReason || "timeExpired",
-        winnerPlayerId: payload.match.standings.find((s: StandingEntry) => s.rank === 1)?.playerId || "",
-        standings: payload.match.standings
+        winnerPlayerId:
+          payload.match.standings.find((s: StandingEntry) => s.rank === 1)
+            ?.playerId || "",
+        standings: payload.match.standings,
       });
     } else if (payload.match.phase !== "ended") {
       setMatchEndResult(null);
@@ -167,10 +184,16 @@ export function GameStateProvider({
 
     if (payload.self) {
       setPlayerPrivateState(payload.self);
+      setShopCooldowns(payload.self.shopCooldowns ?? {});
+    } else {
+      setPlayerPrivateState(null);
+      setShopCooldowns({});
     }
 
     // Get player's public data to extract score/streak/etc
-    const myPublicData = payload.players.find(p => p.playerId === payload.me.playerId);
+    const myPublicData = payload.players.find(
+      (p) => p.playerId === payload.me.playerId,
+    );
     if (myPublicData) {
       setActiveDebuff(myPublicData.activeDebuff ?? null);
       setActiveBuff(myPublicData.activeBuff ?? null);
@@ -186,50 +209,46 @@ export function GameStateProvider({
     if (payload.shopCatalog) {
       setShopCatalog(payload.shopCatalog);
     }
-
-    if (payload.self?.shopCooldowns) {
-      setShopCooldowns(payload.self.shopCooldowns);
-    }
   }, []);
 
   const handleSettingsUpdate = useCallback(
     (payload: { settings: RoomSettings }) => {
       setRoomSettings(payload.settings);
     },
-    []
+    [],
   );
 
-  const handleMatchStarted = useCallback(
-    (payload: MatchStartedPayload) => {
-      setMatchPhase(payload.match.phase);
-      setMatchEndAt(payload.match.endAt ?? null);
-      setMatchEndResult(null);
-    },
-    []
-  );
+  const handleMatchStarted = useCallback((payload: MatchStartedPayload) => {
+    setMatchPhase(payload.match.phase);
+    setMatchEndAt(payload.match.endAt ?? null);
+    setMatchEndResult(null);
+  }, []);
 
   const handleMatchPhaseUpdate = useCallback(
     (payload: { matchId: string; phase: MatchPhase }) => {
       setMatchPhase(payload.phase);
     },
-    []
+    [],
   );
 
-  const handlePlayerUpdate = useCallback((payload: { player: PlayerPublic }) => {
-    setPlayersPublic((prev) =>
-      prev.map((p) =>
-        p.playerId === payload.player.playerId ? payload.player : p
-      )
-    );
+  const handlePlayerUpdate = useCallback(
+    (payload: { player: PlayerPublic }) => {
+      setPlayersPublic((prev) =>
+        prev.map((p) =>
+          p.playerId === payload.player.playerId ? payload.player : p,
+        ),
+      );
 
-    // Update our local state if this is us
-    if (payload.player.playerId === playerId) {
-      setActiveDebuff(payload.player.activeDebuff ?? null);
-      setScore(payload.player.score);
-      setSolveStreak(payload.player.streak);
-      setTargetingModeState(payload.player.targetingMode);
-    }
-  }, [playerId]);
+      // Update our local state if this is us
+      if (payload.player.playerId === playerId) {
+        setActiveDebuff(payload.player.activeDebuff ?? null);
+        setScore(payload.player.score);
+        setSolveStreak(payload.player.streak);
+        setTargetingModeState(payload.player.targetingMode);
+      }
+    },
+    [playerId],
+  );
 
   const handleJudgeResult = useCallback((payload: JudgeResult) => {
     setLastJudgeResult(payload);
@@ -242,7 +261,7 @@ export function GameStateProvider({
         // Stack size changed - we'll get the full state in ROOM_SNAPSHOT or PLAYER_UPDATE
       }
     },
-    [playerId]
+    [playerId],
   );
 
   const handleChatAppend = useCallback((payload: { message: ChatMessage }) => {
@@ -265,7 +284,11 @@ export function GameStateProvider({
       ) {
         if (payload.endsAt) {
           setActiveDebuff({
-            type: payload.type as "ddos" | "flashbang" | "vimLock" | "memoryLeak",
+            type: payload.type as
+              | "ddos"
+              | "flashbang"
+              | "vimLock"
+              | "memoryLeak",
             endsAt: payload.endsAt,
           });
         }
@@ -279,21 +302,21 @@ export function GameStateProvider({
         });
       }
     },
-    [playerPrivateState]
+    [playerPrivateState],
   );
 
   const handleEventLogAppend = useCallback(
     (payload: { entry: EventLogEntry }) => {
       setEventLog((prev) => [...prev, payload.entry]);
     },
-    []
+    [],
   );
 
   const handleSpectateState = useCallback(
     (payload: { spectating: SpectateView | null }) => {
       setSpectateState(payload.spectating);
     },
-    []
+    [],
   );
 
   const handleCodeUpdate = useCallback(
@@ -312,22 +335,22 @@ export function GameStateProvider({
         });
       }
     },
-    [spectateState]
+    [spectateState],
   );
 
-  const handleMatchEnd = useCallback(
-    (payload: MatchEndPayload) => {
-      console.log("[WS] Match Ended:", payload);
-      setMatchPhase("ended");
-      setMatchEndResult(payload);
-    },
-    []
-  );
-
-  const handleError = useCallback((payload: { code: string; message: string }) => {
-    console.error("WebSocket error:", payload.code, payload.message);
-    // Could show a toast notification here
+  const handleMatchEnd = useCallback((payload: MatchEndPayload) => {
+    console.log("[WS] Match Ended:", payload);
+    setMatchPhase("ended");
+    setMatchEndResult(payload);
   }, []);
+
+  const handleError = useCallback(
+    (payload: { code: string; message: string }) => {
+      console.error("WebSocket error:", payload.code, payload.message);
+      // Could show a toast notification here
+    },
+    [],
+  );
 
   // Initialize WebSocket connection
   const ws = useWebSocket({
@@ -357,7 +380,7 @@ export function GameStateProvider({
         await ws.runCode(currentProblem.problemId, code);
       }
     },
-    [ws, currentProblem]
+    [ws, currentProblem],
   );
 
   const submitCode = useCallback(
@@ -366,7 +389,7 @@ export function GameStateProvider({
         await ws.submitCode(currentProblem.problemId, code);
       }
     },
-    [ws, currentProblem]
+    [ws, currentProblem],
   );
 
   const updateCode = useCallback(
@@ -375,7 +398,7 @@ export function GameStateProvider({
         ws.updateCode(currentProblem.problemId, code, version);
       }
     },
-    [ws, currentProblem]
+    [ws, currentProblem],
   );
 
   const value: GameStateContextValue = {

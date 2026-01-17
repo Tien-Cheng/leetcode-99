@@ -1,170 +1,316 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
-import { Panel, Button } from "@leet99/ui";
+import { useEffect, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  Button,
+  EffectsOverlay,
+  EditorWrapper,
+  MatchResultsModal,
+  Minimap,
+  Panel,
+  ProblemDisplay,
+  StackPanel,
+  TerminalLog,
+  Timer,
+} from "@leet99/ui";
+import type { EventLogEntry, PlayerPublic } from "@leet99/contracts";
+import { useGameState } from "../../../contexts/game-state-context";
+import { SpectateWrapper } from "./spectate-wrapper";
 
-export default function SpectatePage() {
-  const params = useParams();
-  const _roomId = params.roomId as string;
-  const [spectating, setSpectating] = useState("alice");
+function SpectatePageContent({ roomId }: { roomId: string }) {
+  const router = useRouter();
+  const {
+    isConnected,
+    playersPublic,
+    spectateState,
+    spectatePlayer,
+    stopSpectate,
+    eventLog,
+    matchPhase,
+    matchEndAt,
+    matchEndResult,
+    serverTime,
+    isHost,
+    roomSettings,
+    playerId,
+  } = useGameState();
+
+  const targets = useMemo(
+    () =>
+      playersPublic.filter(
+        (player: PlayerPublic) =>
+          player.role !== "spectator" && player.status !== "lobby",
+      ),
+    [playersPublic],
+  );
+
+  const activeTargetId = spectateState?.playerId ?? null;
+
+  useEffect(() => {
+    if (
+      activeTargetId &&
+      !targets.some(
+        (target: PlayerPublic) => target.playerId === activeTargetId,
+      )
+    ) {
+      stopSpectate();
+    }
+  }, [activeTargetId, targets, stopSpectate]);
+
+  useEffect(() => {
+    if (!activeTargetId && targets.length > 0) {
+      spectatePlayer(targets[0].playerId);
+    }
+  }, [activeTargetId, targets, spectatePlayer]);
+
+  useEffect(() => {
+    const theme =
+      spectateState?.activeDebuff?.type === "flashbang"
+        ? "leet99-flashbang"
+        : "leet99";
+    document.documentElement.setAttribute("data-theme", theme);
+
+    return () => {
+      document.documentElement.setAttribute("data-theme", "leet99");
+    };
+  }, [spectateState?.activeDebuff?.type]);
+
+  const currentProblem = spectateState?.currentProblem ?? null;
+  const queued = spectateState?.queued ?? [];
+  const activeDebuff = spectateState?.activeDebuff ?? null;
+
+  const ddosActive = activeDebuff?.type === "ddos";
+  const memoryLeakActive = activeDebuff?.type === "memoryLeak";
+
+  const minimapPlayers = targets.map((player: PlayerPublic) => ({
+    id: player.playerId,
+    username: player.username,
+    status: player.status as "coding" | "error" | "underAttack" | "eliminated",
+    isBot: player.role === "bot",
+    score: player.score,
+    activeDebuff: player.activeDebuff,
+  }));
+
+  const terminalMessages = eventLog.map((entry: EventLogEntry) => ({
+    type: (entry.level === "error"
+      ? "danger"
+      : entry.level === "warning"
+        ? "warning"
+        : "info") as "info" | "success" | "warning" | "danger" | "system",
+    content: entry.message,
+    timestamp: new Date(entry.at).toLocaleTimeString(),
+  }));
+
+  if (matchPhase === "ended") {
+    return (
+      <MatchResultsModal
+        isOpen={true}
+        endReason={matchEndResult?.endReason || "timeExpired"}
+        standings={matchEndResult?.standings || []}
+        selfPlayerId={playerId || ""}
+        isHost={isHost}
+        onReturnToLobby={() => router.push(`/lobby/${roomId}`)}
+        onExit={() => router.push("/")}
+      />
+    );
+  }
 
   return (
-    <main className="flex min-h-screen flex-col p-2">
+    <main className="flex h-screen flex-col p-2 overflow-hidden relative">
+      <EffectsOverlay
+        ddosActive={ddosActive}
+        memoryLeakActive={memoryLeakActive}
+      />
+
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
-        <div className="font-mono text-lg text-primary">
-          ⏱ 09:32
-          <span className="ml-4 text-base text-accent">
-            SPECTATING: {spectating}
-          </span>
+        <Timer
+          endsAt={matchEndAt || new Date().toISOString()}
+          serverTime={serverTime || new Date().toISOString()}
+        />
+        <div className="font-mono text-sm text-muted flex items-center gap-3">
+          <div>
+            Room: <span className="text-primary">{roomId}</span>
+            {!isConnected && (
+              <span className="text-error animate-pulse ml-2">
+                (Disconnected)
+              </span>
+            )}
+          </div>
+          <div className="text-xs uppercase tracking-widest">
+            Spectating
+            <span className="text-primary ml-2">
+              {spectateState?.username ?? "--"}
+            </span>
+          </div>
+          {activeDebuff && (
+            <span
+              className={`px-2 py-0.5 text-xs font-bold border ${
+                activeDebuff.type === "ddos"
+                  ? "border-error text-error animate-pulse"
+                  : activeDebuff.type === "flashbang"
+                    ? "border-warning text-warning"
+                    : activeDebuff.type === "vimLock"
+                      ? "border-success text-success"
+                      : "border-warning text-warning"
+              }`}
+              data-text={`[${activeDebuff.type.toUpperCase()}]`}
+            >
+              [{activeDebuff.type.toUpperCase()}]
+            </span>
+          )}
         </div>
-        <Button
-          variant="ghost"
-          hotkey="Tab"
-          onClick={() =>
-            setSpectating(spectating === "alice" ? "bob" : "alice")
-          }
-        >
-          Switch Player
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => stopSpectate()}
+            disabled={!activeTargetId}
+          >
+            Stop
+          </Button>
+          <Button variant="ghost" onClick={() => router.push("/")}>
+            Exit
+          </Button>
+        </div>
       </div>
 
-      {/* Main Game Layout (Same as Game Page but Read-Only) */}
-      <div className="flex flex-1 gap-2">
+      {/* Main Layout */}
+      <div className="flex flex-1 gap-1 min-h-0">
         {/* Left: Problem Panel */}
-        <div className="w-80">
-          <Panel title="PROBLEM" className="h-full">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h3 className="font-mono text-lg">Two Sum</h3>
-                <span className="px-2 py-1 bg-success/20 text-success text-xs font-mono">
-                  EASY
-                </span>
+        <div className="flex-shrink-0 w-[320px]">
+          {currentProblem ? (
+            <ProblemDisplay
+              problem={{
+                title: currentProblem.title,
+                difficulty: currentProblem.difficulty,
+                prompt: currentProblem.prompt,
+                signature:
+                  currentProblem.problemType === "code"
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).signature
+                    : "",
+                publicTests:
+                  currentProblem.problemType === "code"
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).publicTests.map((test) => ({
+                        input: String(test.input ?? ""),
+                        output: String(test.output ?? ""),
+                      }))
+                    : [],
+                isGarbage: currentProblem.isGarbage,
+                problemType: currentProblem.problemType,
+                options:
+                  currentProblem.problemType === "mcq"
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "mcq" }
+                        >
+                      ).options
+                    : undefined,
+                selectedOptionId: undefined,
+              }}
+              testResults={[]}
+            />
+          ) : (
+            <Panel title="PROBLEM" className="h-full">
+              <div className="flex items-center justify-center h-full text-muted font-mono text-sm animate-pulse">
+                Waiting for spectate target...
               </div>
-              <p className="text-sm text-base-content">
-                Given an array of integers nums and an integer target, return
-                indices of the two numbers such that they add up to target.
-              </p>
-              <div className="border border-secondary p-2 bg-base-300">
-                <code className="font-mono text-xs text-base-content">
-                  def two_sum(nums: list[int], target: int) -&gt; list[int]:
-                </code>
-              </div>
-            </div>
-          </Panel>
+            </Panel>
+          )}
         </div>
 
-        {/* Center: Editor (Read-Only) */}
-        <div className="flex-1 flex flex-col gap-2">
-          <Panel title="EDITOR (READ-ONLY)" className="flex-1">
-            <div className="h-full bg-base-300 p-4 font-mono text-sm opacity-75">
-              <code className="text-base-content">
-                def two_sum(nums, target):
-                <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;hash_map = &#123;&#125;
-                <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;for i, num in enumerate(nums):
-                <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;complement =
-                target - num
-                <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if complement in
-                hash_map:
-                <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return
-                [hash_map[complement], i]
-                <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hash_map[num] =
-                i
-              </code>
-            </div>
+        {/* Center: Editor + Log */}
+        <div className="flex-1 flex flex-col gap-1 min-w-0">
+          <Panel
+            title="EDITOR (READ-ONLY)"
+            className="flex-1 min-h-0"
+            noPadding
+          >
+            {currentProblem?.problemType === "mcq" ? (
+              <div className="flex items-center justify-center h-full text-muted font-mono text-sm border-2 border-dashed border-secondary m-4">
+                MCQ problem - no editor needed
+              </div>
+            ) : (
+              <EditorWrapper
+                code={spectateState?.code ?? ""}
+                onChange={() => {}}
+                language="python"
+                readOnly
+                className="h-full"
+              />
+            )}
           </Panel>
 
-          {/* Terminal Log */}
-          <Panel title="TERMINAL LOG" className="h-32">
-            <div className="space-y-1 font-mono text-xs">
-              <div className="text-success">&gt; Match started</div>
-              <div className="text-base-content">
-                &gt; {spectating} is solving Two Sum...
-              </div>
-              <div className="text-success">
-                &gt; {spectating} passed all public tests
-              </div>
-            </div>
+          <Panel title="TERMINAL LOG" className="h-40" noPadding>
+            <TerminalLog messages={terminalMessages} />
           </Panel>
 
-          {/* Spectator Controls */}
-          <div className="flex items-center gap-3 p-2 border border-secondary bg-base-200">
+          <div className="flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0">
             <div className="font-mono text-sm text-muted">Spectator Mode</div>
-            <div className="flex-1"></div>
+            <div className="flex-1" />
             <div className="font-mono text-sm">
-              Watching: <span className="text-accent">{spectating}</span>
+              Watching:{" "}
+              <span className="text-accent">
+                {spectateState?.username ?? "--"}
+              </span>
             </div>
             <div className="font-mono text-sm">
-              Score: <span className="text-accent">45</span>
+              Score:{" "}
+              <span className="text-accent">{spectateState?.score ?? 0}</span>
+            </div>
+            <div className="font-mono text-sm">
+              Streak:{" "}
+              <span className="text-accent">{spectateState?.streak ?? 0}</span>
             </div>
           </div>
         </div>
 
-        {/* Right: Stack & Minimap */}
-        <div className="w-64 space-y-2">
-          {/* Minimap */}
-          <Panel title="MINIMAP">
-            <div className="grid grid-cols-4 gap-1">
-              {[
-                { name: "al", active: spectating === "alice" },
-                { name: "bo", active: spectating === "bob" },
-                { name: "ch", active: false },
-                { name: "da", active: false },
-              ].map((player, i) => (
-                <button
-                  key={i}
-                  onClick={() =>
-                    player.name === "al"
-                      ? setSpectating("alice")
-                      : player.name === "bo"
-                        ? setSpectating("bob")
-                        : null
-                  }
-                  className={`
-                    aspect-square flex items-center justify-center
-                    border text-xs font-mono
-                    ${player.active ? "border-primary glow-primary" : "border-secondary"}
-                    hover:border-primary/50
-                  `}
-                >
-                  {player.active && "▶"}
-                  {player.name}
-                </button>
-              ))}
-            </div>
+        {/* Right: Minimap + Stack */}
+        <div className="w-64 flex-shrink-0 space-y-2 flex flex-col min-h-0">
+          <Panel title="MINIMAP" className="flex-shrink-0">
+            <Minimap
+              players={minimapPlayers}
+              selfId={playerId || ""}
+              spectatingId={activeTargetId || undefined}
+              onPlayerClick={(id) => spectatePlayer(id)}
+            />
           </Panel>
 
-          {/* Stack ({spectating}'s stack) */}
-          <Panel title={`STACK (${spectating})`} className="flex-1">
-            <div className="space-y-2">
-              {[
-                { title: "Reverse Str", difficulty: "hard" },
-                { title: "Valid Paren", difficulty: "medium" },
-              ].map((problem, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 p-2 border border-secondary"
-                >
-                  <div
-                    className={`
-                      w-1 h-8
-                      ${problem.difficulty === "easy" ? "bg-success" : problem.difficulty === "medium" ? "bg-warning" : "bg-error"}
-                    `}
-                  />
-                  <span className="font-mono text-xs">{problem.title}</span>
-                </div>
-              ))}
-            </div>
-          </Panel>
+          <StackPanel
+            stack={queued.map((problem, index) => ({
+              id: `${problem.problemId}-${index}`,
+              title: problem.title,
+              difficulty: problem.difficulty,
+              isGarbage: problem.isGarbage,
+            }))}
+            stackLimit={roomSettings?.stackLimit || 10}
+            memoryLeakActive={memoryLeakActive}
+            className="flex-1 min-h-0"
+          />
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SpectatePage() {
+  const params = useParams();
+  const roomId = params.roomId as string;
+
+  return (
+    <SpectateWrapper roomId={roomId}>
+      <SpectatePageContent roomId={roomId} />
+    </SpectateWrapper>
   );
 }
