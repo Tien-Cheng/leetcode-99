@@ -61,8 +61,10 @@ Judge0 CE uses the following language IDs:
 
 - Python 3.8.1: `71`
 - Python 3.10.0: `92` (if available)
+- Python 3.13.2: Not available in Judge0 CE (requires self-hosted instance)
 
-We use `71` (Python 3.8.1) for MVP compatibility.
+We default to `92` (Python 3.10.0) which supports modern type hints (`list[int]` syntax).
+You can override this by setting `pythonLanguageId` in `JudgeConfig`.
 
 ## API Reference
 
