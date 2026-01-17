@@ -20,20 +20,29 @@ export function GameWrapper({ children, roomId }: GameWrapperProps) {
   const [playerToken, setPlayerToken] = useState("");
 
   useEffect(() => {
-    // TODO: In production, get these from:
-    // 1. localStorage (after joining/creating room)
-    // 2. Session/cookie
-    // 3. Auth provider
+    const stored = localStorage.getItem(`room_${roomId}`);
+    if (stored) {
+      try {
+        const auth = JSON.parse(stored);
+        setPlayerId(auth.playerId);
+        setPlayerToken(auth.playerToken);
+        // Use stored wsUrl or fallback
+        const url = auth.wsUrl || process.env.NEXT_PUBLIC_PARTYKIT_HOST
+          ? `ws://${process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999"}/parties/main/${roomId}`
+          : `ws://localhost:1999/parties/main/${roomId}`;
 
-    // For now, generate mock values for development
-    const mockPlayerId = `player_${Math.random().toString(36).substr(2, 9)}`;
-    const mockToken = `token_${Math.random().toString(36).substr(2, 16)}`;
-    const mockWsUrl = `ws://localhost:1999/party/${roomId}`;
-
-    setPlayerId(mockPlayerId);
-    setPlayerToken(mockToken);
-    setWsUrl(mockWsUrl);
-    setConnectionReady(true);
+        // If the stored URL is from server, it might be fully qualified. 
+        // CreateRoom returns full wsUrl.
+        setWsUrl(auth.wsUrl || url);
+        setConnectionReady(true);
+      } catch (e) {
+        console.error("Failed to parse stored auth", e);
+      }
+    } else {
+      // Redirect or show error?
+      // For now, let it hang or show message, as redirecting might cause loop if not handled
+      console.warn("No stored auth found for room", roomId);
+    }
   }, [roomId]);
 
   if (!connectionReady) {
