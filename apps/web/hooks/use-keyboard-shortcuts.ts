@@ -47,10 +47,19 @@ export function useKeyboardShortcuts({
 
       // Find matching shortcut
       const matchingShortcut = shortcuts.find((shortcut) => {
-        const keyMatches = shortcut.key.toLowerCase() === e.key.toLowerCase();
+        // Special handling for Mac: Option+[Key] often changes e.key to a special character.
+        // We check e.code (e.g., 'KeyR') to be sure it's the right physical key.
+        const keyMatches =
+          shortcut.key.toLowerCase() === e.key.toLowerCase() ||
+          (shortcut.key.length === 1 && e.code === `Key${shortcut.key.toUpperCase()}`);
+
         const altMatches = shortcut.altKey ? e.altKey : !e.altKey;
         const ctrlMatches = shortcut.ctrlKey ? e.ctrlKey : !e.ctrlKey;
         const shiftMatches = shortcut.shiftKey ? e.shiftKey : !e.shiftKey;
+
+        // On Mac, sometimes people expect Meta (Cmd) instead of Alt.
+        // But for consistency with the UI hints, we'll keep it strictly Alt for now,
+        // but ensure it's compatible by fixing the key matching above.
         const metaMatches = shortcut.metaKey ? e.metaKey : !e.metaKey;
 
         return (

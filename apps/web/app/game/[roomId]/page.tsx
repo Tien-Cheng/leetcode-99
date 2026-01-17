@@ -15,6 +15,7 @@ import {
 } from "@leet99/ui";
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
+import { useKeyboardShortcuts } from "../../../hooks/use-keyboard-shortcuts";
 import { GameWrapper } from "./game-wrapper";
 
 function GamePageContent() {
@@ -90,6 +91,21 @@ function GamePageContent() {
   const handleShopToggle = () => {
     setShopOpen(!shopOpen);
   };
+
+  // Register global shortcuts
+  useKeyboardShortcuts({
+    shortcuts: [
+      { key: "r", altKey: true, action: handleRun, description: "Run Code" },
+      { key: "s", altKey: true, action: handleSubmit, description: "Submit Code" },
+      { key: "b", altKey: true, action: handleShopToggle, description: "Toggle Shop" },
+      { key: "1", action: () => shopOpen && purchaseItem("clearDebuff"), description: "Purchase Clear Debuff" },
+      { key: "2", action: () => shopOpen && purchaseItem("memoryDefrag"), description: "Purchase Memory Defrag" },
+      { key: "3", action: () => shopOpen && purchaseItem("skipProblem"), description: "Purchase Skip Problem" },
+      { key: "4", action: () => shopOpen && purchaseItem("rateLimiter"), description: "Purchase Rate Limiter" },
+      { key: "5", action: () => shopOpen && purchaseItem("hint"), description: "Purchase Hint" },
+    ],
+    enabled: true,
+  });
 
   // Apply Flashbang debuff theme switching
   useEffect(() => {
