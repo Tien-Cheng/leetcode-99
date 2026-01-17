@@ -144,21 +144,21 @@ export function Minimap({
             )}
 
 
-            {/* Username abbreviation */}
-            <span className={`${isSelf ? "font-bold" : ""} text-[10px] mb-0.5`}>
+            {/* Username abbreviation and score */}
+            <span className={`${isSelf ? "font-bold" : ""} text-[10px]`}>
               {getAbbreviation(player.username)}
             </span>
 
             {/* Score bar */}
-            <div className="w-full h-1.5 bg-base-300 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-secondary/50 rounded-sm overflow-hidden mt-0.5">
               <div
-                className={`h-full transition-all duration-300 rounded-full ${getScoreBarColor(player, isSelf)}`}
-                style={{ width: `${Math.max(scorePercent, 5)}%` }}
+                className={`h-full transition-all duration-300 ${getScoreBarColor(player, isSelf)}`}
+                style={{ width: `${Math.max(scorePercent, 8)}%` }}
               />
             </div>
 
             {/* Score number */}
-            <span className="text-[8px] text-muted mt-0.5">
+            <span className="text-[8px] text-base-content/70 mt-0.5">
               {player.score || 0}
             </span>
           </button>
