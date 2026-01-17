@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@leet99/ui";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -37,6 +38,16 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       {/* Title */}
       <div className="text-center">
+        <div className="flex justify-center mb-4">
+          <Image
+            src="/icon.png"
+            alt="Leet99 Logo"
+            width={120}
+            height={120}
+            className="drop-shadow-lg"
+            priority
+          />
+        </div>
         <h1 className="font-mono text-6xl font-bold tracking-tight text-primary glow-primary">
           LEET99
         </h1>

@@ -153,7 +153,6 @@ export function GameStateProvider({
         setMatchEndResult(null);
       }
     }
-
     setUsername(payload.me.username);
     setIsHost(payload.me.isHost);
     setChat(payload.chat);
