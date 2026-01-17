@@ -46,6 +46,16 @@ export interface PlayerInternal {
   activeBuff: { type: string; endsAt: string } | null;
   connectionId: string | null;
   joinOrder: number;
+  // Game state (only for players during match)
+  currentProblemId: string | null;
+  queuedProblemIds: string[]; // LIFO stack, newest at index 0
+  code: string;
+  codeVersion: number;
+  revealedHints: string[];
+  problemState: {
+    seenProblemIds: Set<string>;
+    availableProblemIds: Set<string>;
+  } | null;
 }
 
 export interface RoomState {
@@ -183,6 +193,13 @@ export function applyPartyRegister(
     activeBuff: null,
     connectionId: null,
     joinOrder: state.nextJoinOrder++,
+    // Game state (initialized during match start)
+    currentProblemId: null,
+    queuedProblemIds: [],
+    code: "",
+    codeVersion: 0,
+    revealedHints: [],
+    problemState: null,
   };
 
   state.players.set(req.playerId, player);
