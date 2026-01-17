@@ -23,9 +23,9 @@ export function Toast({
   }, [duration, onClose]);
 
   const bgColor = {
-    success: "bg-success/10 border-success",
-    error: "bg-error/10 border-error",
-    info: "bg-primary/10 border-primary",
+    success: "bg-base-300 border-success text-success border-l-4",
+    error: "bg-base-300 border-error text-error border-l-4",
+    info: "bg-base-300 border-primary text-primary border-l-4",
   }[type];
 
   return (

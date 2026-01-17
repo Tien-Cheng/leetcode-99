@@ -140,6 +140,21 @@ function GamePageContent() {
     return () => clearTimeout(timer);
   }, [code, codeVersion, currentProblem, updateCode]);
 
+  // Show error toast for wrong MCQ answer
+  useEffect(() => {
+    if (
+      lastJudgeResult &&
+      currentProblem?.problemType === "mcq" &&
+      lastJudgeResult.problemId === currentProblem.problemId &&
+      !lastJudgeResult.passed
+    ) {
+      setToast({
+        message: "Incorrect answer. Try again!",
+        type: "error",
+      });
+    }
+  }, [lastJudgeResult, currentProblem]);
+
   // Handle code change
   const handleCodeChange = (newCode: string) => {
     setCode(newCode);
