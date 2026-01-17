@@ -121,8 +121,8 @@ export function calculateScore(
 // ============================================================================
 
 export const BASE_DEBUFF_DURATIONS: Record<DebuffType, number> = {
-  ddos: 12000,
-  flashbang: 25000,
+  ddos: 8000,
+  flashbang: 24000,
   vimLock: 12000,
   memoryLeak: 30000,
 };

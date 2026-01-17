@@ -47,6 +47,7 @@ interface GameStateContextValue {
   score: number;
   solveStreak: number;
   targetingMode: TargetingMode;
+  lastAttackerInfo: { playerId: string; username: string; attackType: string } | null;
 
   // Spectator state
   spectateState: SpectateView | null;
@@ -240,6 +241,12 @@ export function GameStateProvider({
     setChat((prev) => [...prev, payload.message]);
   }, []);
 
+  const [lastAttackerInfo, setLastAttackerInfo] = useState<{
+    playerId: string;
+    username: string;
+    attackType: string;
+  } | null>(null);
+
   const handleAttackReceived = useCallback(
     (payload: {
       type: string;
@@ -247,6 +254,21 @@ export function GameStateProvider({
       endsAt?: string;
       addedProblem?: ProblemSummary;
     }) => {
+      // Find attacker username from current playersPublic state
+      setPlayersPublic((currentPlayers) => {
+        const attacker = currentPlayers.find(p => p.playerId === payload.fromPlayerId);
+        if (attacker) {
+          setLastAttackerInfo({
+            playerId: payload.fromPlayerId,
+            username: attacker.username,
+            attackType: payload.type,
+          });
+          // Clear after 5 seconds
+          setTimeout(() => setLastAttackerInfo(null), 5000);
+        }
+        return currentPlayers; // Return unchanged
+      });
+
       // Update active debuff if this is a debuff attack
       if (
         payload.type === "ddos" ||
@@ -393,6 +415,7 @@ export function GameStateProvider({
     score,
     solveStreak,
     targetingMode,
+    lastAttackerInfo,
 
     // Spectator state
     spectateState,

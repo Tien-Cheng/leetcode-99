@@ -42,7 +42,7 @@ export function useKeyboardShortcuts({
 
         if (isInput) {
           // Allow shortcuts with modifiers (Alt, Ctrl, Meta) or special keys like Escape
-          // to bypass the focus check. This ensures Alt+R works while typing code.
+          // to bypass the focus check. This ensures Alt+R and Ctrl+Shift+2 work while typing code.
           const hasModifier = e.altKey || e.ctrlKey || e.metaKey;
           if (e.key !== "Escape" && !hasModifier) {
             return;
@@ -50,13 +50,30 @@ export function useKeyboardShortcuts({
         }
       }
 
+      // Debug logging for Ctrl+Shift+number combinations
+      if (e.ctrlKey && e.shiftKey && /^\d$/.test(e.key)) {
+        console.log("[Shortcut] Detected Ctrl+Shift+" + e.key, {
+          key: e.key,
+          code: e.code,
+          ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+          metaKey: e.metaKey,
+          target: e.target,
+        });
+      }
+
       // Find matching shortcut
       const matchingShortcut = shortcuts.find((shortcut) => {
         // Special handling for Mac: Option+[Key] often changes e.key to a special character.
-        // We check e.code (e.g., 'KeyR') to be sure it's the right physical key.
+        // We check e.code to be sure it's the right physical key.
+        // For letters: e.code = "KeyA", "KeyB", etc.
+        // For numbers: e.code = "Digit1", "Digit2", etc.
+        const isNumber = /^\d$/.test(shortcut.key);
         const keyMatches =
           shortcut.key.toLowerCase() === e.key.toLowerCase() ||
-          (shortcut.key.length === 1 && e.code === `Key${shortcut.key.toUpperCase()}`);
+          (shortcut.key.length === 1 && !isNumber && e.code === `Key${shortcut.key.toUpperCase()}`) ||
+          (shortcut.key.length === 1 && isNumber && e.code === `Digit${shortcut.key}`);
 
         const altMatches = shortcut.altKey ? e.altKey : !e.altKey;
         const ctrlMatches = shortcut.ctrlKey ? e.ctrlKey : !e.ctrlKey;
@@ -77,8 +94,21 @@ export function useKeyboardShortcuts({
       });
 
       if (matchingShortcut) {
+        console.log("[Shortcut] Matched shortcut:", matchingShortcut.description || matchingShortcut.key);
         e.preventDefault();
         matchingShortcut.action();
+      } else if (e.ctrlKey && e.shiftKey && /^\d$/.test(e.key)) {
+        // Debug why Ctrl+Shift+number didn't match
+        console.log("[Shortcut] Ctrl+Shift+" + e.key + " pressed but no match found. Available shortcuts:", 
+          shortcuts.filter(s => s.ctrlKey && s.shiftKey).map(s => ({
+            key: s.key,
+            ctrlKey: s.ctrlKey,
+            shiftKey: s.shiftKey,
+            altKey: s.altKey,
+            metaKey: s.metaKey,
+            description: s.description
+          }))
+        );
       }
     },
     [shortcuts, enabled, disableWhenInputFocused]
