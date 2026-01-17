@@ -441,8 +441,14 @@ export default class Room implements Party.Server {
           );
       }
     } catch (err) {
-      console.error(`[${this.state.roomId}] Error parsing message:`, err);
-      this.sendError(sender, "BAD_REQUEST", "Invalid JSON message");
+      console.error(`[${this.state.roomId}] Error processing message:`, err);
+      if (err instanceof SyntaxError) {
+        this.sendError(sender, "BAD_REQUEST", "Invalid JSON message");
+      } else {
+        const errorMessage =
+          err instanceof Error ? err.message : "Internal server error";
+        this.sendError(sender, "INTERNAL_ERROR", errorMessage);
+      }
     }
   }
 
@@ -1077,7 +1083,8 @@ export default class Room implements Party.Server {
     }
 
     // Payload size check
-    if (Buffer.byteLength(payload.code, "utf8") > CODE_MAX_BYTES) {
+    const codeByteLength = new TextEncoder().encode(payload.code).length;
+    if (codeByteLength > CODE_MAX_BYTES) {
       this.sendError(conn, "PAYLOAD_TOO_LARGE", "Code exceeds 50KB limit", requestId);
       return;
     }

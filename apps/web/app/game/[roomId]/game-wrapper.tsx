@@ -26,6 +26,10 @@ export function GameWrapper({ children, roomId }: GameWrapperProps) {
         const auth = JSON.parse(stored);
         setPlayerId(auth.playerId);
         setPlayerToken(auth.playerToken);
+        // Use stored wsUrl or fallback
+        const url = auth.wsUrl || (process.env.NEXT_PUBLIC_PARTYKIT_HOST
+          ? `ws://${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/leet99/${roomId}`
+          : `ws://127.0.0.1:1999/parties/leet99/${roomId}`);
         const partyHost =
           process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
         const partyName = process.env.NEXT_PUBLIC_PARTYKIT_PARTY || "main";
