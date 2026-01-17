@@ -3,8 +3,8 @@ import {
   JoinRoomRequestSchema,
   type JoinRoomResponse,
   type HttpErrorResponse,
-  RoomSettingsSchema,
 } from "@leet99/contracts";
+import { registerPartyPlayer, toWsUrl } from "@/server/partykit";
 
 type RouteParams = {
   params: Promise<{ roomId: string }>;
@@ -16,8 +16,10 @@ type RouteParams = {
  * Joins a room as player (lobby only) or spectator (any time).
  */
 export async function POST(req: NextRequest, { params }: RouteParams) {
+  let roomId: string | undefined;
+
   try {
-    const { roomId } = await params;
+    ({ roomId } = await params);
     const body = await req.json();
     const parsed = JoinRoomRequestSchema.safeParse(body);
 
@@ -32,7 +34,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json(error, { status: 400 });
     }
 
-    const { username, role } = parsed.data;
+    const { username } = parsed.data;
+    const role = parsed.data.role ?? "player";
 
     // Validate username
     const trimmedUsername = username.trim();
@@ -46,39 +49,42 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json(error, { status: 400 });
     }
 
-    // TODO: Verify room exists and check constraints:
-    // - ROOM_NOT_FOUND if room doesn't exist
-    // - ROOM_FULL if role=player and room is at capacity
-    // - USERNAME_TAKEN if username is already taken in room
-    // - MATCH_ALREADY_STARTED if role=player and match is running
-
-    // For now, we return mock data to allow the client to proceed
-
     // Generate player credentials
-    const playerId = `p_${generateId()}`;
-    const playerToken = `pt_${generateId()}`;
+    const playerId = `p_${crypto.randomUUID()}`;
+    const playerToken = `pt_${crypto.randomUUID()}`;
 
-    // Build WebSocket URL
-    const partykitHost = process.env.PARTYKIT_HOST || "http://localhost:1999";
-    const partykitProject = process.env.PARTYKIT_PROJECT || "leet99";
-    const wsUrl = `${partykitHost}/parties/${partykitProject}/${roomId}`;
+    const registerResult = await registerPartyPlayer(roomId, {
+      playerId,
+      playerToken,
+      username: trimmedUsername,
+      role,
+      isHost: false,
+    });
 
-    // Mock settings (in production, fetch from room state)
-    const settings = RoomSettingsSchema.parse({});
+    if (!registerResult.ok) {
+      console.error("Failed to register player with PartyKit", {
+        roomId,
+        status: registerResult.status,
+      });
+
+      return NextResponse.json(registerResult.error, {
+        status: registerResult.status,
+      });
+    }
 
     const response: JoinRoomResponse = {
       roomId,
-      wsUrl,
+      wsUrl: toWsUrl(roomId),
       playerId,
       playerToken,
-      role: role ?? "player",
+      role,
+      settings: registerResult.data.settings,
       isHost: false,
-      settings,
     };
 
     return NextResponse.json(response, { status: 200 });
-  } catch (err) {
-    console.error("Error joining room:", err);
+  } catch {
+    console.error("Failed to join room", { roomId });
     const error: HttpErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",
@@ -87,11 +93,4 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     };
     return NextResponse.json(error, { status: 500 });
   }
-}
-
-/**
- * Generate a random ID for player/token
- */
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 15);
 }

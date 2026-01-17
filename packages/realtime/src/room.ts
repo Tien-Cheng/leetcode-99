@@ -1,20 +1,26 @@
 import type * as Party from "partykit/server";
 import type {
-  RoomSettings,
-  PlayerPublic,
-  MatchPublic,
   ChatMessage,
-  EventLogEntry,
-  ShopCatalogItem,
-  PlayerPrivateState,
-  SpectateView,
-  RoomSnapshotPayload,
-  ErrorPayload,
-  JoinRoomPayload,
-  WSMessage,
   ClientMessageType,
+  ErrorPayload,
+  EventLogEntry,
+  HttpErrorResponse,
+  JoinRoomPayload,
+  MatchPublic,
+  PlayerPrivateState,
+  PlayerPublic,
+  RoomSettings,
+  RoomSnapshotPayload,
+  WSMessage,
 } from "@leet99/contracts";
-import { DEFAULT_SHOP_CATALOG, RoomSettingsSchema } from "@leet99/contracts";
+import {
+  DEFAULT_SHOP_CATALOG,
+  PartyRegisterRequestSchema,
+  PartyRegisterResponseSchema,
+  RoomSettingsSchema,
+} from "@leet99/contracts";
+
+import { applyPartyRegister } from "./register.ts";
 
 // ============================================================================
 // Room State Types
@@ -39,6 +45,7 @@ interface PlayerInternal {
 
 interface RoomState {
   roomId: string;
+  isCreated: boolean;
   settings: RoomSettings;
   players: Map<string, PlayerInternal>;
   match: MatchPublic;
@@ -52,11 +59,14 @@ interface RoomState {
 // ============================================================================
 
 export default class Room implements Party.Server {
+  readonly room: Party.Room;
   private state: RoomState;
 
-  constructor(readonly room: Party.Room) {
+  constructor(room: Party.Room) {
+    this.room = room;
     this.state = {
       roomId: room.id,
+      isCreated: false,
       settings: RoomSettingsSchema.parse({}),
       players: new Map(),
       match: {
@@ -80,6 +90,8 @@ export default class Room implements Party.Server {
     if (stored) {
       this.state = {
         ...stored,
+        isCreated:
+          (stored as unknown as { isCreated?: boolean }).isCreated ?? true,
         players: new Map(
           Object.entries(
             stored.players as unknown as Record<string, PlayerInternal>,
@@ -89,7 +101,7 @@ export default class Room implements Party.Server {
     }
   }
 
-  async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+  async onConnect(conn: Party.Connection, _ctx: Party.ConnectionContext) {
     // Connection established, wait for JOIN_ROOM message
     console.log(`[${this.state.roomId}] Connection opened: ${conn.id}`);
   }
@@ -435,50 +447,65 @@ export default class Room implements Party.Server {
 
     // POST /parties/leet99/:roomId/register - Register a new player
     if (req.method === "POST" && url.pathname.endsWith("/register")) {
+      const json = (data: unknown, status = 200) =>
+        new Response(JSON.stringify(data), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        });
+
+      const httpError = (
+        code: string,
+        message: string,
+        status: number,
+        details?: unknown,
+      ) => {
+        const body: HttpErrorResponse = {
+          error: {
+            code,
+            message,
+            ...(details === undefined ? {} : { details }),
+          },
+        };
+        return json(body, status);
+      };
+
+      let body: unknown;
       try {
-        const body = (await req.json()) as {
-          playerId: string;
-          playerToken: string;
-          username: string;
-          role: "player" | "spectator";
-          isHost: boolean;
-        };
-
-        const player: PlayerInternal = {
-          playerId: body.playerId,
-          playerToken: body.playerToken,
-          username: body.username,
-          role: body.role,
-          isHost: body.isHost,
-          status: "lobby",
-          score: 0,
-          streak: 0,
-          targetingMode: "random",
-          stackSize: 0,
-          activeDebuff: null,
-          activeBuff: null,
-          connectionId: null,
-          joinOrder: this.state.nextJoinOrder++,
-        };
-
-        this.state.players.set(body.playerId, player);
-
-        // Persist state
-        await this.room.storage.put("state", {
-          ...this.state,
-          players: Object.fromEntries(this.state.players),
-        });
-
-        return new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ error: "Invalid request" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        body = await req.json();
+      } catch {
+        return httpError("BAD_REQUEST", "Invalid JSON body", 400);
       }
+
+      const parsed = PartyRegisterRequestSchema.safeParse(body);
+      if (!parsed.success) {
+        return httpError(
+          "BAD_REQUEST",
+          "Invalid request body",
+          400,
+          parsed.error.flatten(),
+        );
+      }
+
+      const result = applyPartyRegister(this.state, parsed.data);
+      if (!result.ok) {
+        const status =
+          result.error.code === "ROOM_NOT_FOUND"
+            ? 404
+            : result.error.code === "BAD_REQUEST"
+              ? 400
+              : 409;
+        return httpError(result.error.code, result.error.message, status);
+      }
+
+      const response = PartyRegisterResponseSchema.parse(result.response);
+
+      // Persist state
+      await this.room.storage.put("state", {
+        ...this.state,
+        players: Object.fromEntries(this.state.players),
+      });
+
+      return json(response, 200);
     }
 
     // GET /parties/leet99/:roomId/state - Get room state (for debugging)

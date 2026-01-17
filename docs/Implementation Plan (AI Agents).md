@@ -6,6 +6,7 @@ tags: [HackAndRoll2026, LeetCode99, implementation, monorepo, agents]
 # LeetCode 99 — Implementation Plan (AI Agents)
 
 This document is **for AI coding agents** (and humans supervising them). It is designed to prevent common failures:
+
 - using outdated/incorrect package versions
 - scattering code across inconsistent directories
 - mixing obsolete framework patterns (e.g. old Tailwind/Next.js patterns)
@@ -32,6 +33,7 @@ Agents MUST use these versions unless explicitly told otherwise.
 Operational rule (prevents thrash): if the real code repo already has a lockfile (e.g. `pnpm-lock.yaml`), the lockfile wins. Do not change dependency versions unless the task explicitly asks for a version bump.
 
 **Runtime + tooling**
+
 - Node: `24.x` (LTS)
 - pnpm: `10.10.x`
 - TypeScript: `5.9.x`
@@ -40,6 +42,7 @@ Operational rule (prevents thrash): if the real code repo already has a lockfile
 - Prettier: `3.8.x`
 
 **Frontend / Next.js**
+
 - Next.js: `16.1.x` (App Router)
 - React: `19.x`
 - Tailwind CSS: `4.1.x`
@@ -51,23 +54,28 @@ Operational rule (prevents thrash): if the real code repo already has a lockfile
 - Vim: `monaco-vim@0.4.x`
 
 **Realtime / Backend**
+
 - PartyKit: `partykit@0.0.115` (pin exactly; 0.x may break)
 - Zod: `4.3.x` (runtime schemas + inferred TS types)
 
 **Persistence**
+
 - Supabase JS: `@supabase/supabase-js@2.90.x`
 
 **Sandbox execution**
+
 - Judge0 Extra CE: `1.13.1-extra` (pinned; upgrade only as an explicit task)
 - Pyodide (client RUN_CODE): `0.29.x` (lazy-loaded; public tests only)
 
 ### 1.1 Why these constraints exist
+
 - **daisyUI v5** expects **Tailwind v4** (use the v4 CSS-first setup).
 - **Next 16 + React 19**: avoid older Next 13/14 tutorials and older React patterns.
 - **PartyKit 0.x**: avoid unreviewed `^` upgrades.
 - **Judge0 is Remote Code Execution**: treat it as hostile-by-default infrastructure.
 
 ### 1.2 Compatibility guardrails (common agent mistakes)
+
 - **Tailwind v4 config**: do not use Tailwind v3 directives like `@tailwind base;`.
 - **Next.js endpoints**: do not create `pages/api/*` (App Router only).
 - **React 19**: avoid old guidance about `React.FC` everywhere; prefer explicit props typing.
@@ -95,12 +103,14 @@ repo/
 ```
 
 ### 2.1 Ownership boundaries
+
 - `packages/contracts`: only change if your task is “contract change”.
 - `packages/realtime`: authoritative game logic + state machine.
 - `apps/web`: UI + route handlers only. Do not put game logic here.
 - `packages/ui`: dumb components (props in, render out). No WebSocket here.
 
 ### 2.2 Path conventions
+
 - Server-only code MUST NOT be imported into client bundles.
 - Next.js:
   - UI pages: `apps/web/app/**`
@@ -128,10 +138,12 @@ Principle: the browser only talks to **Next.js HTTP** and **PartyKit WS**. Anyth
 Agents often fail because env var names drift. When bootstrapping the real code repo, add an `.env.example` and keep it updated.
 
 **Public (safe for browser, `NEXT_PUBLIC_*`)**
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 **Server-only (Next.js + PartyKit runtime)**
+
 - `SUPABASE_SERVICE_ROLE_KEY` (optional; only if server needs privileged writes)
 - `JUDGE0_URL` (e.g. `https://judge0.example.com`)
 - `JUDGE0_API_KEY` (canonical; no alternative names)
@@ -147,13 +159,14 @@ All realtime messages must use a single envelope:
 ```ts
 // packages/contracts/src/ws.ts
 export type WSMessage<TType extends string, TPayload> = {
-  type: TType
-  requestId?: string
-  payload: TPayload
-}
+  type: TType;
+  requestId?: string;
+  payload: TPayload;
+};
 ```
 
 ### 3.1 Zod schemas are mandatory at boundaries
+
 - Every Client→Server and Server→Client payload must have a Zod schema.
 - Derive TS types from schemas: `z.infer<typeof Schema>`.
 - Never “hand-wave” with `any` at the network boundary.
@@ -165,6 +178,7 @@ Agents MUST NOT invent new message type strings. Use these exact uppercase `type
 If you believe a new WS event is needed, stop and ask for approval before adding it (contract changes ripple everywhere).
 
 Client → Server (MVP)
+
 - `JOIN_ROOM`
 - `SET_TARGET_MODE`
 - `UPDATE_SETTINGS`
@@ -180,6 +194,7 @@ Client → Server (MVP)
 - `CODE_UPDATE`
 
 Server → Client (MVP)
+
 - `ROOM_SNAPSHOT`
 - `SETTINGS_UPDATE`
 - `MATCH_STARTED`
@@ -196,6 +211,7 @@ Server → Client (MVP)
 - `ERROR`
 
 ### 3.3 Anti-patterns (do not do these)
+
 - Duplicating “almost the same” types in UI and realtime.
 - Adding fields to payloads without updating schemas.
 - Using snake_case in JSON payloads (the spec is camelCase).
@@ -203,17 +219,18 @@ Server → Client (MVP)
 ## 4) Next.js (apps/web) Rules
 
 ### 4.1 App Router only
+
 - Implement endpoints in `app/api/**/route.ts` exporting `GET/POST/...`.
 - Use `NextRequest`/`NextResponse` from `next/server`.
 
 Example:
 
 ```ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  return NextResponse.json({ ok: true }, { status: 200 })
+  const body = await req.json();
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
 ```
 
@@ -232,11 +249,13 @@ Do not improvise HTTP payload shapes; keep them aligned to the Backend API Spec.
 If an agent needs a new endpoint, it must first propose the contract and update `packages/contracts`.
 
 ### 4.2 Environment variables
+
 - Browser-safe values only as `NEXT_PUBLIC_*`.
 - Supabase service role key MUST be server-only.
 - Judge0 endpoint keys/headers MUST be server-only.
 
 ### 4.3 HTTP routes should be thin
+
 - Route handlers orchestrate:
   - validate request
   - call `packages/realtime` (if needed) or DB helpers
@@ -246,6 +265,7 @@ If an agent needs a new endpoint, it must first propose the contract and update 
 ## 5) PartyKit Realtime (packages/realtime)
 
 ### 5.1 Server is authoritative
+
 - The PartyKit room owns:
   - player roster + host transfer
   - match lifecycle (lobby → warmup → main → ended)
@@ -254,11 +274,13 @@ If an agent needs a new endpoint, it must first propose the contract and update 
   - attacks/debuffs and timers
 
 ### 5.2 Determinism + ordering
+
 - PartyKit serializes messages per room; use that ordering.
 - Timers should be managed server-side and expressed as ISO timestamps (`endsAt`).
 - Avoid client-side “guessing” that affects outcomes.
 
 ### 5.3 Payload size + throttling
+
 - Respect spec caps:
   - `CODE_UPDATE` <= 50_000 bytes
   - throttle `CODE_UPDATE` (max 10/s)
@@ -267,6 +289,7 @@ If an agent needs a new endpoint, it must first propose the contract and update 
   - send code updates only to authorized spectators
 
 ### 5.4 Secrets + anti-patterns
+
 - PartyKit code runs server-side, so it MAY call Judge0 / Supabase using secrets, but:
   - never hardcode secrets in git
   - never send secrets to clients (including in error messages)
@@ -277,6 +300,7 @@ If an agent needs a new endpoint, it must first propose the contract and update 
 ## 6) Judge / Execution (packages/judge + infra/judge0)
 
 ### 6.1 Execution modes
+
 - `RUN_CODE`:
   - Prefer client-side Pyodide (public tests only)
   - Optional fallback: server executes public tests only
@@ -284,11 +308,13 @@ If an agent needs a new endpoint, it must first propose the contract and update 
   - Server executes public + hidden tests using Judge0 (authoritative)
 
 ### 6.2 Security rules (non-negotiable)
+
 - Treat Judge0 as RCE.
 - Do NOT expose Judge0 publicly without auth/IP allowlist.
 - Never pass user code to a third-party endpoint without an explicit decision.
 
 ### 6.3 Adapter expectations
+
 - Adapter functions (conceptual):
   - `runPublicTests(problem, code)` → `JudgeResult`
   - `runAllTests(problem, code)` → `JudgeResult`
@@ -301,24 +327,24 @@ Keep this aligned with the Backend API Spec:
 
 ```ts
 type PublicTestResult = {
-  index: number
-  passed: boolean
-  expected?: unknown
-  received?: unknown
-  stdout?: string
-  stderr?: string
-  error?: string
-}
+  index: number;
+  passed: boolean;
+  expected?: unknown;
+  received?: unknown;
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+};
 
 type JudgeResult = {
-  kind: 'run' | 'submit'
-  problemId: string
-  passed: boolean
-  publicTests: PublicTestResult[]
-  runtimeMs?: number
-  hiddenTestsPassed?: boolean
-  hiddenFailureMessage?: string
-}
+  kind: "run" | "submit";
+  problemId: string;
+  passed: boolean;
+  publicTests: PublicTestResult[];
+  runtimeMs?: number;
+  hiddenTestsPassed?: boolean;
+  hiddenFailureMessage?: string;
+};
 ```
 
 Rule: `RUN_CODE` must only populate public test details; `SUBMIT_CODE` may set `hiddenTestsPassed` but never include hidden case data.
@@ -326,10 +352,12 @@ Rule: `RUN_CODE` must only populate public test details; `SUBMIT_CODE` may set `
 ## 7) Supabase (packages/supabase)
 
 ### 7.1 Scope
+
 - MVP persistence: `matches` + `match_players` for end screen + leaderboard.
 - Avoid premature “accounts” work.
 
 ### 7.2 Key handling
+
 - Browser uses **anon** key only.
 - Server uses service role key only if needed.
 - Never ship service role key to client.
@@ -339,6 +367,7 @@ Rule: `RUN_CODE` must only populate public test details; `SUBMIT_CODE` may set `
 These rules exist because agents often produce generic “template UI”. Do not.
 
 ### 8.1 Non-negotiable aesthetic constraints (from UI spec)
+
 - No Inter/Roboto/system UI fonts.
 - IBM Plex Sans + IBM Plex Mono only (MVP).
 - Sharp borders; near-zero radii.
@@ -346,6 +375,7 @@ These rules exist because agents often produce generic “template UI”. Do not
 - Avoid SaaS patterns (rounded cards, hero sections, marketing navbar).
 
 ### 8.2 Tailwind v4 + daisyUI v5 setup
+
 In your global CSS:
 
 ```css
@@ -356,11 +386,13 @@ In your global CSS:
 For theme(s), define `leet99` and `leet99-flashbang` using daisyUI theme plugin. Keep radii tiny and depth off.
 
 ### 8.3 Component boundaries
+
 - `packages/ui` components are **pure**:
   - props-only, no direct WebSocket calls
 - `apps/web` binds state to UI.
 
 ### 8.4 Monaco editor
+
 - Lazy-load Monaco to reduce initial bundle impact.
 - Default focus on editor in-game.
 - Vim mode:
@@ -368,6 +400,7 @@ For theme(s), define `leet99` and `leet99-flashbang` using daisyUI theme plugin.
   - forced during debuff `vimLock`
 
 ### 8.5 Anti-patterns
+
 - Adding another icon library.
 - Using daisyUI `card`/`navbar` defaults without heavy customization.
 - Building UI state that contradicts server snapshot.
@@ -375,15 +408,18 @@ For theme(s), define `leet99` and `leet99-flashbang` using daisyUI theme plugin.
 ## 9) Project-wide Style + Quality Gates
 
 ### 9.1 TypeScript strictness
+
 - `strict: true`.
 - Avoid `any`.
 - If you must use assertions, confine to parsing/validation layers.
 
 ### 9.2 Lint/format
+
 - Prefer ESLint v9 Flat Config (`eslint.config.js`).
 - Format with Prettier; do not reformat unrelated files.
 
 ### 9.3 Testing philosophy (hackathon)
+
 - Add tests only where they save time:
   - contract schema tests
   - judge adapter tests (pure functions)
@@ -393,15 +429,18 @@ For theme(s), define `leet99` and `leet99-flashbang` using daisyUI theme plugin.
 ## 10) Agent Task Contract (How to Work Safely)
 
 When you are assigned a task, your output should include:
+
 - what files you touched
 - what contract types/events were affected (if any)
 - how to validate (commands)
 
 ### 10.1 Allowed changes
+
 - Implement a feature behind existing contracts.
 - Add small helper utilities local to your package.
 
 ### 10.2 Not allowed without explicit approval
+
 - Renaming message types or payload fields.
 - Moving folders.
 - Replacing libraries (e.g., “let’s use Zustand instead”).
@@ -410,6 +449,7 @@ When you are assigned a task, your output should include:
 ## 11) Minimal Command Set (Expected)
 
 Agents should assume the repo supports:
+
 - `pnpm i`
 - `pnpm dev` (starts `apps/web` and any required packages)
 - `pnpm lint`

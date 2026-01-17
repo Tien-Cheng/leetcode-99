@@ -3,13 +3,13 @@
 // ============================================================================
 
 // Room types
-export * from "./room";
+export * from "./room.js";
 
 // Problem types
-export * from "./problem";
+export * from "./problem.js";
 
 // WebSocket message types
-export * from "./ws";
+export * from "./ws.js";
 
 // HTTP request/response types
-export * from "./http";
+export * from "./http.js";

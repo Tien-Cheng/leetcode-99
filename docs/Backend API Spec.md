@@ -67,10 +67,10 @@ All PartyKit room messages use this JSON envelope:
 
 ```ts
 type WSMessage<TType extends string, TPayload> = {
-  type: TType
-  requestId?: string // client-generated, for correlating responses
-  payload: TPayload
-}
+  type: TType;
+  requestId?: string; // client-generated, for correlating responses
+  payload: TPayload;
+};
 ```
 
 Servers SHOULD echo `requestId` on direct responses (`JUDGE_RESULT`, `ERROR`).
@@ -116,17 +116,17 @@ Servers SHOULD echo `requestId` on direct responses (`JUDGE_RESULT`, `ERROR`).
 ### 4.1 Room settings
 
 ```ts
-type DifficultyProfile = 'beginner' | 'moderate' | 'competitive'
-type AttackIntensity = 'low' | 'high'
+type DifficultyProfile = "beginner" | "moderate" | "competitive";
+type AttackIntensity = "low" | "high";
 
 type RoomSettings = {
-  matchDurationSec: number // default 600
-  playerCap: number // human players only, default 8
-  stackLimit: number // default 10
-  startingQueued: number // default 2
-  difficultyProfile: DifficultyProfile
-  attackIntensity: AttackIntensity
-}
+  matchDurationSec: number; // default 600
+  playerCap: number; // human players only, default 8
+  stackLimit: number; // default 10
+  startingQueued: number; // default 2
+  difficultyProfile: DifficultyProfile;
+  attackIntensity: AttackIntensity;
+};
 ```
 
 Semantics (MVP):
@@ -137,40 +137,40 @@ Semantics (MVP):
 ### 4.2 Player (public)
 
 ```ts
-type PlayerRole = 'player' | 'bot' | 'spectator'
+type PlayerRole = "player" | "bot" | "spectator";
 
-type PlayerStatus = 'lobby' | 'coding' | 'error' | 'underAttack' | 'eliminated'
+type PlayerStatus = "lobby" | "coding" | "error" | "underAttack" | "eliminated";
 
-type TargetingMode = 'random' | 'attackers' | 'topScore' | 'nearDeath'
+type TargetingMode = "random" | "attackers" | "topScore" | "nearDeath";
 
-type DebuffType = 'ddos' | 'flashbang' | 'vimLock' | 'memoryLeak'
-type AttackType = DebuffType | 'garbageDrop'
+type DebuffType = "ddos" | "flashbang" | "vimLock" | "memoryLeak";
+type AttackType = DebuffType | "garbageDrop";
 
 type ActiveDebuff = {
-  type: DebuffType
-  endsAt: string // ISO timestamp
-}
+  type: DebuffType;
+  endsAt: string; // ISO timestamp
+};
 
-type BuffType = 'rateLimiter'
+type BuffType = "rateLimiter";
 
 type ActiveBuff = {
-  type: BuffType
-  endsAt: string // ISO timestamp
-}
+  type: BuffType;
+  endsAt: string; // ISO timestamp
+};
 
 type PlayerPublic = {
-  playerId: string
-  username: string
-  role: PlayerRole
-  status: PlayerStatus
-  isHost: boolean
-  score: number
-  streak: number
-  targetingMode: TargetingMode
-  stackSize: number // queued only; current excluded
-  activeDebuff?: ActiveDebuff | null
-  activeBuff?: ActiveBuff | null
-}
+  playerId: string;
+  username: string;
+  role: PlayerRole;
+  status: PlayerStatus;
+  isHost: boolean;
+  score: number;
+  streak: number;
+  targetingMode: TargetingMode;
+  stackSize: number; // queued only; current excluded
+  activeDebuff?: ActiveDebuff | null;
+  activeBuff?: ActiveBuff | null;
+};
 ```
 
 Status semantics (MVP):
@@ -186,26 +186,26 @@ Status semantics (MVP):
 Clients MUST NEVER receive `hiddenTests`.
 
 ```ts
-type Difficulty = 'easy' | 'medium' | 'hard'
+type Difficulty = "easy" | "medium" | "hard";
 
 type TestCase = {
-  input: unknown // JSON-serializable
-  output: unknown // JSON-serializable
-}
+  input: unknown; // JSON-serializable
+  output: unknown; // JSON-serializable
+};
 
 type ProblemClientView = {
-  problemId: string
-  title: string
-  prompt: string
-  functionName: string
-  signature: string
-  starterCode: string
-  publicTests: TestCase[]
-  difficulty: Difficulty
-  timeLimitMs: number
-  hintCount?: number // number of purchasable hint lines
-  isGarbage?: boolean
-}
+  problemId: string;
+  title: string;
+  prompt: string;
+  functionName: string;
+  signature: string;
+  starterCode: string;
+  publicTests: TestCase[];
+  difficulty: Difficulty;
+  timeLimitMs: number;
+  hintCount?: number; // number of purchasable hint lines
+  isGarbage?: boolean;
+};
 ```
 
 Notes:
@@ -216,38 +216,38 @@ Notes:
 
 ```ts
 type PublicTestResult = {
-  index: number
-  passed: boolean
-  expected?: unknown
-  received?: unknown
-  stdout?: string
-  stderr?: string
-  error?: string
-}
+  index: number;
+  passed: boolean;
+  expected?: unknown;
+  received?: unknown;
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+};
 
 type JudgeResult = {
-  kind: 'run' | 'submit'
-  problemId: string
-  passed: boolean
-  publicTests: PublicTestResult[]
-  runtimeMs?: number
+  kind: "run" | "submit";
+  problemId: string;
+  passed: boolean;
+  publicTests: PublicTestResult[];
+  runtimeMs?: number;
   // Hidden test failures are opaque:
-  hiddenTestsPassed?: boolean
-  hiddenFailureMessage?: string // e.g. "Failed hidden tests"
-}
+  hiddenTestsPassed?: boolean;
+  hiddenFailureMessage?: string; // e.g. "Failed hidden tests"
+};
 ```
 
 ### 4.5 Event log
 
 ```ts
-type EventLogLevel = 'info' | 'warning' | 'error'
+type EventLogLevel = "info" | "warning" | "error";
 
 type EventLogEntry = {
-  id: string
-  at: string // ISO timestamp
-  level: EventLogLevel
-  message: string
-}
+  id: string;
+  at: string; // ISO timestamp
+  level: EventLogLevel;
+  message: string;
+};
 ```
 
 ### 4.5.1 Lobby chat
@@ -255,16 +255,16 @@ type EventLogEntry = {
 Lobby chat is a separate channel from `eventLog`.
 
 ```ts
-type ChatMessageKind = 'user' | 'system'
+type ChatMessageKind = "user" | "system";
 
 type ChatMessage = {
-  id: string
-  at: string // ISO timestamp
-  kind: ChatMessageKind
-  text: string
-  fromPlayerId?: string
-  fromUsername?: string
-}
+  id: string;
+  at: string; // ISO timestamp
+  kind: ChatMessageKind;
+  text: string;
+  fromPlayerId?: string;
+  fromUsername?: string;
+};
 ```
 
 Notes:
@@ -277,28 +277,28 @@ Notes:
 
 ```ts
 type ProblemSummary = {
-  problemId: string
-  title: string
-  difficulty: Difficulty
-  isGarbage?: boolean
-}
+  problemId: string;
+  title: string;
+  difficulty: Difficulty;
+  isGarbage?: boolean;
+};
 ```
 
 ### 4.7 Match state (public)
 
 ```ts
-type MatchPhase = 'lobby' | 'warmup' | 'main' | 'boss' | 'ended'
+type MatchPhase = "lobby" | "warmup" | "main" | "boss" | "ended";
 
-type MatchEndReason = 'lastAlive' | 'timeExpired'
+type MatchEndReason = "lastAlive" | "timeExpired";
 
 type MatchPublic = {
-  matchId: string | null
-  phase: MatchPhase
-  startAt?: string
-  endAt?: string
-  endReason?: MatchEndReason
-  settings: RoomSettings
-}
+  matchId: string | null;
+  phase: MatchPhase;
+  startAt?: string;
+  endAt?: string;
+  endReason?: MatchEndReason;
+  settings: RoomSettings;
+};
 ```
 
 Semantics:
@@ -314,12 +314,12 @@ This shape is only sent to the requesting client for their own player state.
 
 ```ts
 type PlayerPrivateState = {
-  currentProblem: ProblemClientView | null
-  queued: ProblemSummary[] // top at index 0
-  code: string
-  codeVersion: number
-  revealedHints: string[] // for currentProblem only
-}
+  currentProblem: ProblemClientView | null;
+  queued: ProblemSummary[]; // top at index 0
+  code: string;
+  codeVersion: number;
+  revealedHints: string[]; // for currentProblem only
+};
 ```
 
 ### 4.9 Spectate view (read-only)
@@ -328,44 +328,44 @@ This shape is only sent to clients who are allowed to spectate a target player.
 
 ```ts
 type SpectateView = {
-  playerId: string
-  username: string
-  status: PlayerStatus
-  score: number
-  streak: number
-  targetingMode: TargetingMode
-  stackSize: number
-  activeDebuff?: ActiveDebuff | null
-  activeBuff?: ActiveBuff | null
-  currentProblem: ProblemClientView | null
-  queued: ProblemSummary[]
-  code: string
-  codeVersion: number
-  revealedHints: string[]
-}
+  playerId: string;
+  username: string;
+  status: PlayerStatus;
+  score: number;
+  streak: number;
+  targetingMode: TargetingMode;
+  stackSize: number;
+  activeDebuff?: ActiveDebuff | null;
+  activeBuff?: ActiveBuff | null;
+  currentProblem: ProblemClientView | null;
+  queued: ProblemSummary[];
+  code: string;
+  codeVersion: number;
+  revealedHints: string[];
+};
 ```
 
 ### 4.10 Room snapshot (server → client)
 
 ```ts
 type RoomSnapshot = {
-  roomId: string
-  serverTime: string
+  roomId: string;
+  serverTime: string;
   me: {
-    playerId: string
-    username: string
-    role: PlayerRole
-    isHost: boolean
-    status: PlayerStatus
-  }
-  players: PlayerPublic[]
-  match: MatchPublic
-  shopCatalog?: ShopCatalogItem[]
-  self?: PlayerPrivateState
-  spectating?: SpectateView | null
-  chat: ChatMessage[]
-  eventLog: EventLogEntry[]
-}
+    playerId: string;
+    username: string;
+    role: PlayerRole;
+    isHost: boolean;
+    status: PlayerStatus;
+  };
+  players: PlayerPublic[];
+  match: MatchPublic;
+  shopCatalog?: ShopCatalogItem[];
+  self?: PlayerPrivateState;
+  spectating?: SpectateView | null;
+  chat: ChatMessage[];
+  eventLog: EventLogEntry[];
+};
 ```
 
 Notes:
@@ -377,13 +377,18 @@ Notes:
 ### 4.11 Shop
 
 ```ts
-type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' | 'hint'
+type ShopItem =
+  | "clearDebuff"
+  | "memoryDefrag"
+  | "skipProblem"
+  | "rateLimiter"
+  | "hint";
 
 type ShopCatalogItem = {
-  item: ShopItem
-  cost: number
-  cooldownSec?: number
-}
+  item: ShopItem;
+  cost: number;
+  cooldownSec?: number;
+};
 ```
 
 Recommended MVP catalog (server-defined, sent via `shopCatalog`):
@@ -619,8 +624,20 @@ Response `200`:
     }
   },
   "standings": [
-    { "rank": 1, "playerId": "p_123", "username": "alice", "role": "player", "score": 120 },
-    { "rank": 2, "playerId": "p_bot1", "username": "Bot 1", "role": "bot", "score": 80 }
+    {
+      "rank": 1,
+      "playerId": "p_123",
+      "username": "alice",
+      "role": "player",
+      "score": 120
+    },
+    {
+      "rank": 2,
+      "playerId": "p_bot1",
+      "username": "Bot 1",
+      "role": "bot",
+      "score": 80
+    }
   ]
 }
 ```
@@ -663,13 +680,19 @@ Semantics (MVP):
 - Since there are no accounts, `username` is not globally unique (duplicates possible).
 - `window` is reserved for future filtering; MVP supports `window=all`.
 
-Response `200`: 
+Response `200`:
 
 ```json
 {
   "window": "all",
   "entries": [
-    { "rank": 1, "username": "alice", "score": 120, "matchId": "m_123", "at": "2026-01-16T12:10:00.000Z" }
+    {
+      "rank": 1,
+      "username": "alice",
+      "score": 120,
+      "matchId": "m_123",
+      "at": "2026-01-16T12:10:00.000Z"
+    }
   ]
 }
 ```
@@ -701,7 +724,7 @@ Auth failure:
 
 - If `playerToken` is invalid or does not belong to this `roomId`, server sends `ERROR` with `code="UNAUTHORIZED"` and closes the socket.
 
-Server → Client `ROOM_SNAPSHOT`: 
+Server → Client `ROOM_SNAPSHOT`:
 
 ```json
 {
@@ -1138,9 +1161,7 @@ Sent to:
     "kind": "submit",
     "problemId": "two-sum",
     "passed": true,
-    "publicTests": [
-      { "index": 0, "passed": true }
-    ],
+    "publicTests": [{ "index": 0, "passed": true }],
     "hiddenTestsPassed": true,
     "runtimeMs": 42
   }
@@ -1310,7 +1331,13 @@ Rules:
     "endReason": "timeExpired",
     "winnerPlayerId": "p_123",
     "standings": [
-      { "rank": 1, "playerId": "p_123", "username": "alice", "role": "player", "score": 120 }
+      {
+        "rank": 1,
+        "playerId": "p_123",
+        "username": "alice",
+        "role": "player",
+        "score": 120
+      }
     ]
   }
 }
