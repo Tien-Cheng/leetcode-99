@@ -20,7 +20,7 @@ export * from "./problem-display";
 export * from "./shop-modal";
 export * from "./timer";
 
-// Editor wrapper (to be added - requires Monaco integration)
-// export * from './editor-wrapper'
+// Editor wrapper
+export * from "./editor-wrapper";
 
 export const UI_VERSION = "0.1.0";
