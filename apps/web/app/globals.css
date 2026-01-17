@@ -225,7 +225,8 @@ select:focus {
 }
 
 @keyframes pulseRed {
-  0%, 100% {
+  0%,
+  100% {
     border-color: #ff4444;
     box-shadow: 0 0 0 rgba(255, 68, 68, 0);
   }
@@ -240,7 +241,8 @@ select:focus {
 }
 
 @keyframes pulseAmber {
-  0%, 100% {
+  0%,
+  100% {
     border-color: #ffb000;
     box-shadow: 0 0 0 rgba(255, 176, 0, 0);
   }
@@ -280,6 +282,632 @@ select:focus {
     rgba(74, 85, 104, 0.3) 10px,
     rgba(74, 85, 104, 0.3) 20px
   );
+}
+
+/* ============================================================================
+ * Dynamic Gameplay Effects - Animations
+ * ============================================================================ */
+
+/* Screen shake on attack received */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Intense shake for critical events */
+@keyframes shakeIntense {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  10% {
+    transform: translate(-6px, -2px) rotate(-1deg);
+  }
+  20% {
+    transform: translate(6px, 2px) rotate(1deg);
+  }
+  30% {
+    transform: translate(-6px, 2px) rotate(0deg);
+  }
+  40% {
+    transform: translate(6px, -2px) rotate(1deg);
+  }
+  50% {
+    transform: translate(-4px, 2px) rotate(-1deg);
+  }
+  60% {
+    transform: translate(4px, -1px) rotate(0deg);
+  }
+  70% {
+    transform: translate(-4px, 1px) rotate(-1deg);
+  }
+  80% {
+    transform: translate(4px, 1px) rotate(1deg);
+  }
+  90% {
+    transform: translate(-2px, -1px) rotate(0deg);
+  }
+}
+
+.animate-shake-intense {
+  animation: shakeIntense 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Score pop animation */
+@keyframes scorePop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-score-pop {
+  animation: scorePop 0.3s ease-out;
+}
+
+/* Flying score points */
+@keyframes flyUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.5);
+  }
+}
+
+.animate-fly-up {
+  animation: flyUp 1s ease-out forwards;
+}
+
+/* Success flash - green border glow */
+@keyframes successFlash {
+  0% {
+    box-shadow: 0 0 0 rgba(80, 250, 123, 0);
+    border-color: inherit;
+  }
+  30% {
+    box-shadow:
+      0 0 30px rgba(80, 250, 123, 0.8),
+      inset 0 0 20px rgba(80, 250, 123, 0.2);
+    border-color: #50fa7b;
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(80, 250, 123, 0);
+    border-color: inherit;
+  }
+}
+
+.animate-success-flash {
+  animation: successFlash 0.8s ease-out;
+}
+
+/* Error flash - red border glow */
+@keyframes errorFlash {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 68, 68, 0);
+    border-color: inherit;
+  }
+  30% {
+    box-shadow:
+      0 0 30px rgba(255, 68, 68, 0.8),
+      inset 0 0 20px rgba(255, 68, 68, 0.2);
+    border-color: #ff4444;
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(255, 68, 68, 0);
+    border-color: inherit;
+  }
+}
+
+.animate-error-flash {
+  animation: errorFlash 0.6s ease-out;
+}
+
+/* Attack received - red vignette */
+@keyframes attackVignette {
+  0% {
+    box-shadow: inset 0 0 0 rgba(255, 68, 68, 0);
+  }
+  20% {
+    box-shadow: inset 0 0 100px 50px rgba(255, 68, 68, 0.3);
+  }
+  100% {
+    box-shadow: inset 0 0 0 rgba(255, 68, 68, 0);
+  }
+}
+
+.animate-attack-vignette {
+  animation: attackVignette 0.8s ease-out;
+}
+
+/* Confetti particle base */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confettiFall 2s ease-out forwards;
+}
+
+/* Counter roll-up effect */
+@keyframes counterRoll {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-counter-roll {
+  animation: counterRoll 0.3s ease-out;
+}
+
+/* Glow pulse for active states */
+@keyframes glowPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow:
+      0 0 20px currentColor,
+      0 0 40px currentColor;
+  }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 1.5s ease-in-out infinite;
+}
+
+/* Fire effect for high streaks */
+@keyframes fireGlow {
+  0%,
+  100% {
+    text-shadow:
+      0 0 4px #ff6b35,
+      0 0 11px #f7c873,
+      0 0 19px #f7c873;
+  }
+  33% {
+    text-shadow:
+      0 0 6px #ff6b35,
+      0 0 15px #f7c873,
+      0 0 25px #ff6b35;
+  }
+  66% {
+    text-shadow:
+      0 0 3px #ff6b35,
+      0 0 9px #f7c873,
+      0 0 14px #f7c873;
+  }
+}
+
+.animate-fire {
+  animation: fireGlow 0.5s ease-in-out infinite;
+  color: #ffb000;
+}
+
+/* Static noise for DDOS */
+@keyframes staticNoise {
+  0%,
+  100% {
+    background-position: 0 0;
+  }
+  10% {
+    background-position: -5% -10%;
+  }
+  20% {
+    background-position: -15% 5%;
+  }
+  30% {
+    background-position: 7% -25%;
+  }
+  40% {
+    background-position: 20% 25%;
+  }
+  50% {
+    background-position: -25% 10%;
+  }
+  60% {
+    background-position: 15% 5%;
+  }
+  70% {
+    background-position: 0% 15%;
+  }
+  80% {
+    background-position: 25% 35%;
+  }
+  90% {
+    background-position: -10% 10%;
+  }
+}
+
+.ddos-static-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  animation: staticNoise 0.2s steps(10) infinite;
+}
+
+/* Glitch effect for memory leak */
+@keyframes glitch {
+  0% {
+    clip-path: inset(40% 0 61% 0);
+    transform: translate(-2px, 2px);
+  }
+  20% {
+    clip-path: inset(92% 0 1% 0);
+    transform: translate(2px, -2px);
+  }
+  40% {
+    clip-path: inset(43% 0 1% 0);
+    transform: translate(-2px, 0);
+  }
+  60% {
+    clip-path: inset(25% 0 58% 0);
+    transform: translate(2px, 2px);
+  }
+  80% {
+    clip-path: inset(54% 0 7% 0);
+    transform: translate(-2px, -2px);
+  }
+  100% {
+    clip-path: inset(58% 0 43% 0);
+    transform: translate(0);
+  }
+}
+
+.glitch-text {
+  position: relative;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch-text::before {
+  animation: glitch 0.3s infinite;
+  color: #ff4444;
+  z-index: -1;
+}
+
+.glitch-text::after {
+  animation: glitch 0.3s infinite reverse;
+  color: #00ffd5;
+  z-index: -1;
+}
+
+/* Vim cursor blink */
+@keyframes vimCursor {
+  0%,
+  100% {
+    border-left: 2px solid #50fa7b;
+    box-shadow: -2px 0 0 #50fa7b;
+  }
+  50% {
+    border-left: 2px solid transparent;
+    box-shadow: none;
+  }
+}
+
+.vim-cursor-blink {
+  animation: vimCursor 0.8s step-end infinite;
+}
+
+/* Timer urgency animations */
+@keyframes timerWarning {
+  0%,
+  100% {
+    color: #ffb000;
+    text-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
+  }
+  50% {
+    color: #ffcc00;
+    text-shadow: 0 0 20px rgba(255, 204, 0, 0.8);
+  }
+}
+
+@keyframes timerCritical {
+  0%,
+  100% {
+    color: #ff4444;
+    text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    color: #ff6666;
+    text-shadow: 0 0 25px rgba(255, 68, 68, 0.9);
+    transform: scale(1.05);
+  }
+}
+
+.timer-warning {
+  animation: timerWarning 1s ease-in-out infinite;
+}
+
+.timer-critical {
+  animation: timerCritical 0.5s ease-in-out infinite;
+}
+
+/* Slide animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInBottom {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.2s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.2s ease-out;
+}
+
+.animate-slide-in-bottom {
+  animation: slideInBottom 0.2s ease-out;
+}
+
+/* Fade animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+
+/* Explosion effect for eliminations */
+@keyframes explosion {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.8);
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+}
+
+.animate-explosion {
+  animation: explosion 0.5s ease-out forwards;
+}
+
+/* Typing indicator pulse */
+@keyframes typingPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(0, 255, 213, 0);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(0, 255, 213, 0.6);
+  }
+}
+
+.animate-typing {
+  animation: typingPulse 0.8s ease-in-out infinite;
+}
+
+/* Progress bar animation */
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-progress {
+  animation: progressShrink var(--duration, 5s) linear forwards;
+}
+
+/* Continuous spin for loading */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Border trace animation */
+@keyframes borderTrace {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+.border-trace {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #00ffd5 25%,
+    transparent 50%,
+    #00ffd5 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: borderTrace 2s linear infinite;
+}
+
+/* Toast slide in/out */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.3s ease-out;
+}
+
+.animate-toast-out {
+  animation: toastSlideOut 0.3s ease-out forwards;
+}
+
+/* Rainbow border for special events */
+@keyframes rainbowBorder {
+  0% {
+    border-color: #ff0000;
+  }
+  17% {
+    border-color: #ff8800;
+  }
+  33% {
+    border-color: #ffff00;
+  }
+  50% {
+    border-color: #00ff00;
+  }
+  67% {
+    border-color: #0088ff;
+  }
+  83% {
+    border-color: #8800ff;
+  }
+  100% {
+    border-color: #ff0000;
+  }
+}
+
+.animate-rainbow-border {
+  animation: rainbowBorder 2s linear infinite;
+}
+
+/* Text reveal typing effect */
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.animate-typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 1s steps(30) forwards;
 }
 
 /* Disable animations for reduced motion */

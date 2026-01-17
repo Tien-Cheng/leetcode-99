@@ -137,6 +137,8 @@ export function GameStateProvider({
     setRoomSettings(payload.match.settings);
     setMatchPhase(payload.match.phase);
     setMatchEndAt(payload.match.endAt || null);
+
+    // HEAD logic: Snapshot has standings
     if (payload.match.standings) {
       console.log("[WS] Snapshot has standings, setting results");
       setMatchEndResult({
@@ -145,7 +147,13 @@ export function GameStateProvider({
         winnerPlayerId: payload.match.standings.find((s: StandingEntry) => s.rank === 1)?.playerId || "",
         standings: payload.match.standings
       });
+    } else {
+      // Just in case we need to clear it or if we are not in ended state
+      if (payload.match.phase !== "ended") {
+        setMatchEndResult(null);
+      }
     }
+
     setUsername(payload.me.username);
     setIsHost(payload.me.isHost);
     setChat(payload.chat);
@@ -184,6 +192,7 @@ export function GameStateProvider({
     (payload: MatchStartedPayload) => {
       setMatchPhase(payload.match.phase);
       setMatchEndAt(payload.match.endAt || null);
+      setMatchEndResult(null); // Clear results when match starts
     },
     []
   );
