@@ -104,7 +104,7 @@ export const SpectateViewSchema = z.object({
   status: z.enum(["lobby", "coding", "error", "underAttack", "eliminated"]),
   score: z.number().int(),
   streak: z.number().int(),
-  targetingMode: z.enum(["random", "attackers", "topScore", "nearDeath"]),
+  targetingMode: z.enum(["random", "attackers", "topScore", "nearDeath", "rankAbove"]),
   stackSize: z.number().int(),
   activeDebuff: z
     .object({

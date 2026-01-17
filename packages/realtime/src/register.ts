@@ -1,3 +1,5 @@
+import type { TargetingMode } from "@leet99/contracts";
+
 export type MatchPhase = "lobby" | "warmup" | "main" | "boss" | "ended";
 
 export type RoomSettings = {
@@ -40,7 +42,7 @@ export interface PlayerInternal {
   status: "lobby" | "coding" | "error" | "underAttack" | "eliminated";
   score: number;
   streak: number;
-  targetingMode: "random" | "attackers" | "topScore" | "nearDeath";
+  targetingMode: TargetingMode;
   stackSize: number;
   activeDebuff: { type: string; endsAt: string } | null;
   activeBuff: { type: string; endsAt: string } | null;
