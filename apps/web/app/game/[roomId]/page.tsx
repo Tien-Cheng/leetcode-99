@@ -185,7 +185,7 @@ function GamePageContent() {
           </Panel>
 
           {/* Terminal Log */}
-          <Panel title="TERMINAL LOG" className="h-32 flex-shrink-0">
+          <Panel title="TERMINAL LOG" className="h-32 flex-shrink-0" noPadding>
             <TerminalLog messages={terminalMessages} />
           </Panel>
 

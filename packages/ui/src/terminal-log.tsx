@@ -54,7 +54,7 @@ export function TerminalLog({
   return (
     <div
       ref={logRef}
-      className={`overflow-y-auto space-y-1 font-mono text-sm ${className}`}
+      className={`h-full overflow-y-auto p-2 space-y-1 font-mono text-sm ${className}`}
     >
       {displayMessages.map((message, index) => (
         <div
