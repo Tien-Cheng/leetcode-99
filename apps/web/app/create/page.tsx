@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function CreateRoomPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
-  const [duration, setDuration] = useState("2");
+  const [duration, setDuration] = useState("120");
   const [difficulty, setDifficulty] = useState("moderate");
   const [attackIntensity, setAttackIntensity] = useState("low");
   const [error, setError] = useState("");
@@ -131,10 +131,11 @@ export default function CreateRoomPage() {
               onChange={(e) => setDuration(e.target.value)}
               disabled={loading}
               options={[
-                { value: "2", label: "2 minutes" },
-                { value: "6", label: "6 minutes" },
-                { value: "8", label: "8 minutes" },
-                { value: "10", label: "10 minutes" },
+                { value: "3", label: "3 seconds (Test)" },
+                { value: "120", label: "2 minutes" },
+                { value: "360", label: "6 minutes" },
+                { value: "480", label: "8 minutes" },
+                { value: "600", label: "10 minutes" },
               ]}
             />
 

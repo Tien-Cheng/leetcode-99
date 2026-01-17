@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Panel,
@@ -28,6 +27,7 @@ import { GameWrapper } from "./game-wrapper";
 function GamePageContent() {
   const params = useParams();
   const roomId = params.roomId as string;
+  const router = useRouter();
 
   // Game state from context
   const {
@@ -56,7 +56,8 @@ function GamePageContent() {
     isHost,
   } = useGameState();
 
-  const router = useRouter();
+  // Effects system
+  const { triggerEffect } = useGameEffects();
 
   // Hotkey state
   const { vimMode, setVimMode } = useHotkeys();
