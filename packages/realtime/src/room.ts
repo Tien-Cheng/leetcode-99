@@ -69,10 +69,12 @@ const BASE_DEBUFF_DURATIONS: Record<DebuffType, number> = {
 
 const DEBUFF_GRACE_PERIOD_MS = 5000; // 5s immunity after debuff ends
 
+const DEBUG_TIMERS = true;
+
 // ============================================================================
 // Scoring Constants (per spec section 8.2)
 // ============================================================================
-
+ 
 const DIFFICULTY_SCORES: Record<"easy" | "medium" | "hard", number> = {
   easy: 5,
   medium: 10,
@@ -279,24 +281,6 @@ export default class Room implements Party.Server {
         } else {
           // No arrival scheduled, schedule one
           await this.scheduleNextProblemArrival();
-        }
-
-        // Reschedule phase transition if in warmup
-        if (this.state.match.phase === "warmup" && this.state.match.startAt) {
-          const warmupEndAt =
-            new Date(this.state.match.startAt).getTime() +
-            this.state.settings.matchDurationSec * 1000 * 0.1;
-          if (warmupEndAt > now) {
-            await this.room.storage.setAlarm(warmupEndAt);
-          }
-        }
-
-        // Reschedule match end check
-        if (this.state.match.endAt) {
-          const matchEndAt = new Date(this.state.match.endAt).getTime();
-          if (matchEndAt > now) {
-            await this.room.storage.setAlarm(matchEndAt);
-          }
         }
 
         // Reschedule bot actions
@@ -795,10 +779,6 @@ export default class Room implements Party.Server {
 
     // Persist
     await this.persistState();
-
-    // Schedule warmup -> main transition
-    const warmupDurationMs = this.state.settings.matchDurationSec * 1000 * 0.1;
-    await this.room.storage.setAlarm(Date.now() + warmupDurationMs);
 
     // Schedule first problem arrival
     await this.scheduleNextProblemArrival();
@@ -1733,7 +1713,10 @@ export default class Room implements Party.Server {
     // For simplicity, we'll handle debuff expiry in onAlarm
     // The alarm system will check for expired debuffs
     const expiryAt = Date.now() + durationMs;
-    await this.room.storage.setAlarm(expiryAt);
+    if (player.activeDebuff) {
+      player.activeDebuff.endsAt = new Date(expiryAt).toISOString();
+    }
+    await this.scheduleNextAlarm();
   }
 
   private handleExpiredDebuffs() {
@@ -1991,7 +1974,7 @@ export default class Room implements Party.Server {
     }
 
     this.state.nextBotActionAt = earliestActionAt;
-    await this.room.storage.setAlarm(earliestActionAt);
+    await this.scheduleNextAlarm();
   }
 
   private async handleBotActions() {
@@ -2622,6 +2605,12 @@ export default class Room implements Party.Server {
       // Check if enough time has passed for this player
       const timeSinceLastArrival = now - player.lastProblemArrivalAt;
       if (timeSinceLastArrival >= effectiveIntervalMs) {
+        if (DEBUG_TIMERS) {
+          console.log(
+            `[${this.state.roomId}] Problem due for ${player.username}: ` +
+              `since=${timeSinceLastArrival}ms interval=${effectiveIntervalMs}ms`,
+          );
+        }
         try {
           const problem = this.sampleProblem(player.playerId, false); // Allow garbage
           const eliminated = this.addProblemToQueue(player, problem);
@@ -2636,10 +2625,23 @@ export default class Room implements Party.Server {
               `[${this.state.roomId}] Player ${player.username} eliminated by stack overflow`,
             );
           } else {
+            if (DEBUG_TIMERS) {
+              console.log(
+                `[${this.state.roomId}] Added problem to ${player.username} queue: ` +
+                  `${problem.problemId}`,
+              );
+            }
             // Broadcast stack update for this player
             this.broadcastPlayerUpdate(player);
             this.broadcastStackUpdate(player);
             this.updateSpectators(player);
+
+            // Send updated private snapshot so the client queue reflects timed arrivals
+            const conn = this.getPlayerConnection(player);
+            if (conn) {
+              const snapshot = this.buildRoomSnapshot(player);
+              conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+            }
           }
         } catch (error) {
           console.error(
@@ -2737,8 +2739,17 @@ export default class Room implements Party.Server {
     }
 
     this.state.nextProblemArrivalAt = nextArrivalAt;
+    await this.scheduleNextAlarm();
+  }
 
-    // Schedule alarm (use the earlier of phase transition, problem arrival, bot action, or match end)
+  /**
+   * Schedule the next alarm based on the earliest pending event.
+   */
+  private async scheduleNextAlarm(): Promise<void> {
+    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+      return;
+    }
+
     const warmupEndAt =
       this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
@@ -2749,13 +2760,51 @@ export default class Room implements Party.Server {
       ? new Date(this.state.match.endAt).getTime()
       : Infinity;
 
+    const nextArrivalAt = this.state.nextProblemArrivalAt ?? Infinity;
     const botActionAt = this.state.nextBotActionAt ?? Infinity;
 
-    const alarmAt = Math.min(nextArrivalAt, warmupEndAt, matchEndAt, botActionAt);
-    await this.room.storage.setAlarm(alarmAt);
+    let effectExpiryAt = Infinity;
+    for (const player of this.state.players.values()) {
+      if (player.activeDebuff) {
+        effectExpiryAt = Math.min(
+          effectExpiryAt,
+          new Date(player.activeDebuff.endsAt).getTime(),
+        );
+      }
+      if (player.activeBuff) {
+        effectExpiryAt = Math.min(
+          effectExpiryAt,
+          new Date(player.activeBuff.endsAt).getTime(),
+        );
+      }
+    }
 
+    const alarmAt = Math.min(
+      nextArrivalAt,
+      warmupEndAt,
+      matchEndAt,
+      botActionAt,
+      effectExpiryAt,
+    );
+    if (!Number.isFinite(alarmAt)) {
+      return;
+    }
+
+    const now = Date.now();
+    const scheduledAt = alarmAt <= now ? now + 100 : alarmAt;
+    if (DEBUG_TIMERS) {
+      console.log(
+        `[${this.state.roomId}] scheduleNextAlarm ` +
+          `arrival=${nextArrivalAt === Infinity ? "∞" : new Date(nextArrivalAt).toISOString()} ` +
+          `warmupEnd=${warmupEndAt === Infinity ? "∞" : new Date(warmupEndAt).toISOString()} ` +
+          `matchEnd=${matchEndAt === Infinity ? "∞" : new Date(matchEndAt).toISOString()} ` +
+          `bot=${botActionAt === Infinity ? "∞" : new Date(botActionAt).toISOString()} ` +
+          `effect=${effectExpiryAt === Infinity ? "∞" : new Date(effectExpiryAt).toISOString()}`,
+      );
+    }
+    await this.room.storage.setAlarm(scheduledAt);
     console.log(
-      `[${this.state.roomId}] Scheduled next alarm at ${new Date(alarmAt).toISOString()}`,
+      `[${this.state.roomId}] Scheduled next alarm at ${new Date(scheduledAt).toISOString()}`,
     );
   }
 
@@ -2866,6 +2915,17 @@ export default class Room implements Party.Server {
   async onAlarm() {
     const now = Date.now();
 
+    if (DEBUG_TIMERS) {
+      console.log(
+        `[${this.state.roomId}] onAlarm now=${new Date(now).toISOString()} ` +
+          `phase=${this.state.match.phase} ` +
+          `nextArrival=${this.state.nextProblemArrivalAt ? new Date(this.state.nextProblemArrivalAt).toISOString() : "null"} ` +
+          `nextBot=${this.state.nextBotActionAt ? new Date(this.state.nextBotActionAt).toISOString() : "null"}`,
+      );
+    }
+
+    let didWork = false;
+
     // Handle expired debuffs and buffs
     this.handleExpiredDebuffs();
 
@@ -2884,6 +2944,7 @@ export default class Room implements Party.Server {
       now >= this.state.nextBotActionAt
     ) {
       await this.handleBotActions();
+      didWork = true;
     }
 
     // Check if it's time for problem arrivals
@@ -2913,6 +2974,11 @@ export default class Room implements Party.Server {
 
       // Reschedule problem arrivals with new phase interval
       await this.scheduleNextProblemArrival();
+      didWork = true;
+    }
+
+    if (!didWork) {
+      await this.scheduleNextAlarm();
     }
   }
 
