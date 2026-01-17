@@ -14,13 +14,17 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "tsx test.ts",
+    "test:build": "pnpm build && node dist/test.js"
   },
   "dependencies": {
     "@leet99/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "dotenv": "^17.2.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.0"
   }
 }
