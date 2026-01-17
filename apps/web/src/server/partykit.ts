@@ -13,7 +13,11 @@ export function partyBaseUrl(): string {
 }
 
 export function partyName(): string {
-  return process.env.PARTYKIT_PARTY || "main";
+  return (
+    process.env.PARTYKIT_PARTY ||
+    process.env.PARTYKIT_PROJECT ||
+    "leet99"
+  );
 }
 
 function partyRoomPath(roomId: string): string {
