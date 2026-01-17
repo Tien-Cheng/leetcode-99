@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@leet99/contracts": "workspace:*",
+    "@leet99/judge": "workspace:*",
     "partykit": "0.0.115"
   },
   "devDependencies": {
