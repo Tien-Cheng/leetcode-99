@@ -6,7 +6,7 @@ import { Panel, Button } from "@leet99/ui";
 
 export default function SpectatePage() {
   const params = useParams();
-  const roomId = params.roomId as string;
+  const _roomId = params.roomId as string;
   const [spectating, setSpectating] = useState("alice");
 
   return (
@@ -19,7 +19,13 @@ export default function SpectatePage() {
             SPECTATING: {spectating}
           </span>
         </div>
-        <Button variant="ghost" hotkey="Tab" onClick={() => setSpectating(spectating === "alice" ? "bob" : "alice")}>
+        <Button
+          variant="ghost"
+          hotkey="Tab"
+          onClick={() =>
+            setSpectating(spectating === "alice" ? "bob" : "alice")
+          }
+        >
           Switch Player
         </Button>
       </div>
@@ -60,13 +66,17 @@ export default function SpectatePage() {
                 <br />
                 &nbsp;&nbsp;&nbsp;&nbsp;for i, num in enumerate(nums):
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;complement = target - num
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;complement =
+                target - num
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if complement in hash_map:
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if complement in
+                hash_map:
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return [hash_map[complement], i]
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return
+                [hash_map[complement], i]
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hash_map[num] = i
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hash_map[num] =
+                i
               </code>
             </div>
           </Panel>
@@ -75,8 +85,12 @@ export default function SpectatePage() {
           <Panel title="TERMINAL LOG" className="h-32">
             <div className="space-y-1 font-mono text-xs">
               <div className="text-success">&gt; Match started</div>
-              <div className="text-base-content">&gt; {spectating} is solving Two Sum...</div>
-              <div className="text-success">&gt; {spectating} passed all public tests</div>
+              <div className="text-base-content">
+                &gt; {spectating} is solving Two Sum...
+              </div>
+              <div className="text-success">
+                &gt; {spectating} passed all public tests
+              </div>
             </div>
           </Panel>
 
@@ -106,7 +120,13 @@ export default function SpectatePage() {
               ].map((player, i) => (
                 <button
                   key={i}
-                  onClick={() => player.name === "al" ? setSpectating("alice") : player.name === "bo" ? setSpectating("bob") : null}
+                  onClick={() =>
+                    player.name === "al"
+                      ? setSpectating("alice")
+                      : player.name === "bo"
+                        ? setSpectating("bob")
+                        : null
+                  }
                   className={`
                     aspect-square flex items-center justify-center
                     border text-xs font-mono

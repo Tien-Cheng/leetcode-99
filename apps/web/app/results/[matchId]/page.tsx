@@ -6,7 +6,7 @@ import { Button, Panel } from "@leet99/ui";
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const matchId = params.matchId as string;
+  const _matchId = params.matchId as string;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -114,7 +114,11 @@ export default function ResultsPage() {
 
         {/* Actions */}
         <div className="flex justify-center gap-4">
-          <Button variant="primary" hotkey="Enter" onClick={() => router.push("/")}>
+          <Button
+            variant="primary"
+            hotkey="Enter"
+            onClick={() => router.push("/")}
+          >
             Return to Lobby
           </Button>
           <Button variant="ghost" hotkey="Esc" onClick={() => router.push("/")}>

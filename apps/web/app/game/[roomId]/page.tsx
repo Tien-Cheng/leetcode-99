@@ -69,8 +69,11 @@ function GamePageContent() {
   const { vimMode, setVimMode } = useHotkeys();
 
   // Local editor state
-  const [code, setCode] = useState(currentProblem?.starterCode || "");
+  const [code, setCode] = useState(
+    currentProblem?.problemType === "code" ? currentProblem.starterCode : ""
+  );
   const [codeVersion, setCodeVersion] = useState(1);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
   const [shopError, setShopError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -85,9 +88,17 @@ function GamePageContent() {
   // Update code when problem changes
   useEffect(() => {
     if (currentProblem) {
-      setCode(currentProblem.starterCode);
+      if (currentProblem.problemType === "code") {
+        setCode(currentProblem.starterCode);
+      } else {
+        setCode("");
+      }
       setCodeVersion(1);
+      setSelectedOptionId(null);
+      // Clear judge result when problem changes
+      // The judge result will be set when we get a new JUDGE_RESULT message
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProblem?.problemId]);
 
   // Trigger effects on score change
@@ -138,16 +149,19 @@ function GamePageContent() {
     }
   }, [activeDebuff, code, isRunning, runCode]);
 
-  // Handle Submit code
+  // Handle Submit code / option
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await submitCode(code);
+      const submission = currentProblem?.problemType === "mcq"
+        ? (selectedOptionId || "")
+        : code;
+      await submitCode(submission);
     } finally {
       setIsSubmitting(false);
     }
-  }, [code, isSubmitting, submitCode]);
+  }, [code, isSubmitting, submitCode, currentProblem, selectedOptionId]);
 
   // Handle shop toggle
   const handleShopToggle = () => {
@@ -169,7 +183,9 @@ function GamePageContent() {
   // Register global shortcuts
   useKeyboardShortcuts({
     shortcuts: [
-      { key: "r", altKey: true, action: handleRun, description: "Run Code" },
+      ...(currentProblem?.problemType === "code"
+        ? [{ key: "r", altKey: true, action: handleRun, description: "Run Code" }]
+        : []),
       {
         key: "s",
         altKey: true,
@@ -463,19 +479,50 @@ function GamePageContent() {
                 title: currentProblem.title,
                 difficulty: currentProblem.difficulty,
                 prompt: currentProblem.prompt,
-                signature: currentProblem.signature,
-                publicTests: currentProblem.publicTests.map((t) => ({
-                  input: String(t.input),
-                  output: String(t.output),
-                })),
+                signature:
+                  currentProblem.problemType === "code"
+                    ? (currentProblem as Extract<
+                      typeof currentProblem,
+                      { problemType: "code" }
+                    >).signature
+                    : "",
+                publicTests:
+                  currentProblem.problemType === "code"
+                    ? (
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "code" }
+                      >
+                    ).publicTests.map((t) => ({
+                      input: String(t.input ?? ""),
+                      output: String(t.output ?? ""),
+                    }))
+                    : [],
                 isGarbage: currentProblem.isGarbage,
+                problemType: currentProblem.problemType,
+                options:
+                  currentProblem.problemType === "mcq"
+                    ? (
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "mcq" }
+                      >
+                    ).options
+                    : undefined,
+                selectedOptionId: selectedOptionId || undefined,
+                onOptionSelect: (id) => setSelectedOptionId(id),
               }}
-              testResults={lastJudgeResult?.publicTests.map((t) => ({
-                index: t.index,
-                passed: t.passed,
-                expected: t.expected ? String(t.expected) : undefined,
-                received: t.received ? String(t.received) : undefined,
-              }))}
+              testResults={
+                lastJudgeResult &&
+                  lastJudgeResult.problemId === currentProblem.problemId
+                  ? lastJudgeResult.publicTests.map((t) => ({
+                    index: t.index,
+                    passed: t.passed,
+                    expected: t.expected ? String(t.expected) : undefined,
+                    received: t.received ? String(t.received) : undefined,
+                  }))
+                  : []
+              }
             />
           ) : (
             <Panel title="PROBLEM" className="h-full">
@@ -499,15 +546,21 @@ function GamePageContent() {
             className={`flex-1 min-h-0 ${vimLocked ? "vim-cursor-blink" : ""}`}
             noPadding
           >
-            <EditorWrapper
-              code={code}
-              onChange={handleCodeChange}
-              language="python"
-              vimMode={vimMode}
-              vimLocked={vimLocked}
-              onVimModeChange={setVimMode}
-              className="h-full"
-            />
+            {currentProblem?.problemType === "mcq" ? (
+              <div className="flex items-center justify-center h-full text-muted font-mono text-sm border-2 border-dashed border-secondary m-4">
+                Select an option on the left to solve this problem
+              </div>
+            ) : (
+              <EditorWrapper
+                code={code}
+                onChange={handleCodeChange}
+                language="python"
+                vimMode={vimMode}
+                vimLocked={vimLocked}
+                onVimModeChange={setVimMode}
+                className="h-full"
+              />
+            )}
           </Panel>
 
           {/* Horizontal Resizer */}
@@ -532,21 +585,22 @@ function GamePageContent() {
             flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0
             transition-all duration-300
             ${ddosActive ? "border-error animate-pulse-red" : ""}
-          `}
-          >
-            <Button
-              variant="primary"
-              hotkey="Alt+R"
-              onClick={handleRun}
-              disabled={ddosActive || isRunning}
-              className={`
-                transition-all duration-200
-                ${ddosActive ? "opacity-50 cursor-not-allowed" : ""}
-                ${isRunning ? "animate-pulse" : ""}
-              `}
-            >
-              {isRunning ? "Running..." : "Run"}
-            </Button>
+          `}>
+            {currentProblem?.problemType === "code" && (
+              <Button
+                variant="primary"
+                hotkey="Alt+R"
+                onClick={handleRun}
+                disabled={ddosActive || isRunning}
+                className={`
+                  transition-all duration-200
+                  ${ddosActive ? "opacity-50 cursor-not-allowed" : ""}
+                  ${isRunning ? "animate-pulse" : ""}
+                `}
+              >
+                {isRunning ? "Running..." : "Run"}
+              </Button>
+            )}
             <Button
               variant="primary"
               hotkey="Alt+S"
@@ -584,7 +638,7 @@ function GamePageContent() {
                     0,
                     Math.ceil(
                       (new Date(activeBuff.endsAt).getTime() - Date.now()) /
-                        1000,
+                      1000,
                     ),
                   )}
                   s

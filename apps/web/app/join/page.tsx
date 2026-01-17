@@ -110,7 +110,7 @@ export default function JoinRoomPage() {
           playerToken: data.playerToken,
           wsUrl: data.wsUrl,
           role: data.role,
-        })
+        }),
       );
 
       // Navigate based on role
@@ -119,7 +119,7 @@ export default function JoinRoomPage() {
       } else {
         router.push(`/lobby/${data.roomId}`);
       }
-    } catch (err) {
+    } catch {
       setError("Network error. Please try again.");
       setLoading(false);
     }
@@ -152,11 +152,11 @@ export default function JoinRoomPage() {
           playerToken: data.playerToken,
           wsUrl: data.wsUrl,
           role: "spectator",
-        })
+        }),
       );
 
       router.push(`/spectate/${data.roomId}`);
-    } catch (err) {
+    } catch {
       setError("Network error. Please try again.");
       setLoading(false);
     }
@@ -196,9 +196,7 @@ export default function JoinRoomPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="text-error text-sm font-mono">
-              ✗ {error}
-            </div>
+            <div className="text-error text-sm font-mono">✗ {error}</div>
           )}
 
           {/* Actions */}

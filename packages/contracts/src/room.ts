@@ -197,4 +197,3 @@ export const DEFAULT_SHOP_CATALOG: ShopCatalogItem[] = [
   { item: "rateLimiter", cost: 10, cooldownSec: 60 },
   // { item: "hint", cost: 5 }, // TODO: Uncomment when hint system is ready
 ];
-

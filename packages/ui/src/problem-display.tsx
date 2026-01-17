@@ -15,6 +15,11 @@ export interface ProblemData {
   signature: string;
   publicTests?: Array<{ input: string; output: string }>;
   isGarbage?: boolean;
+  problemType?: "code" | "mcq";
+  options?: Array<{ id: string; text: string }>;
+  correctAnswer?: string;
+  onOptionSelect?: (optionId: string) => void;
+  selectedOptionId?: string;
 }
 
 export interface ProblemDisplayProps {
@@ -135,12 +140,34 @@ export function ProblemDisplay({
         {problem.prompt}
       </div>
 
-      {/* Function Signature */}
-      <div className="border border-secondary p-2 bg-base-300 hover:border-primary/50 transition-colors">
-        <code className="font-mono text-xs text-base-content">
-          {problem.signature}
-        </code>
-      </div>
+      {/* MCQ Options or Function Signature */}
+      {problem.problemType === "mcq" ? (
+        <div className="space-y-2">
+          {problem.options?.map((option) => (
+            <button
+              key={option.id}
+              onClick={() => problem.onOptionSelect?.(option.id)}
+              className={`
+                w-full text-left p-3 border font-mono text-sm transition-all
+                ${problem.selectedOptionId === option.id
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-secondary hover:border-primary/50 bg-base-300"}
+              `}
+            >
+              <span className="mr-2 text-muted">
+                [{problem.selectedOptionId === option.id ? "●" : " "}]
+              </span>
+              {option.text}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="border border-secondary p-2 bg-base-300 hover:border-primary/50 transition-colors">
+          <code className="font-mono text-xs text-base-content">
+            {problem.signature}
+          </code>
+        </div>
+      )}
 
       {/* Public Tests */}
       {problem.publicTests && problem.publicTests.length > 0 && (

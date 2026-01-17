@@ -1,12 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { useWebSocket } from "../hooks/use-websocket";
 import type {
-  MatchStartedPayload,
   MatchEndPayload,
   StandingEntry,
   RoomSnapshotPayload,
+  MatchStartedPayload,
   PlayerPublic,
   RoomSettings,
   MatchPhase,
@@ -102,7 +102,8 @@ export function GameStateProvider({
   const [roomSettings, setRoomSettings] = useState<RoomSettings | null>(null);
   const [matchPhase, setMatchPhase] = useState<MatchPhase>("lobby");
   const [matchEndAt, setMatchEndAt] = useState<string | null>(null);
-  const [matchEndResult, setMatchEndResult] = useState<MatchEndPayload | null>(null);
+  const [matchEndResult, setMatchEndResult] =
+    useState<MatchEndPayload | null>(null);
 
   // Player state
   const [username, setUsername] = useState<string | null>(null);
@@ -134,6 +135,11 @@ export function GameStateProvider({
   const currentProblem = playerPrivateState?.currentProblem ?? null;
   const problemStack = playerPrivateState?.queued ?? [];
 
+  // Clear judge result when problem changes
+  useEffect(() => {
+    setLastJudgeResult(null);
+  }, [currentProblem?.problemId]);
+
   // WebSocket handlers
   const handleRoomSnapshot = useCallback((payload: RoomSnapshotPayload) => {
     console.log("[WS] Received ROOM_SNAPSHOT, phase:", payload.match.phase, "standings:", !!payload.match.standings);
@@ -142,9 +148,7 @@ export function GameStateProvider({
     setPlayersPublic(payload.players);
     setRoomSettings(payload.match.settings);
     setMatchPhase(payload.match.phase);
-    setMatchEndAt(payload.match.endAt || null);
-
-    // HEAD logic: Snapshot has standings
+    setMatchEndAt(payload.match.endAt ?? null);
     if (payload.match.standings) {
       console.log("[WS] Snapshot has standings, setting results");
       setMatchEndResult({
@@ -153,11 +157,8 @@ export function GameStateProvider({
         winnerPlayerId: payload.match.standings.find((s: StandingEntry) => s.rank === 1)?.playerId || "",
         standings: payload.match.standings
       });
-    } else {
-      // Just in case we need to clear it or if we are not in ended state
-      if (payload.match.phase !== "ended") {
-        setMatchEndResult(null);
-      }
+    } else if (payload.match.phase !== "ended") {
+      setMatchEndResult(null);
     }
     setUsername(payload.me.username);
     setIsHost(payload.me.isHost);
@@ -201,8 +202,8 @@ export function GameStateProvider({
   const handleMatchStarted = useCallback(
     (payload: MatchStartedPayload) => {
       setMatchPhase(payload.match.phase);
-      setMatchEndAt(payload.match.endAt || null);
-      setMatchEndResult(null); // Clear results when match starts
+      setMatchEndAt(payload.match.endAt ?? null);
+      setMatchEndResult(null);
     },
     []
   );
