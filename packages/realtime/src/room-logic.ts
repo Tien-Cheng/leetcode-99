@@ -8,9 +8,6 @@ import type {
   DebuffType,
   DifficultyProfile,
   MatchPhase,
-  PlayerPublic,
-  ProblemFull,
-  RoomSettings,
   ShopItem,
   TargetingMode,
 } from "@leet99/contracts";

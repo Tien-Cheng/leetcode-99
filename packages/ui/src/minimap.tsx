@@ -28,7 +28,7 @@ export function Minimap({
   players,
   selfId,
   targetId,
-  spectatingId,
+
   onPlayerClick,
   className = "",
 }: MinimapProps) {
@@ -91,10 +91,7 @@ export function Minimap({
     }
   };
 
-  const getStatusIcon = (_player: MinimapPlayer) => {
-    // Status is indicated by tile styling, no icon needed
-    return null;
-  };
+
 
   const getAbbreviation = (username: string) => {
     return username.slice(0, 2).toLowerCase();
@@ -112,7 +109,7 @@ export function Minimap({
       {players.map((player) => {
         const isSelf = player.id === selfId;
         const isTarget = player.id === targetId;
-        const isSpectating = player.id === spectatingId;
+
         const isEliminated = player.status === "eliminated";
         const hasScoreChange = player.lastScoreChange &&
           Date.now() - player.lastScoreChange.at < 2000;

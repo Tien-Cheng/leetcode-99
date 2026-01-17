@@ -92,7 +92,7 @@ export function ShopModal({
 
         {/* Items */}
         <div className="space-y-2">
-          {items.map((item, index) => {
+          {items.map((item) => {
             const canAfford = score >= item.cost;
             const isAvailable = !item.isDisabled && !item.cooldownRemaining;
             const isEnabled = canAfford && isAvailable;

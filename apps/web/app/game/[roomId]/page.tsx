@@ -60,7 +60,7 @@ function GamePageContent() {
     __debugSetDebuff,
     shopCatalog,
     shopCooldowns,
-    playerPrivateState,
+
     debugAddScore,
   } = useGameState();
 
