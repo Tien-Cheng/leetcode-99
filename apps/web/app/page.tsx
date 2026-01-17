@@ -1,49 +1,76 @@
+"use client";
+
 import Link from "next/link";
+import { Button } from "@leet99/ui";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Only trigger if not in an input field
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case "c":
+          router.push("/create");
+          break;
+        case "j":
+          router.push("/join");
+          break;
+        case "?":
+          // TODO: Open tutorial/help modal
+          alert("Tutorial coming soon!");
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [router]);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       {/* Title */}
       <div className="text-center">
-        <h1 className="font-mono text-5xl font-bold tracking-tight text-primary drop-shadow-[0_0_10px_var(--color-primary)]">
+        <h1 className="font-mono text-6xl font-bold tracking-tight text-primary glow-primary">
           LEET99
         </h1>
-        <p className="mt-2 font-mono text-sm text-base-content/60">
+        <p className="mt-2 font-mono text-sm text-muted">
           Battle Royale for Coders
         </p>
       </div>
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
-        <Link
-          href="/create"
-          className="btn btn-outline btn-primary min-w-64 font-mono"
-          accessKey="c"
-        >
-          <span className="kbd kbd-sm mr-2">C</span>
-          Create Room
+        <Link href="/create">
+          <Button variant="primary" hotkey="C" className="min-w-64">
+            Create Room
+          </Button>
         </Link>
-        <Link
-          href="/join"
-          className="btn btn-outline min-w-64 font-mono"
-          accessKey="j"
-        >
-          <span className="kbd kbd-sm mr-2">J</span>
-          Join Room
+        <Link href="/join">
+          <Button variant="secondary" hotkey="J" className="min-w-64">
+            Join Room
+          </Button>
         </Link>
       </div>
 
       {/* Help link */}
-      <button
-        className="btn btn-ghost btn-sm font-mono text-base-content/40"
-        accessKey="?"
+      <Button
+        variant="ghost"
+        hotkey="?"
+        className="text-muted"
+        onClick={() => alert("Tutorial coming soon!")}
       >
-        <span className="kbd kbd-xs mr-1">?</span>
         How to Play
-      </button>
+      </Button>
 
       {/* Version */}
-      <p className="fixed bottom-4 right-4 font-mono text-xs text-base-content/30">
+      <p className="fixed bottom-4 right-4 font-mono text-xs text-muted">
         v0.1.0
       </p>
     </main>

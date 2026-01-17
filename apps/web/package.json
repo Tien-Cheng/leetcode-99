@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,9 +12,14 @@
   },
   "dependencies": {
     "@leet99/contracts": "workspace:*",
+    "@monaco-editor/react": "^4.7.0",
     "@leet99/supabase": "workspace:*",
     "lucide-react": "^0.469.0",
+    "monaco-editor": "^0.55.1",
+    "monaco-vim": "^0.4.4",
     "next": "^15.1.0",
+    "partykit": "0.0.115",
+    "partysocket": "^1.1.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^3.24.0"

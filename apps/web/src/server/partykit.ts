@@ -9,7 +9,7 @@ import {
 import { z } from "zod";
 
 export function partyBaseUrl(): string {
-  return process.env.PARTYKIT_HOST || "http://localhost:1999";
+  return process.env.PARTYKIT_HOST || "http://127.0.0.1:1999";
 }
 
 export function partyProject(): string {
@@ -67,6 +67,7 @@ export async function registerPartyPlayer(
     partyBaseUrl(),
   );
 
+
   let response: Response;
   try {
     response = await fetch(url, {
@@ -108,12 +109,12 @@ export async function registerPartyPlayer(
       error: parsedError.success
         ? parsedError.data
         : {
-            error: {
-              code: "INTERNAL_ERROR",
-              message: "PartyKit register failed",
-              details: { status },
-            },
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "PartyKit register failed",
+            details: { status },
           },
+        },
     };
   }
 

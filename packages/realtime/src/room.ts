@@ -332,6 +332,7 @@ export default class Room implements Party.Server {
   }
 
   async onMessage(message: string, sender: Party.Connection) {
+    console.log(`[Room ${this.state.roomId}][RX] ${message.slice(0, 100)}`);
     try {
       const parsed = JSON.parse(message) as WSMessage<
         ClientMessageType,
@@ -2858,6 +2859,7 @@ export default class Room implements Party.Server {
   // ============================================================================
 
   async onRequest(req: Party.Request): Promise<Response> {
+
     const url = new URL(req.url);
 
     // POST /parties/leet99/:roomId/register - Register a new player
