@@ -21,6 +21,19 @@ import { createSubmission, getSubmissionResult } from "./judge0-client.js";
 import { buildTestHarness, parseTestOutput } from "./test-harness.js";
 
 // ============================================================================
+// Type Guards
+// ============================================================================
+
+/**
+ * Type guard to check if a problem is a code problem
+ */
+function isCodeProblem(
+  problem: ProblemFull,
+): problem is Extract<ProblemFull, { problemType: "code" }> {
+  return problem.problemType === "code";
+}
+
+// ============================================================================
 // Internal Test Execution
 // ============================================================================
 
@@ -29,7 +42,7 @@ import { buildTestHarness, parseTestOutput } from "./test-harness.js";
  * @throws {JudgeError} If execution fails
  */
 async function executeTests(
-  problem: ProblemFull,
+  problem: Extract<ProblemFull, { problemType: "code" }>,
   code: string,
   config: JudgeConfig,
   testCases: TestCase[],
@@ -164,17 +177,24 @@ async function executeTests(
  * Run public tests only (for RUN_CODE).
  * Does not affect score or trigger attacks.
  *
- * @param problem - Full problem definition
+ * @param problem - Full problem definition (must be a code problem)
  * @param code - User's code to test
  * @param config - Judge0 configuration
  * @returns Judge result with public test outcomes
- * @throws {JudgeError} If execution fails
+ * @throws {JudgeError} If execution fails or problem is not a code problem
  */
 export async function runPublicTests(
   problem: ProblemFull,
   code: string,
   config: JudgeConfig,
 ): Promise<JudgeResult> {
+  if (!isCodeProblem(problem)) {
+    throw new JudgeError(
+      "INVALID_PROBLEM_TYPE",
+      "Judge runner only supports code problems, not MCQ problems",
+    );
+  }
+
   const context: LogContext = { problemId: problem.problemId };
   log("info", "Running public tests", {
     ...context,
@@ -243,17 +263,24 @@ export async function runPublicTests(
  *
  * Hidden test failures are opaque - only returns pass/fail status without revealing test details.
  *
- * @param problem - Full problem definition (including hidden tests)
+ * @param problem - Full problem definition (including hidden tests, must be a code problem)
  * @param code - User's code to test
  * @param config - Judge0 configuration
  * @returns Judge result with public test details and hidden test pass/fail status
- * @throws {JudgeError} If execution fails
+ * @throws {JudgeError} If execution fails or problem is not a code problem
  */
 export async function runAllTests(
   problem: ProblemFull,
   code: string,
   config: JudgeConfig,
 ): Promise<JudgeResult> {
+  if (!isCodeProblem(problem)) {
+    throw new JudgeError(
+      "INVALID_PROBLEM_TYPE",
+      "Judge runner only supports code problems, not MCQ problems",
+    );
+  }
+
   const context: LogContext = { problemId: problem.problemId };
   log("info", "Running all tests (public + hidden)", {
     ...context,

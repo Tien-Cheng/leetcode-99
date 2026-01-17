@@ -57,7 +57,9 @@ function GamePageContent() {
   const { vimMode, setVimMode } = useHotkeys();
 
   // Local editor state
-  const [code, setCode] = useState(currentProblem?.starterCode || "");
+  const [code, setCode] = useState(
+    currentProblem?.problemType === "code" ? currentProblem.starterCode : ""
+  );
   const [codeVersion, setCodeVersion] = useState(1);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
@@ -72,11 +74,15 @@ function GamePageContent() {
   // Update code when problem changes
   useEffect(() => {
     if (currentProblem) {
-      setCode(currentProblem.starterCode);
+      if (currentProblem.problemType === "code") {
+        setCode(currentProblem.starterCode);
+      } else {
+        setCode("");
+      }
       setCodeVersion(1);
       setSelectedOptionId(null);
     }
-  }, [currentProblem?.problemId]);
+  }, [currentProblem]);
 
   // Trigger effects on score change
   useEffect(() => {
@@ -155,7 +161,9 @@ function GamePageContent() {
   // Register global shortcuts
   useKeyboardShortcuts({
     shortcuts: [
-      { key: "r", altKey: true, action: handleRun, description: "Run Code" },
+      ...(currentProblem?.problemType === "code"
+        ? [{ key: "r", altKey: true, action: handleRun, description: "Run Code" }]
+        : []),
       { key: "s", altKey: true, action: handleSubmit, description: "Submit Code" },
       { key: "b", altKey: true, action: handleShopToggle, description: "Toggle Shop" },
       { key: "t", altKey: true, action: handleTargetingToggle, description: "Targeting Mode" },
@@ -326,14 +334,36 @@ function GamePageContent() {
                 title: currentProblem.title,
                 difficulty: currentProblem.difficulty,
                 prompt: currentProblem.prompt,
-                signature: currentProblem.signature,
-                publicTests: (currentProblem.publicTests || []).map((t) => ({
-                  input: String(t.input),
-                  output: String(t.output),
-                })),
+                signature:
+                  currentProblem.problemType === "code"
+                    ? (currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "code" }
+                      >).signature
+                    : "",
+                publicTests:
+                  currentProblem.problemType === "code"
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).publicTests.map((t) => ({
+                        input: String(t.input ?? ""),
+                        output: String(t.output ?? ""),
+                      }))
+                    : [],
                 isGarbage: currentProblem.isGarbage,
-                problemType: currentProblem.problemType as any,
-                options: currentProblem.options as any,
+                problemType: currentProblem.problemType,
+                options:
+                  currentProblem.problemType === "mcq"
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "mcq" }
+                        >
+                      ).options
+                    : undefined,
                 selectedOptionId: selectedOptionId || undefined,
                 onOptionSelect: (id) => setSelectedOptionId(id),
               }}
@@ -409,19 +439,21 @@ function GamePageContent() {
             transition-all duration-300
             ${ddosActive ? "border-error animate-pulse-red" : ""}
           `}>
-            <Button
-              variant="primary"
-              hotkey="Alt+R"
-              onClick={handleRun}
-              disabled={ddosActive || isRunning}
-              className={`
-                transition-all duration-200
-                ${ddosActive ? "opacity-50 cursor-not-allowed" : ""}
-                ${isRunning ? "animate-pulse" : ""}
-              `}
-            >
-              {isRunning ? "Running..." : "Run"}
-            </Button>
+            {currentProblem?.problemType === "code" && (
+              <Button
+                variant="primary"
+                hotkey="Alt+R"
+                onClick={handleRun}
+                disabled={ddosActive || isRunning}
+                className={`
+                  transition-all duration-200
+                  ${ddosActive ? "opacity-50 cursor-not-allowed" : ""}
+                  ${isRunning ? "animate-pulse" : ""}
+                `}
+              >
+                {isRunning ? "Running..." : "Run"}
+              </Button>
+            )}
             <Button
               variant="primary"
               hotkey="Alt+S"

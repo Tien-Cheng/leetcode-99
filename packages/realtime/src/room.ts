@@ -1156,6 +1156,12 @@ export default class Room implements Party.Server {
       return;
     }
 
+    // Run code is only for code problems, not MCQs
+    if (problem.problemType === "mcq") {
+      this.sendError(conn, "INVALID_PROBLEM_TYPE", "Run code is not available for MCQ problems", requestId);
+      return;
+    }
+
     // Get judge config
     const judgeConfig = getJudgeConfig();
     if (!judgeConfig) {
@@ -1222,22 +1228,36 @@ export default class Room implements Party.Server {
       return;
     }
 
-    // Get judge config
-    const judgeConfig = getJudgeConfig();
     let result: JudgeResult;
 
-    if (!judgeConfig) {
-      // No judge configured - simulate result for development
-      result = this.simulateJudgeResult("submit", problem, payload.code);
+    // Handle MCQ problems separately (no judge service needed)
+    if (problem.problemType === "mcq") {
+      // For MCQ, payload.code is the selected option ID
+      const passed = payload.code === problem.correctAnswer;
+      result = {
+        kind: "submit",
+        problemId: problem.problemId,
+        passed,
+        publicTests: [], // MCQs don't have test results
+        hiddenTestsPassed: passed,
+        hiddenFailureMessage: passed ? undefined : "Incorrect answer",
+      };
     } else {
-      // Run all tests via judge
-      try {
-        const { runAllTests } = await import("@leet99/judge");
-        result = await runAllTests(problem, payload.code, judgeConfig);
-      } catch (error) {
-        console.error(`[${this.state.roomId}] Judge error:`, error);
-        this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
-        return;
+      // Code problem - use judge service
+      const judgeConfig = getJudgeConfig();
+      if (!judgeConfig) {
+        // No judge configured - simulate result for development
+        result = this.simulateJudgeResult("submit", problem, payload.code);
+      } else {
+        // Run all tests via judge
+        try {
+          const { runAllTests } = await import("@leet99/judge");
+          result = await runAllTests(problem, payload.code, judgeConfig);
+        } catch (error) {
+          console.error(`[${this.state.roomId}] Judge error:`, error);
+          this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+          return;
+        }
       }
     }
 
