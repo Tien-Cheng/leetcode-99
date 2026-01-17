@@ -74,6 +74,46 @@ export function convertTypeHintsIfNeeded(
 // ============================================================================
 
 /**
+ * Serialize JS values to valid Python literals for the harness.
+ * Handles booleans/null to match Python True/False/None.
+ */
+function toPythonLiteral(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "None";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "True" : "False";
+  }
+
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return "float('nan')";
+    if (value === Infinity) return "float('inf')";
+    if (value === -Infinity) return "-float('inf')";
+    return String(value);
+  }
+
+  if (typeof value === "string") {
+    // JSON string escaping is valid for Python string literals
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => toPythonLiteral(item)).join(", ")}]`;
+  }
+
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    const items = entries.map(
+      ([key, val]) => `${JSON.stringify(key)}: ${toPythonLiteral(val)}`,
+    );
+    return `{${items.join(", ")}}`;
+  }
+
+  return "None";
+}
+
+/**
  * Build the test harness code that wraps user code and runs tests.
  *
  * The harness:
@@ -106,8 +146,8 @@ sys.setrecursionlimit(${PYTHON_RECURSION_LIMIT})
   const testCode = testCases
     .map((test, i) => {
       // Handle tuple inputs (convert array to tuple if needed)
-      const inputStr = JSON.stringify(test.input);
-      const outputStr = JSON.stringify(test.output);
+      const inputStr = toPythonLiteral(test.input);
+      const outputStr = toPythonLiteral(test.output);
 
       // Generate Python code with test index hardcoded
       // Use *args unpacking to handle both single values and arrays
