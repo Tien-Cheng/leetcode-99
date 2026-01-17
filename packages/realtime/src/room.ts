@@ -804,11 +804,11 @@ export default class Room implements Party.Server {
     const warmupDurationMs = this.state.settings.matchDurationSec * 1000 * 0.1;
     await this.room.storage.setAlarm(Date.now() + warmupDurationMs);
 
-    // Schedule first problem arrival
-    await this.scheduleNextProblemArrival();
-
-    // Schedule bot actions
+    // Schedule bot actions (sets state only, doesn't set alarm)
     await this.scheduleBotActions();
+
+    // Schedule first problem arrival (coordinates all alarms)
+    await this.scheduleNextProblemArrival();
 
     // Broadcast MATCH_STARTED
     this.broadcast({
@@ -2008,7 +2008,7 @@ export default class Room implements Party.Server {
     }
 
     this.state.nextBotActionAt = earliestActionAt;
-    await this.room.storage.setAlarm(earliestActionAt);
+    // Don't set alarm directly - let scheduleNextProblemArrival() coordinate all alarms
   }
 
   private async handleBotActions() {
@@ -2904,6 +2904,8 @@ export default class Room implements Party.Server {
       now >= this.state.nextBotActionAt
     ) {
       await this.handleBotActions();
+      // Reschedule to coordinate all alarms after bot actions
+      await this.scheduleNextProblemArrival();
     }
 
     // Check if it's time for problem arrivals

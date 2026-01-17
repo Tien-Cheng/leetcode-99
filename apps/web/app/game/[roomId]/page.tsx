@@ -227,6 +227,24 @@ function GamePageContent() {
     timestamp: new Date(entry.at).toLocaleTimeString(),
   }));
 
+  // If match ended, show leaderboard instead of game
+  if (matchPhase === "ended") {
+    return (
+      <MatchResultsModal
+        isOpen={true}
+        endReason={matchEndResult?.endReason || "timeExpired"}
+        standings={matchEndResult?.standings || []}
+        selfPlayerId={playerId || ""}
+        isHost={isHost}
+        onReturnToLobby={() => {
+          returnToLobby();
+          router.push(`/lobby/${roomId}`);
+        }}
+        onExit={() => router.push("/")}
+      />
+    );
+  }
+
   return (
     <main className="flex h-screen flex-col p-2 overflow-hidden relative">
       {/* Resizing Overlay to prevent Monaco interference */}
@@ -415,17 +433,6 @@ function GamePageContent() {
           setTargetMode(modeId as any);
         }}
         onClose={() => setTargetingOpen(false)}
-      />
-
-      {/* Match Results Modal */}
-      <MatchResultsModal
-        isOpen={matchPhase === "ended"}
-        endReason={matchEndResult?.endReason || "timeExpired"}
-        standings={matchEndResult?.standings || []}
-        selfPlayerId={playerId || ""}
-        isHost={isHost}
-        onReturnToLobby={returnToLobby}
-        onExit={() => router.push("/")}
       />
     </main>
   );

@@ -48,14 +48,10 @@ export function MatchResultsModal({
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
-
-    const winner = standings.find((s) => s.rank === 1);
-    const second = standings.find((s) => s.rank === 2);
-    const third = standings.find((s) => s.rank === 3);
-
     // Keyboard support
     useEffect(() => {
+        if (!isOpen) return;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Enter" && isHost) {
                 onReturnToLobby();
@@ -65,10 +61,16 @@ export function MatchResultsModal({
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isHost, onReturnToLobby, onExit]);
+    }, [isOpen, isHost, onReturnToLobby, onExit]);
+
+    if (!isOpen) return null;
+
+    const winner = standings.find((s) => s.rank === 1);
+    const second = standings.find((s) => s.rank === 2);
+    const third = standings.find((s) => s.rank === 3);
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto font-mono">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black p-4 overflow-y-auto font-mono">
             <div className="w-full max-w-4xl bg-[#0d0d0d] border border-[#4a5568] shadow-2xl p-8 min-h-[600px] flex flex-col gap-8 animate-in fade-in zoom-in duration-300">
 
                 {/* Header */}
