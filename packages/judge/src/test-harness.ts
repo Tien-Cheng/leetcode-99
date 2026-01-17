@@ -1,5 +1,5 @@
 import type { TestCase, PublicTestResult } from "@leet99/contracts";
-import { PYTHON3_LANGUAGE_ID } from "./constants.js";
+import { PYTHON3_LANGUAGE_ID, PYTHON_RECURSION_LIMIT } from "./constants.js";
 
 // ============================================================================
 // Type Hint Conversion (Python 3.8 Compatibility)
@@ -77,10 +77,11 @@ export function convertTypeHintsIfNeeded(
  * Build the test harness code that wraps user code and runs tests.
  *
  * The harness:
- * 1. Includes the user's code (with Python 3.8.1 compatibility conversions if needed)
- * 2. Runs each test case by calling the function with the inputs
- * 3. Compares the result with the expected output
- * 4. Prints structured output: "PASS <index>", "FAIL <index> expected=<x> got=<y>", or "ERROR <index> <msg>"
+ * 1. Sets Python recursion limit to prevent stack overflow while allowing recursive solutions
+ * 2. Includes the user's code (with Python 3.8.1 compatibility conversions if needed)
+ * 3. Runs each test case by calling the function with the inputs
+ * 4. Compares the result with the expected output
+ * 5. Prints structured output: "PASS <index>", "FAIL <index> expected=<x> got=<y>", or "ERROR <index> <msg>"
  *
  * @param userCode - The user's solution code
  * @param functionName - Name of the function to test
@@ -96,6 +97,11 @@ export function buildTestHarness(
 ): string {
   // Convert type hints if using Python 3.8.1 (only needed for language ID 71)
   const compatibleCode = convertTypeHintsIfNeeded(userCode, languageId);
+
+  // Set recursion limit to allow recursive solutions while preventing abuse
+  const setupCode = `import sys
+sys.setrecursionlimit(${PYTHON_RECURSION_LIMIT})
+`;
 
   const testCode = testCases
     .map((test, i) => {
@@ -120,7 +126,7 @@ except Exception as e:
     })
     .join("\n");
 
-  return `${compatibleCode}\n\n${testCode}`;
+  return `${setupCode}\n${compatibleCode}\n\n${testCode}`;
 }
 
 // ============================================================================

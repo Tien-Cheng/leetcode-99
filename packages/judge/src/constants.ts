@@ -50,3 +50,19 @@ export const POLL_INTERVAL_MS = 500;
 
 /** Default memory limit in kilobytes (128 MB) */
 export const DEFAULT_MEMORY_LIMIT_KB = 128 * 1024;
+
+// ============================================================================
+// Python Execution Limits
+// ============================================================================
+
+/**
+ * Default recursion limit for Python execution.
+ * Set higher than Python's default (1000) to allow recursive solutions,
+ * but capped to prevent stack overflow attacks and memory exhaustion.
+ *
+ * Considerations:
+ * - Python default is 1000, which may be too low for some recursive algorithms
+ * - Setting too high risks memory exhaustion from deep recursion
+ * - 3000 allows most legitimate recursive solutions while limiting abuse
+ */
+export const PYTHON_RECURSION_LIMIT = 3000;
