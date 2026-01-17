@@ -70,9 +70,11 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
     return "";
   };
 
-  // Progress ring percentage
-  const maxTime = 300; // Assume 5 min max for visual purposes
-  const progress = Math.min(100, (seconds / maxTime) * 100);
+  // Progress ring percentage - circumference = 2 * PI * 14 ≈ 88
+  const circumference = 2 * Math.PI * 14;
+  const maxTime = 600; // 10 min max for visual purposes
+  const progressPercent = Math.min(1, seconds / maxTime);
+  const strokeLength = progressPercent * circumference;
 
   return (
     <div className={`relative inline-flex items-center gap-2 ${className}`}>
@@ -87,7 +89,7 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            className="opacity-20"
+            className="text-secondary opacity-30"
           />
           {/* Progress circle */}
           <circle
@@ -97,7 +99,8 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            strokeDasharray={`${progress * 0.88} 88`}
+            strokeDasharray={`${strokeLength} ${circumference}`}
+            strokeLinecap="round"
             className={`transition-all duration-1000 ${seconds <= 30 ? "text-error" : seconds <= 60 ? "text-warning" : "text-primary"
               }`}
           />

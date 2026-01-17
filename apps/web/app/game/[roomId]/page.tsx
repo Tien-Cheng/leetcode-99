@@ -255,6 +255,8 @@ function GamePageContent() {
       username: p.username,
       status: p.status as "coding" | "error" | "underAttack" | "eliminated",
       isBot: p.role === "bot",
+      score: p.score,
+      activeDebuff: p.activeDebuff,
     }));
 
   // Terminal messages with enhanced types

@@ -7,6 +7,8 @@ export interface MinimapPlayer {
   isBot?: boolean;
   isTyping?: boolean;
   lastScoreChange?: { value: number; at: number };
+  score?: number;
+  activeDebuff?: { type: string; endsAt: string } | null;
 }
 
 export interface MinimapProps {
@@ -20,7 +22,7 @@ export interface MinimapProps {
 
 /**
  * Minimap component - compact grid showing player statuses
- * Enhanced with typing indicators, score changes, and elimination effects
+ * Enhanced with score bars, debuff indicators, and elimination effects
  */
 export function Minimap({
   players,
@@ -31,6 +33,9 @@ export function Minimap({
   className = "",
 }: MinimapProps) {
   const [recentEliminations, setRecentEliminations] = useState<Set<string>>(new Set());
+
+  // Calculate max score for relative bars
+  const maxScore = Math.max(...players.map(p => p.score || 0), 1);
 
   // Track eliminations for explosion effect
   useEffect(() => {
@@ -53,6 +58,24 @@ export function Minimap({
 
   const getStatusStyles = (player: MinimapPlayer) => {
     const isExploding = recentEliminations.has(player.id);
+    const hasDebuff = player.activeDebuff != null;
+
+    // Special styling when under debuff
+    if (hasDebuff && player.status !== "eliminated") {
+      const debuffType = player.activeDebuff?.type;
+      switch (debuffType) {
+        case "ddos":
+          return "border-error bg-error/20 animate-pulse-red";
+        case "flashbang":
+          return "border-warning bg-warning/30 animate-pulse";
+        case "vimLock":
+          return "border-success bg-success/20 vim-cursor-blink";
+        case "memoryLeak":
+          return "border-warning bg-warning/20 glitch-text";
+        default:
+          return "border-warning bg-warning/20 animate-shake";
+      }
+    }
 
     switch (player.status) {
       case "coding":
@@ -68,27 +91,24 @@ export function Minimap({
     }
   };
 
-  const getStatusIcon = (status: MinimapPlayer["status"]) => {
-    switch (status) {
-      case "coding":
-        return null;
-      case "error":
-        return <span className="absolute -top-1 -right-1 text-[8px]">⚠</span>;
-      case "underAttack":
-        return <span className="absolute -top-1 -right-1 text-[8px] animate-pulse">⚔</span>;
-      case "eliminated":
-        return <span className="absolute -top-1 -right-1 text-[8px]">☠</span>;
-      default:
-        return null;
-    }
+  const getStatusIcon = (_player: MinimapPlayer) => {
+    // Status is indicated by tile styling, no icon needed
+    return null;
   };
 
   const getAbbreviation = (username: string) => {
     return username.slice(0, 2).toLowerCase();
   };
 
+  const getScoreBarColor = (player: MinimapPlayer, isSelf: boolean) => {
+    if (player.status === "eliminated") return "bg-secondary/30";
+    if (player.activeDebuff) return "bg-warning";
+    if (isSelf) return "bg-primary";
+    return "bg-success";
+  };
+
   return (
-    <div className={`grid grid-cols-4 gap-1 ${className}`}>
+    <div className={`grid grid-cols-4 gap-1.5 ${className}`}>
       {players.map((player) => {
         const isSelf = player.id === selfId;
         const isTarget = player.id === targetId;
@@ -96,6 +116,7 @@ export function Minimap({
         const isEliminated = player.status === "eliminated";
         const hasScoreChange = player.lastScoreChange &&
           Date.now() - player.lastScoreChange.at < 2000;
+        const scorePercent = maxScore > 0 ? ((player.score || 0) / maxScore) * 100 : 0;
 
         return (
           <button
@@ -103,8 +124,8 @@ export function Minimap({
             onClick={() => !isEliminated && onPlayerClick?.(player.id)}
             disabled={isEliminated}
             className={`
-              aspect-square flex items-center justify-center relative
-              border text-xs font-mono
+              flex flex-col items-center justify-center relative p-1
+              border text-xs font-mono min-h-[44px]
               ${getStatusStyles(player)}
               ${isSelf ? "border-primary glow-primary border-2" : ""}
               ${isTarget ? "ring-2 ring-accent ring-offset-1 ring-offset-base-100" : ""}
@@ -112,34 +133,33 @@ export function Minimap({
               ${isEliminated ? "line-through" : ""}
               transition-all duration-150
             `}
-            title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""}${isEliminated ? " [ELIMINATED]" : ""}`}
+            title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""} - Score: ${player.score || 0}${player.activeDebuff ? ` [${player.activeDebuff.type.toUpperCase()}]` : ""}${isEliminated ? " [ELIMINATED]" : ""}`}
           >
-            {/* Status icon */}
-            {getStatusIcon(player.status)}
-
-            {/* Spectating indicator */}
-            {isSpectating && <span className="absolute -top-1 -left-1 text-[10px] text-primary">👁</span>}
 
             {/* Score change indicator */}
             {hasScoreChange && player.lastScoreChange && (
-              <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[8px] text-success animate-fly-up font-bold">
+              <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[8px] text-success animate-fly-up font-bold z-10">
                 +{player.lastScoreChange.value}
               </span>
             )}
 
-            {/* Target indicator */}
-            {isTarget && !isSpectating && (
-              <span className="absolute -top-1 -right-1 text-[10px] text-accent animate-pulse">⊕</span>
-            )}
-
-            {/* Bot indicator */}
-            {player.isBot && (
-              <span className="absolute -bottom-1 -right-1 text-[6px] text-warning">🤖</span>
-            )}
 
             {/* Username abbreviation */}
-            <span className={isSelf ? "font-bold" : ""}>
+            <span className={`${isSelf ? "font-bold" : ""} text-[10px] mb-0.5`}>
               {getAbbreviation(player.username)}
+            </span>
+
+            {/* Score bar */}
+            <div className="w-full h-1.5 bg-base-300 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 rounded-full ${getScoreBarColor(player, isSelf)}`}
+                style={{ width: `${Math.max(scorePercent, 5)}%` }}
+              />
+            </div>
+
+            {/* Score number */}
+            <span className="text-[8px] text-muted mt-0.5">
+              {player.score || 0}
             </span>
           </button>
         );
