@@ -784,11 +784,11 @@ export default class Room implements Party.Server {
     // Persist
     await this.persistState();
 
-    // Schedule first problem arrival
-    await this.scheduleNextProblemArrival();
-
     // Schedule bot actions
     await this.scheduleBotActions();
+
+    // Schedule first problem arrival (coordinates all alarms)
+    await this.scheduleNextProblemArrival();
 
     // Broadcast MATCH_STARTED
     this.broadcast({
