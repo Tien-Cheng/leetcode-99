@@ -23,7 +23,10 @@ export default function CreateRoomPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
         if (e.key === "Enter") {
           handleSubmit(e as unknown as React.FormEvent);
         }
@@ -86,12 +89,12 @@ export default function CreateRoomPage() {
           playerId: data.playerId,
           playerToken: data.playerToken,
           wsUrl: data.wsUrl,
-        })
+        }),
       );
 
       // Navigate to lobby
       router.push(`/lobby/${data.roomId}`);
-    } catch (err) {
+    } catch {
       setError("Network error. Please try again.");
       setLoading(false);
     }
@@ -165,9 +168,7 @@ export default function CreateRoomPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="text-error text-sm font-mono">
-              ✗ {error}
-            </div>
+            <div className="text-error text-sm font-mono">✗ {error}</div>
           )}
 
           {/* Actions */}
