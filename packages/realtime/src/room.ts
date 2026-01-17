@@ -443,6 +443,7 @@ export default class Room implements Party.Server {
   // ============================================================================
 
   async onRequest(req: Party.Request): Promise<Response> {
+
     const url = new URL(req.url);
 
     // POST /parties/leet99/:roomId/register - Register a new player

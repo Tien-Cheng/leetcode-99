@@ -5,7 +5,7 @@ import {
   MatchPhaseSchema,
   MatchEndReasonSchema,
   StandingEntrySchema,
-} from "./room";
+} from "./room.js";
 
 // ============================================================================
 // HTTP Request/Response Schemas

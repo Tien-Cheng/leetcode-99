@@ -24,7 +24,7 @@ export function toWsUrl(roomId: string): string {
   const wsBase = new URL(base.origin);
   wsBase.protocol = wsProtocol;
 
-  return `${wsBase.origin}/parties/${partyProject()}/${roomId}`;
+  return `${wsBase.origin}/parties/main/${roomId}`;
 }
 
 export type RegisterPartyPlayerOk = {
@@ -62,9 +62,10 @@ export async function registerPartyPlayer(
   }
 
   const url = new URL(
-    `/parties/${partyProject()}/${roomId}/register`,
+    `/parties/main/${roomId}/register`,
     partyBaseUrl(),
   );
+
 
   let response: Response;
   try {
@@ -107,12 +108,12 @@ export async function registerPartyPlayer(
       error: parsedError.success
         ? parsedError.data
         : {
-            error: {
-              code: "INTERNAL_ERROR",
-              message: "PartyKit register failed",
-              details: { status },
-            },
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "PartyKit register failed",
+            details: { status },
           },
+        },
     };
   }
 
