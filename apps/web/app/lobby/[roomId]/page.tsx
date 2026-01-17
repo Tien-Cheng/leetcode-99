@@ -217,11 +217,7 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex flex-col">
                     <span className="text-xs text-muted">Duration</span>
-                    <span className="font-mono">
-                      {snapshot.match.settings.matchDurationSec < 60
-                        ? `${snapshot.match.settings.matchDurationSec} sec`
-                        : `${Math.floor(snapshot.match.settings.matchDurationSec / 60)} min`}
-                    </span>
+                    <span className="font-mono">{snapshot.match.settings.matchDurationSec / 60} min</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs text-muted">Difficulty</span>

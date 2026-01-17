@@ -1,6 +1,5 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -14,7 +13,6 @@ import {
   TargetingModal,
   Timer,
   Button,
-  MatchResultsModal,
   EffectsOverlay,
   ScoreDisplay,
   useGameEffects,
@@ -43,20 +41,17 @@ function GamePageContent() {
     lastJudgeResult,
     serverTime,
     targetingMode,
-    matchPhase,
     matchEndAt,
-    matchEndResult,
     runCode,
     submitCode,
     purchaseItem,
     setTargetMode,
-    returnToLobby,
     updateCode,
     playerId,
-    isHost,
   } = useGameState();
 
-  const router = useRouter();
+  // Effects system
+  const { triggerEffect } = useGameEffects();
 
   // Hotkey state
   const { vimMode, setVimMode } = useHotkeys();
@@ -311,24 +306,6 @@ function GamePageContent() {
     content: entry.message,
     timestamp: new Date(entry.at).toLocaleTimeString(),
   }));
-
-  // If match ended, show leaderboard instead of game
-  if (matchPhase === "ended") {
-    return (
-      <MatchResultsModal
-        isOpen={true}
-        endReason={matchEndResult?.endReason || "timeExpired"}
-        standings={matchEndResult?.standings || []}
-        selfPlayerId={playerId || ""}
-        isHost={isHost}
-        onReturnToLobby={() => {
-          returnToLobby();
-          router.push(`/lobby/${roomId}`);
-        }}
-        onExit={() => router.push("/")}
-      />
-    );
-  }
 
   return (
     <main className="flex h-screen flex-col p-2 overflow-hidden relative">

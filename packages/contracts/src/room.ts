@@ -15,7 +15,7 @@ export const AttackIntensitySchema = z.enum(["low", "high"]);
 export type AttackIntensity = z.infer<typeof AttackIntensitySchema>;
 
 export const RoomSettingsSchema = z.object({
-  matchDurationSec: z.number().int().min(3).max(600).default(600),
+  matchDurationSec: z.number().int().min(120).max(600).default(120),
   playerCap: z.number().int().min(2).max(99).default(8),
   stackLimit: z.number().int().min(5).max(20).default(10),
   startingQueued: z.number().int().min(1).max(5).default(2),
@@ -97,20 +97,6 @@ export const PlayerPublicSchema = z.object({
 export type PlayerPublic = z.infer<typeof PlayerPublicSchema>;
 
 // ============================================================================
-// Match Standings
-// ============================================================================
-
-export const StandingEntrySchema = z.object({
-  rank: z.number().int().min(1),
-  playerId: z.string(),
-  username: z.string(),
-  role: PlayerRoleSchema,
-  score: z.number().int(),
-  status: z.string().optional(),
-});
-export type StandingEntry = z.infer<typeof StandingEntrySchema>;
-
-// ============================================================================
 // Match State
 // ============================================================================
 
@@ -133,7 +119,6 @@ export const MatchPublicSchema = z.object({
   endAt: z.string().datetime().optional(),
   endReason: MatchEndReasonSchema.optional(),
   settings: RoomSettingsSchema,
-  standings: z.array(StandingEntrySchema).optional(),
 });
 export type MatchPublic = z.infer<typeof MatchPublicSchema>;
 
@@ -198,3 +183,15 @@ export const DEFAULT_SHOP_CATALOG: ShopCatalogItem[] = [
   { item: "hint", cost: 5 },
 ];
 
+// ============================================================================
+// Match Standings
+// ============================================================================
+
+export const StandingEntrySchema = z.object({
+  rank: z.number().int().min(1),
+  playerId: z.string(),
+  username: z.string(),
+  role: PlayerRoleSchema,
+  score: z.number().int(),
+});
+export type StandingEntry = z.infer<typeof StandingEntrySchema>;
