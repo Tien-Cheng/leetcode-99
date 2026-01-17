@@ -140,3 +140,12 @@ vite.config.ts.timestamp-*
 
 # Git worktrees
 .worktrees/
+
+# Turborepo
+.turbo
+
+# PartyKit
+.partykit
+
+# Vercel
+.vercel

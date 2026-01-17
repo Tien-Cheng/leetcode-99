@@ -1,0 +1,21 @@
+{
+  "name": "@leet99/realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "partykit dev",
+    "build": "tsc",
+    "deploy": "partykit deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@leet99/contracts": "workspace:*",
+    "partykit": "0.0.115"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

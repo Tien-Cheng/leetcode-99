@@ -1,0 +1,17 @@
+/**
+ * Shared Prettier config for the Leet99 monorepo.
+ * @type {import("prettier").Config}
+ */
+const config = {
+  semi: false,
+  singleQuote: true,
+  trailingComma: 'es5',
+  printWidth: 100,
+  tabWidth: 2,
+  useTabs: false,
+  bracketSpacing: true,
+  arrowParens: 'always',
+  endOfLine: 'lf',
+}
+
+export default config

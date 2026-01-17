@@ -1,0 +1,244 @@
+[
+  {
+    "problemId": "two-sum",
+    "title": "Two Sum",
+    "prompt": "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.",
+    "functionName": "two_sum",
+    "signature": "def two_sum(nums: list[int], target: int) -> list[int]",
+    "starterCode": "def two_sum(nums: list[int], target: int) -> list[int]:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[2, 7, 11, 15], 9], "output": [0, 1] },
+      { "input": [[3, 2, 4], 6], "output": [1, 2] }
+    ],
+    "hiddenTests": [
+      { "input": [[3, 3], 6], "output": [0, 1] },
+      { "input": [[-1, -2, -3, -4, -5], -8], "output": [2, 4] }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Try using a hash map to store values you've seen."],
+    "solutionSketch": "Iterate through array, for each element check if (target - element) exists in hashmap. Store index as value."
+  },
+  {
+    "problemId": "reverse-string",
+    "title": "Reverse String",
+    "prompt": "Write a function that reverses a string. The input string is given as a list of characters `s`.\n\nYou must do this by modifying the input list in-place.",
+    "functionName": "reverse_string",
+    "signature": "def reverse_string(s: list[str]) -> None",
+    "starterCode": "def reverse_string(s: list[str]) -> None:\n    # Modify s in-place\n    pass",
+    "publicTests": [
+      { "input": [[["h", "e", "l", "l", "o"]]], "output": null },
+      { "input": [[["H", "a", "n", "n", "a", "h"]]], "output": null }
+    ],
+    "hiddenTests": [
+      { "input": [[["a"]]], "output": null },
+      { "input": [[["a", "b"]]], "output": null }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use two pointers, one at start and one at end."],
+    "solutionSketch": "Two pointers swap from outside in."
+  },
+  {
+    "problemId": "valid-parentheses",
+    "title": "Valid Parentheses",
+    "prompt": "Given a string `s` containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.",
+    "functionName": "is_valid",
+    "signature": "def is_valid(s: str) -> bool",
+    "starterCode": "def is_valid(s: str) -> bool:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": ["()"], "output": true },
+      { "input": ["()[]{}"], "output": true },
+      { "input": ["(]"], "output": false }
+    ],
+    "hiddenTests": [
+      { "input": ["([)]"], "output": false },
+      { "input": ["{[]}"], "output": true },
+      { "input": [""], "output": true }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use a stack to track open brackets."],
+    "solutionSketch": "Push open brackets to stack, pop and match on close brackets."
+  },
+  {
+    "problemId": "max-subarray",
+    "title": "Maximum Subarray",
+    "prompt": "Given an integer array `nums`, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.",
+    "functionName": "max_subarray",
+    "signature": "def max_subarray(nums: list[int]) -> int",
+    "starterCode": "def max_subarray(nums: list[int]) -> int:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[-2, 1, -3, 4, -1, 2, 1, -5, 4]], "output": 6 },
+      { "input": [[1]], "output": 1 }
+    ],
+    "hiddenTests": [
+      { "input": [[5, 4, -1, 7, 8]], "output": 23 },
+      { "input": [[-1]], "output": -1 },
+      { "input": [[-2, -1]], "output": -1 }
+    ],
+    "difficulty": "medium",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Kadane's algorithm: track current sum and max sum."],
+    "solutionSketch": "Kadane's algorithm: current_sum = max(num, current_sum + num), track global max."
+  },
+  {
+    "problemId": "climbing-stairs",
+    "title": "Climbing Stairs",
+    "prompt": "You are climbing a staircase. It takes `n` steps to reach the top.\n\nEach time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?",
+    "functionName": "climb_stairs",
+    "signature": "def climb_stairs(n: int) -> int",
+    "starterCode": "def climb_stairs(n: int) -> int:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [2], "output": 2 },
+      { "input": [3], "output": 3 }
+    ],
+    "hiddenTests": [
+      { "input": [1], "output": 1 },
+      { "input": [5], "output": 8 },
+      { "input": [10], "output": 89 }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["This is a Fibonacci sequence problem."],
+    "solutionSketch": "DP or Fibonacci: ways[n] = ways[n-1] + ways[n-2]"
+  },
+  {
+    "problemId": "merge-sorted-lists",
+    "title": "Merge Two Sorted Lists",
+    "prompt": "You are given the heads of two sorted linked lists as arrays `list1` and `list2`.\n\nMerge the two lists into one sorted list and return it as an array.",
+    "functionName": "merge_lists",
+    "signature": "def merge_lists(list1: list[int], list2: list[int]) -> list[int]",
+    "starterCode": "def merge_lists(list1: list[int], list2: list[int]) -> list[int]:\n    # Your code here\n    pass",
+    "publicTests": [
+      {
+        "input": [
+          [1, 2, 4],
+          [1, 3, 4]
+        ],
+        "output": [1, 1, 2, 3, 4, 4]
+      },
+      { "input": [[], []], "output": [] }
+    ],
+    "hiddenTests": [
+      { "input": [[], [0]], "output": [0] },
+      { "input": [[1], [2]], "output": [1, 2] }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Use two pointers, compare and append smaller element."],
+    "solutionSketch": "Two pointers, compare heads, append smaller, handle remaining."
+  },
+  {
+    "problemId": "product-except-self",
+    "title": "Product of Array Except Self",
+    "prompt": "Given an integer array `nums`, return an array `answer` such that `answer[i]` is equal to the product of all the elements of `nums` except `nums[i]`.\n\nYou must write an algorithm that runs in O(n) time and without using division.",
+    "functionName": "product_except_self",
+    "signature": "def product_except_self(nums: list[int]) -> list[int]",
+    "starterCode": "def product_except_self(nums: list[int]) -> list[int]:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[1, 2, 3, 4]], "output": [24, 12, 8, 6] },
+      { "input": [[-1, 1, 0, -3, 3]], "output": [0, 0, 9, 0, 0] }
+    ],
+    "hiddenTests": [
+      { "input": [[2, 3]], "output": [3, 2] },
+      { "input": [[1, 1, 1, 1]], "output": [1, 1, 1, 1] }
+    ],
+    "difficulty": "medium",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Build prefix and suffix product arrays."],
+    "solutionSketch": "Two passes: left products, then right products multiplied in."
+  },
+  {
+    "problemId": "longest-palindrome-substring",
+    "title": "Longest Palindromic Substring",
+    "prompt": "Given a string `s`, return the longest palindromic substring in `s`.",
+    "functionName": "longest_palindrome",
+    "signature": "def longest_palindrome(s: str) -> str",
+    "starterCode": "def longest_palindrome(s: str) -> str:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": ["babad"], "output": "bab" },
+      { "input": ["cbbd"], "output": "bb" }
+    ],
+    "hiddenTests": [
+      { "input": ["a"], "output": "a" },
+      { "input": ["ac"], "output": "a" },
+      { "input": ["racecar"], "output": "racecar" }
+    ],
+    "difficulty": "medium",
+    "timeLimitMs": 5000,
+    "isGarbage": false,
+    "hints": ["Expand around center for each position."],
+    "solutionSketch": "Expand around center: check odd and even length palindromes at each position."
+  },
+  {
+    "problemId": "garbage-count-vowels",
+    "title": "Count Vowels",
+    "prompt": "Return the number of vowels (a, e, i, o, u) in the given string `s`. Case-insensitive.",
+    "functionName": "count_vowels",
+    "signature": "def count_vowels(s: str) -> int",
+    "starterCode": "def count_vowels(s: str) -> int:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": ["hello"], "output": 2 },
+      { "input": ["AEIOU"], "output": 5 }
+    ],
+    "hiddenTests": [
+      { "input": ["xyz"], "output": 0 },
+      { "input": [""], "output": 0 }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": true,
+    "hints": [],
+    "solutionSketch": "sum(1 for c in s.lower() if c in 'aeiou')"
+  },
+  {
+    "problemId": "garbage-is-even",
+    "title": "Is Even",
+    "prompt": "Return `True` if `n` is even, `False` otherwise.",
+    "functionName": "is_even",
+    "signature": "def is_even(n: int) -> bool",
+    "starterCode": "def is_even(n: int) -> bool:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [4], "output": true },
+      { "input": [7], "output": false }
+    ],
+    "hiddenTests": [
+      { "input": [0], "output": true },
+      { "input": [-2], "output": true }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": true,
+    "hints": [],
+    "solutionSketch": "return n % 2 == 0"
+  },
+  {
+    "problemId": "garbage-sum-list",
+    "title": "Sum of List",
+    "prompt": "Return the sum of all numbers in the list `nums`.",
+    "functionName": "sum_list",
+    "signature": "def sum_list(nums: list[int]) -> int",
+    "starterCode": "def sum_list(nums: list[int]) -> int:\n    # Your code here\n    pass",
+    "publicTests": [
+      { "input": [[1, 2, 3]], "output": 6 },
+      { "input": [[]], "output": 0 }
+    ],
+    "hiddenTests": [
+      { "input": [[-1, 1]], "output": 0 },
+      { "input": [[100]], "output": 100 }
+    ],
+    "difficulty": "easy",
+    "timeLimitMs": 5000,
+    "isGarbage": true,
+    "hints": [],
+    "solutionSketch": "return sum(nums)"
+  }
+]
