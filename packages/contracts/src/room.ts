@@ -45,6 +45,7 @@ export const TargetingModeSchema = z.enum([
   "attackers",
   "topScore",
   "nearDeath",
+  "rankAbove",
 ]);
 export type TargetingMode = z.infer<typeof TargetingModeSchema>;
 

@@ -10,6 +10,7 @@ import {
   Minimap,
   TerminalLog,
   ShopModal,
+  TargetingModal,
   Timer,
   Button,
 } from "@leet99/ui";
@@ -36,9 +37,11 @@ function GamePageContent() {
     eventLog,
     lastJudgeResult,
     serverTime,
+    targetingMode,
     runCode,
     submitCode,
     purchaseItem,
+    setTargetMode,
     updateCode,
   } = useGameState();
 
@@ -49,6 +52,7 @@ function GamePageContent() {
   const [code, setCode] = useState(currentProblem?.starterCode || "");
   const [codeVersion, setCodeVersion] = useState(1);
   const [shopOpen, setShopOpen] = useState(false);
+  const [targetingOpen, setTargetingOpen] = useState(false);
 
   // Update code when problem changes
   useEffect(() => {
@@ -91,6 +95,13 @@ function GamePageContent() {
   // Handle shop toggle
   const handleShopToggle = () => {
     setShopOpen(!shopOpen);
+    if (!shopOpen) setTargetingOpen(false);
+  };
+
+  // Handle targeting toggle
+  const handleTargetingToggle = () => {
+    setTargetingOpen(!targetingOpen);
+    if (!targetingOpen) setShopOpen(false);
   };
 
   // Register global shortcuts
@@ -99,6 +110,7 @@ function GamePageContent() {
       { key: "r", altKey: true, action: handleRun, description: "Run Code" },
       { key: "s", altKey: true, action: handleSubmit, description: "Submit Code" },
       { key: "b", altKey: true, action: handleShopToggle, description: "Toggle Shop" },
+      { key: "t", altKey: true, action: handleTargetingToggle, description: "Targeting Mode" },
       { key: "1", action: () => shopOpen && purchaseItem("clearDebuff"), description: "Purchase Clear Debuff" },
       { key: "2", action: () => shopOpen && purchaseItem("memoryDefrag"), description: "Purchase Memory Defrag" },
       { key: "3", action: () => shopOpen && purchaseItem("skipProblem"), description: "Purchase Skip Problem" },
@@ -321,12 +333,18 @@ function GamePageContent() {
             <Button variant="secondary" hotkey="Alt+B" onClick={handleShopToggle}>
               Shop
             </Button>
+            <Button variant="secondary" hotkey="Alt+T" onClick={handleTargetingToggle}>
+              Target
+            </Button>
             <div className="flex-1"></div>
             <div className="font-mono text-sm">
               Score: <span className="text-accent">{score}</span>
             </div>
             <div className="font-mono text-sm">
               Streak: <span className="text-warning">{solveStreak}</span>
+            </div>
+            <div className="font-mono text-xs text-muted">
+              Target: <span className="text-primary">{targetingMode.toUpperCase()}</span>
             </div>
             {activeDebuff && (
               <div className="font-mono text-xs text-error">
@@ -383,6 +401,16 @@ function GamePageContent() {
           setShopOpen(false);
         }}
         onClose={() => setShopOpen(false)}
+      />
+
+      {/* Targeting Modal */}
+      <TargetingModal
+        isOpen={targetingOpen}
+        activeMode={targetingMode}
+        onSelect={(modeId) => {
+          setTargetMode(modeId as any);
+        }}
+        onClose={() => setTargetingOpen(false)}
       />
     </main>
   );

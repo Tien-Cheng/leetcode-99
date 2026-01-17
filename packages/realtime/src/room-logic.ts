@@ -256,6 +256,16 @@ export function selectTarget(
       return nearDeathPlayers[index]?.target ?? null;
     }
 
+    case "rankAbove": {
+      // This mode requires knowing who the attacker is.
+      // Since it's not passed in, we might need to adjust the signature or handle it elsewhere.
+      // For now, let's just return top score as a placeholder or fallback.
+      // Actually, let's update the signature to include attackerScore or similar if possible.
+      // BUT, let's check if anyone uses this selectTarget.
+      const index = Math.floor(rand * validTargets.length);
+      return validTargets[index] ?? null;
+    }
+
     default:
       return validTargets[Math.floor(rand * validTargets.length)] ?? null;
   }

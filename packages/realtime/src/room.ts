@@ -1033,7 +1033,7 @@ export default class Room implements Party.Server {
       return;
     }
 
-    const validModes: TargetingMode[] = ["random", "attackers", "topScore", "nearDeath"];
+    const validModes: TargetingMode[] = ["random", "attackers", "topScore", "nearDeath", "rankAbove"];
     if (!validModes.includes(payload.mode)) {
       this.sendError(conn, "BAD_REQUEST", "Invalid targeting mode", requestId);
       return;
@@ -1691,6 +1691,30 @@ export default class Room implements Party.Server {
         const nearDeathPlayers = ratios.filter((r) => r.ratio === maxRatio);
         const selected = nearDeathPlayers[Math.floor(Math.random() * nearDeathPlayers.length)];
         return selected?.player ?? null;
+      }
+
+      case "rankAbove": {
+        // Get all participants (alive and non-spectator)
+        const participants = Array.from(this.state.players.values()).filter(
+          (p) => p.role !== "spectator" && p.status !== "eliminated",
+        );
+
+        // Sort by ranking criteria: score desc, then stackSize asc, then playerId
+        const sorted = [...participants].sort((a, b) => {
+          if (a.score !== b.score) return b.score - a.score;
+          if (a.stackSize !== b.stackSize) return a.stackSize - b.stackSize;
+          return a.playerId.localeCompare(b.playerId);
+        });
+
+        const myIndex = sorted.findIndex((p) => p.playerId === attacker.playerId);
+        if (myIndex > 0) {
+          // Player right above me
+          return sorted[myIndex - 1] ?? null;
+        }
+        // If I'm #1, fallback to random (or maybe top score, which is also me)
+        // User said "right on top of ranking of you", so if I'm #1 there's no one above.
+        // Fallback to random among others.
+        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
       }
 
       default:
@@ -2711,7 +2735,7 @@ export default class Room implements Party.Server {
     const warmupEndAt =
       this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
-          this.state.settings.matchDurationSec * 1000 * 0.1
+        this.state.settings.matchDurationSec * 1000 * 0.1
         : Infinity;
 
     const matchEndAt = this.state.match.endAt
