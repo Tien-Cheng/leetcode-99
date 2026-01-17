@@ -1,360 +1,1464 @@
 [
-  {
-    "problemId": "two-sum",
-    "title": "Two Sum",
-    "prompt": "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.",
-    "functionName": "two_sum",
-    "signature": "def two_sum(nums: list[int], target: int) -> list[int]",
-    "starterCode": "def two_sum(nums: list[int], target: int) -> list[int]:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [[2, 7, 11, 15], 9], "output": [0, 1] },
-      { "input": [[3, 2, 4], 6], "output": [1, 2] }
-    ],
-    "hiddenTests": [
-      { "input": [[3, 3], 6], "output": [0, 1] },
-      { "input": [[-1, -2, -3, -4, -5], -8], "output": [2, 4] }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Try using a hash map to store values you've seen."],
-    "solutionSketch": "Iterate through array, for each element check if (target - element) exists in hashmap. Store index as value."
-  },
-  {
-    "problemId": "valid-parentheses",
-    "title": "Valid Parentheses",
-    "prompt": "Given a string `s` containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.",
-    "functionName": "is_valid",
-    "signature": "def is_valid(s: str) -> bool",
-    "starterCode": "def is_valid(s: str) -> bool:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": ["()"], "output": true },
-      { "input": ["()[]{}"], "output": true },
-      { "input": ["(]"], "output": false }
-    ],
-    "hiddenTests": [
-      { "input": ["([)]"], "output": false },
-      { "input": ["{[]}"], "output": true },
-      { "input": [""], "output": true }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use a stack to track open brackets."],
-    "solutionSketch": "Push open brackets to stack, pop and match on close brackets."
-  },
-  {
-    "problemId": "find-max",
-    "title": "Find Maximum",
-    "prompt": "Given an integer array `nums`, return the maximum value in the array.",
-    "functionName": "find_max",
-    "signature": "def find_max(nums: list[int]) -> int",
-    "starterCode": "def find_max(nums: list[int]) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [[1, 3, 2]], "output": 3 },
-      { "input": [[-1, -5, -3]], "output": -1 }
-    ],
-    "hiddenTests": [
-      { "input": [[5]], "output": 5 },
-      { "input": [[0, 0, 0]], "output": 0 },
-      { "input": [[10, 20, 5, 15]], "output": 20 }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use the built-in max() function or iterate through the array."],
-    "solutionSketch": "return max(nums) or iterate and track maximum value."
-  },
-  {
-    "problemId": "climbing-stairs",
-    "title": "Climbing Stairs",
-    "prompt": "You are climbing a staircase. It takes `n` steps to reach the top.\n\nEach time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?",
-    "functionName": "climb_stairs",
-    "signature": "def climb_stairs(n: int) -> int",
-    "starterCode": "def climb_stairs(n: int) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [2], "output": 2 },
-      { "input": [3], "output": 3 }
-    ],
-    "hiddenTests": [
-      { "input": [1], "output": 1 },
-      { "input": [5], "output": 8 },
-      { "input": [10], "output": 89 }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["This is a Fibonacci sequence problem."],
-    "solutionSketch": "DP or Fibonacci: ways[n] = ways[n-1] + ways[n-2]"
-  },
-  {
-    "problemId": "merge-sorted-lists",
-    "title": "Merge Two Sorted Lists",
-    "prompt": "You are given the heads of two sorted linked lists as arrays `list1` and `list2`.\n\nMerge the two lists into one sorted list and return it as an array.",
-    "functionName": "merge_lists",
-    "signature": "def merge_lists(list1: list[int], list2: list[int]) -> list[int]",
-    "starterCode": "def merge_lists(list1: list[int], list2: list[int]) -> list[int]:\n    # Your code here\n    pass",
-    "publicTests": [
-      {
-        "input": [
-          [1, 2, 4],
-          [1, 3, 4]
+    {
+        "problemId": "two-sum",
+        "title": "Two Sum",
+        "prompt": "Return indices of two numbers that add up to target.",
+        "functionName": "two_sum",
+        "signature": "two_sum(nums, target)",
+        "starterCode": "def two_sum(nums: list[int], target: int) -> list[int]:\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return []",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        2,
+                        7,
+                        11,
+                        15
+                    ],
+                    9
+                ],
+                "output": [
+                    0,
+                    1
+                ]
+            }
         ],
-        "output": [1, 1, 2, 3, 4, 4]
-      },
-      { "input": [[], []], "output": [] }
-    ],
-    "hiddenTests": [
-      { "input": [[], [0]], "output": [0] },
-      { "input": [[1], [2]], "output": [1, 2] }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use two pointers, compare and append smaller element."],
-    "solutionSketch": "Two pointers, compare heads, append smaller, handle remaining."
-  },
-  {
-    "problemId": "count-char",
-    "title": "Count Character",
-    "prompt": "Given a string `s` and a character `c`, return the number of times `c` appears in `s`.",
-    "functionName": "count_char",
-    "signature": "def count_char(s: str, c: str) -> int",
-    "starterCode": "def count_char(s: str, c: str) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": ["hello", "l"], "output": 2 },
-      { "input": ["python", "p"], "output": 1 }
-    ],
-    "hiddenTests": [
-      { "input": ["aaaa", "a"], "output": 4 },
-      { "input": ["test", "x"], "output": 0 },
-      { "input": ["", "a"], "output": 0 }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use the count() method or iterate through the string."],
-    "solutionSketch": "return s.count(c) or iterate and count matches."
-  },
-  {
-    "problemId": "is-palindrome",
-    "title": "Is Palindrome",
-    "prompt": "Given a string `s`, return `True` if it is a palindrome (reads the same forwards and backwards), otherwise return `False`. Ignore case.",
-    "functionName": "is_palindrome",
-    "signature": "def is_palindrome(s: str) -> bool",
-    "starterCode": "def is_palindrome(s: str) -> bool:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": ["racecar"], "output": true },
-      { "input": ["hello"], "output": false },
-      { "input": ["A"], "output": true }
-    ],
-    "hiddenTests": [
-      { "input": [""], "output": true },
-      { "input": ["Aa"], "output": true },
-      { "input": ["ab"], "output": false }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Compare the string with its reverse. Use lower() to ignore case."],
-    "solutionSketch": "s_lower = s.lower(); return s_lower == s_lower[::-1]"
-  },
-  {
-    "problemId": "remove-duplicates",
-    "title": "Remove Duplicates",
-    "prompt": "Given a list of integers `nums`, return a new list with duplicates removed, preserving order of first occurrence.",
-    "functionName": "remove_duplicates",
-    "signature": "def remove_duplicates(nums: list[int]) -> list[int]",
-    "starterCode": "def remove_duplicates(nums: list[int]) -> list[int]:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [[1, 2, 2, 3]], "output": [1, 2, 3] },
-      { "input": [[1, 1, 1]], "output": [1] }
-    ],
-    "hiddenTests": [
-      { "input": [[]], "output": [] },
-      { "input": [[1, 2, 3]], "output": [1, 2, 3] },
-      { "input": [[3, 1, 3, 2, 1]], "output": [3, 1, 2] }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use a set to track seen values, or use dict.fromkeys() to preserve order."],
-    "solutionSketch": "Use a set to track seen values, append to result if not seen."
-  },
-  {
-    "problemId": "contains-duplicate",
-    "title": "Contains Duplicate",
-    "prompt": "Given an integer array `nums`, return `True` if any value appears at least twice, otherwise return `False`.",
-    "functionName": "contains_duplicate",
-    "signature": "def contains_duplicate(nums: list[int]) -> bool",
-    "starterCode": "def contains_duplicate(nums: list[int]) -> bool:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [[1, 2, 3, 1]], "output": true },
-      { "input": [[1, 2, 3, 4]], "output": false }
-    ],
-    "hiddenTests": [
-      { "input": [[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]], "output": true },
-      { "input": [[1]], "output": false },
-      { "input": [[]], "output": false }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use a set to check for duplicates."],
-    "solutionSketch": "Compare len(nums) with len(set(nums))."
-  },
-  {
-    "problemId": "fibonacci",
-    "title": "Fibonacci Number",
-    "prompt": "Given an integer `n`, return the nth Fibonacci number. F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2).",
-    "functionName": "fibonacci",
-    "signature": "def fibonacci(n: int) -> int",
-    "starterCode": "def fibonacci(n: int) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [2], "output": 1 },
-      { "input": [3], "output": 2 },
-      { "input": [4], "output": 3 }
-    ],
-    "hiddenTests": [
-      { "input": [0], "output": 0 },
-      { "input": [1], "output": 1 },
-      { "input": [5], "output": 5 }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use iteration or recursion. Handle base cases n=0 and n=1."],
-    "solutionSketch": "Base cases: if n <= 1 return n. Otherwise iterate from 2 to n, building up values."
-  },
-  {
-    "problemId": "two-sum-simple",
-    "title": "Two Sum (Simple)",
-    "prompt": "Given an array of integers `nums` and an integer `target`, return `True` if there exist two numbers that add up to `target`, otherwise return `False`.",
-    "functionName": "two_sum_exists",
-    "signature": "def two_sum_exists(nums: list[int], target: int) -> bool",
-    "starterCode": "def two_sum_exists(nums: list[int], target: int) -> bool:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [[2, 7, 11, 15], 9], "output": true },
-      { "input": [[3, 2, 4], 6], "output": true },
-      { "input": [[1, 2, 3], 7], "output": false }
-    ],
-    "hiddenTests": [
-      { "input": [[1, 1], 2], "output": true },
-      { "input": [[], 0], "output": false },
-      { "input": [[-1, -2], -3], "output": true }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use nested loops or a set to check for complement values."],
-    "solutionSketch": "For each num, check if (target - num) exists in the rest of the array."
-  },
-  {
-    "problemId": "reverse-integer",
-    "title": "Reverse Integer",
-    "prompt": "Given an integer `n`, reverse its digits and return the result. If reversing causes overflow, return 0. Assume we're dealing with 32-bit integers.",
-    "functionName": "reverse_integer",
-    "signature": "def reverse_integer(n: int) -> int",
-    "starterCode": "def reverse_integer(n: int) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [123], "output": 321 },
-      { "input": [-123], "output": -321 },
-      { "input": [120], "output": 21 }
-    ],
-    "hiddenTests": [
-      { "input": [0], "output": 0 },
-      { "input": [1534236469], "output": 0 },
-      { "input": [-2147483648], "output": 0 }
-    ],
-    "difficulty": "medium",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Convert to string and reverse, or use modulo/division. Check for overflow."],
-    "solutionSketch": "Handle sign, reverse digits, check if result is within 32-bit range."
-  },
-  {
-    "problemId": "anagram-check",
-    "title": "Valid Anagram",
-    "prompt": "Given two strings `s` and `t`, return `True` if `t` is an anagram of `s`, otherwise return `False`. An anagram is a word formed by rearranging letters.",
-    "functionName": "is_anagram",
-    "signature": "def is_anagram(s: str, t: str) -> bool",
-    "starterCode": "def is_anagram(s: str, t: str) -> bool:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": ["anagram", "nagaram"], "output": true },
-      { "input": ["rat", "car"], "output": false }
-    ],
-    "hiddenTests": [
-      { "input": ["", ""], "output": true },
-      { "input": ["a", "a"], "output": true },
-      { "input": ["listen", "silent"], "output": true }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Compare sorted versions of both strings, or count character frequencies."],
-    "solutionSketch": "return sorted(s) == sorted(t) or use Counter to compare frequencies."
-  },
-  {
-    "problemId": "garbage-count-vowels",
-    "title": "Count Vowels",
-    "prompt": "Return the number of vowels (a, e, i, o, u) in the given string `s`. Case-insensitive.",
-    "functionName": "count_vowels",
-    "signature": "def count_vowels(s: str) -> int",
-    "starterCode": "def count_vowels(s: str) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": ["hello"], "output": 2 },
-      { "input": ["AEIOU"], "output": 5 }
-    ],
-    "hiddenTests": [
-      { "input": ["xyz"], "output": 0 },
-      { "input": [""], "output": 0 }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": true,
-    "hints": [],
-    "solutionSketch": "sum(1 for c in s.lower() if c in 'aeiou')"
-  },
-  {
-    "problemId": "garbage-is-even",
-    "title": "Is Even",
-    "prompt": "Return `True` if `n` is even, `False` otherwise.",
-    "functionName": "is_even",
-    "signature": "def is_even(n: int) -> bool",
-    "starterCode": "def is_even(n: int) -> bool:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [4], "output": true },
-      { "input": [7], "output": false }
-    ],
-    "hiddenTests": [
-      { "input": [0], "output": true },
-      { "input": [-2], "output": true }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": true,
-    "hints": [],
-    "solutionSketch": "return n % 2 == 0"
-  },
-  {
-    "problemId": "garbage-sum-list",
-    "title": "Sum of List",
-    "prompt": "Return the sum of all numbers in the list `nums`.",
-    "functionName": "sum_list",
-    "signature": "def sum_list(nums: list[int]) -> int",
-    "starterCode": "def sum_list(nums: list[int]) -> int:\n    # Your code here\n    pass",
-    "publicTests": [
-      { "input": [[1, 2, 3]], "output": 6 },
-      { "input": [[]], "output": 0 }
-    ],
-    "hiddenTests": [
-      { "input": [[-1, 1]], "output": 0 },
-      { "input": [[100]], "output": 100 }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": true,
-    "hints": [],
-    "solutionSketch": "return sum(nums)"
-  }
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        3,
+                        2,
+                        4
+                    ],
+                    6
+                ],
+                "output": [
+                    1,
+                    2
+                ]
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-list-vs-tuple",
+        "title": "List vs Tuple",
+        "prompt": "Which of the following is true about Python tuples?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "They are mutable (can be changed)"
+            },
+            {
+                "id": "b",
+                "text": "They are immutable (cannot be changed)"
+            },
+            {
+                "id": "c",
+                "text": "They use square brackets []"
+            },
+            {
+                "id": "d",
+                "text": "They cannot store different data types"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "find-max-easy",
+        "title": "Find Max",
+        "prompt": "Return the largest number in the list.",
+        "functionName": "find_max",
+        "signature": "find_max(nums)",
+        "starterCode": "def find_max(nums: list[int]) -> int:\n    return max(nums)",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        3,
+                        2
+                    ]
+                ],
+                "output": 3
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        -5,
+                        -1,
+                        -10
+                    ]
+                ],
+                "output": -1
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-o-n-complexity",
+        "title": "Time Complexity",
+        "prompt": "What is the time complexity of searching for an element in an unsorted list of size N?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "O(1)"
+            },
+            {
+                "id": "2",
+                "text": "O(log N)"
+            },
+            {
+                "id": "3",
+                "text": "O(N)"
+            },
+            {
+                "id": "4",
+                "text": "O(N^2)"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "is-even-easy",
+        "title": "Is Even",
+        "prompt": "Return True if n is even, else False.",
+        "functionName": "is_even",
+        "signature": "is_even(n)",
+        "starterCode": "def is_even(n: int) -> bool:\n    return n % 2 == 0",
+        "publicTests": [
+            {
+                "input": [
+                    4
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    7
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-stack-behavior",
+        "title": "Stack Behavior",
+        "prompt": "Which principle does a Stack follow?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "fifo",
+                "text": "FIFO (First In First Out)"
+            },
+            {
+                "id": "lifo",
+                "text": "LIFO (Last In First Out)"
+            },
+            {
+                "id": "gho",
+                "text": "GHO (Garbage In Out)"
+            },
+            {
+                "id": "random",
+                "text": "Random Access"
+            }
+        ],
+        "correctAnswer": "lifo",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "string-length",
+        "title": "String Length",
+        "prompt": "Return the length of the string s.",
+        "functionName": "get_length",
+        "signature": "get_length(s)",
+        "starterCode": "def get_length(s: str) -> int:\n    return len(s)",
+        "publicTests": [
+            {
+                "input": [
+                    "hello"
+                ],
+                "output": 5
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    ""
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-python-print",
+        "title": "Python Print",
+        "prompt": "How do you output 'Hello World' in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "console.log('Hello World')"
+            },
+            {
+                "id": "b",
+                "text": "print('Hello World')"
+            },
+            {
+                "id": "c",
+                "text": "echo('Hello World')"
+            },
+            {
+                "id": "d",
+                "text": "System.out.println('Hello World')"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "sum-list-easy",
+        "title": "Sum List",
+        "prompt": "Return the sum of all numbers in the list.",
+        "functionName": "sum_list",
+        "signature": "sum_list(nums)",
+        "starterCode": "def sum_list(nums: list[int]) -> int:\n    return sum(nums)",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3
+                    ]
+                ],
+                "output": 6
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    []
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-binary-search",
+        "title": "Binary Search",
+        "prompt": "What is required for Binary Search to work?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "The list must be sorted"
+            },
+            {
+                "id": "b",
+                "text": "The list must be empty"
+            },
+            {
+                "id": "c",
+                "text": "The list must contain only strings"
+            },
+            {
+                "id": "d",
+                "text": "The list must be unsorted"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "reverse-string-easy",
+        "title": "Reverse String",
+        "prompt": "Return the string s reversed.",
+        "functionName": "reverse_string",
+        "signature": "reverse_string(s)",
+        "starterCode": "def reverse_string(s: str) -> str:\n    return s[::-1]",
+        "publicTests": [
+            {
+                "input": [
+                    "abc"
+                ],
+                "output": "cba"
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "a"
+                ],
+                "output": "a"
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-bitwise-and",
+        "title": "Bitwise AND",
+        "prompt": "What is the result of 5 & 3 in binary?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "1 (001)"
+            },
+            {
+                "id": "2",
+                "text": "7 (111)"
+            },
+            {
+                "id": "3",
+                "text": "5 (101)"
+            },
+            {
+                "id": "4",
+                "text": "3 (011)"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "count-vowels-easy",
+        "title": "Count Vowels",
+        "prompt": "Count vowels (a, e, i, o, u) in string.",
+        "functionName": "count_vowels",
+        "signature": "count_vowels(s)",
+        "starterCode": "def count_vowels(s: str) -> int:\n    return sum(1 for c in s.lower() if c in 'aeiou')",
+        "publicTests": [
+            {
+                "input": [
+                    "hello"
+                ],
+                "output": 2
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "xyz"
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-dict-access",
+        "title": "Dictionary Access",
+        "prompt": "How do you access value 'v' for key 'k' in a Python dict 'd'?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "d('k')"
+            },
+            {
+                "id": "2",
+                "text": "d['k']"
+            },
+            {
+                "id": "3",
+                "text": "d.k"
+            },
+            {
+                "id": "4",
+                "text": "d.get('k')"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "is-palindrome-easy",
+        "title": "Is Palindrome",
+        "prompt": "Check if string reads same backwards.",
+        "functionName": "is_palindrome",
+        "signature": "is_palindrome(s)",
+        "starterCode": "def is_palindrome(s: str) -> bool:\n    s = s.lower()\n    return s == s[::-1]",
+        "publicTests": [
+            {
+                "input": [
+                    "racecar"
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "hello"
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-array-index",
+        "title": "Array Index",
+        "prompt": "What is the index of the first element in a Python list?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "0",
+                "text": "0"
+            },
+            {
+                "id": "1",
+                "text": "1"
+            },
+            {
+                "id": "-1",
+                "text": "-1"
+            },
+            {
+                "id": "first",
+                "text": "first"
+            }
+        ],
+        "correctAnswer": "0",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "abs-value",
+        "title": "Absolute Value",
+        "prompt": "Return absolute value of n.",
+        "functionName": "get_abs",
+        "signature": "get_abs(n)",
+        "starterCode": "def get_abs(n: int) -> int:\n    return abs(n)",
+        "publicTests": [
+            {
+                "input": [
+                    -5
+                ],
+                "output": 5
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    10
+                ],
+                "output": 10
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-comments",
+        "title": "Python Comments",
+        "prompt": "How do you start a single-line comment in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "//"
+            },
+            {
+                "id": "2",
+                "text": "/*"
+            },
+            {
+                "id": "3",
+                "text": "#"
+            },
+            {
+                "id": "4",
+                "text": "--"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "contains-duplicate-easy",
+        "title": "Contains Duplicate",
+        "prompt": "Check if any value appears twice.",
+        "functionName": "has_duplicate",
+        "signature": "has_duplicate(nums)",
+        "starterCode": "def has_duplicate(nums: list[int]) -> bool:\n    return len(nums) != len(set(nums))",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        1
+                    ]
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3
+                    ]
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-variable-naming",
+        "title": "Variable Names",
+        "prompt": "Which variable name is INVALID in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "my_var"
+            },
+            {
+                "id": "2",
+                "text": "2var"
+            },
+            {
+                "id": "3",
+                "text": "_var"
+            },
+            {
+                "id": "4",
+                "text": "var2"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "square-number",
+        "title": "Square Number",
+        "prompt": "Return n squared.",
+        "functionName": "square",
+        "signature": "square(n)",
+        "starterCode": "def square(n: int) -> int:\n    return n * n",
+        "publicTests": [
+            {
+                "input": [
+                    3
+                ],
+                "output": 9
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    5
+                ],
+                "output": 25
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-recursion",
+        "title": "Recursion",
+        "prompt": "What is a base case in recursion?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "The recursive call"
+            },
+            {
+                "id": "2",
+                "text": "The condition to stop recursion"
+            },
+            {
+                "id": "3",
+                "text": "The initial input"
+            },
+            {
+                "id": "4",
+                "text": "A bug in the code"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "get-first-char",
+        "title": "First Char",
+        "prompt": "Return first character of s.",
+        "functionName": "get_first",
+        "signature": "get_first(s)",
+        "starterCode": "def get_first(s: str) -> str:\n    return s[0] if s else ''",
+        "publicTests": [
+            {
+                "input": [
+                    "hello"
+                ],
+                "output": "h"
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "a"
+                ],
+                "output": "a"
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-boolean-not",
+        "title": "Boolean NOT",
+        "prompt": "What is 'not True' in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "False"
+            },
+            {
+                "id": "2",
+                "text": "True"
+            },
+            {
+                "id": "3",
+                "text": "None"
+            },
+            {
+                "id": "4",
+                "text": "0"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "double-list",
+        "title": "Double List",
+        "prompt": "Return [x*2 for x in nums].",
+        "functionName": "double_list",
+        "signature": "double_list(nums)",
+        "starterCode": "def double_list(nums: list[int]) -> list[int]:\n    return [x * 2 for x in nums]",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2
+                    ]
+                ],
+                "output": [
+                    2,
+                    4
+                ]
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    []
+                ],
+                "output": []
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-set-uniqueness",
+        "title": "Python Set",
+        "prompt": "What is the main property of a Set in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "Items are ordered"
+            },
+            {
+                "id": "2",
+                "text": "Items must be unique"
+            },
+            {
+                "id": "3",
+                "text": "Items cannot be strings"
+            },
+            {
+                "id": "4",
+                "text": "It uses parentheses ()"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "to-uppercase",
+        "title": "To Uppercase",
+        "prompt": "Return s in uppercase.",
+        "functionName": "to_upper",
+        "signature": "to_upper(s)",
+        "starterCode": "def to_upper(s: str) -> str:\n    return s.upper()",
+        "publicTests": [
+            {
+                "input": [
+                    "abc"
+                ],
+                "output": "ABC"
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "AbC"
+                ],
+                "output": "ABC"
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-indentation",
+        "title": "Python Syntax",
+        "prompt": "What does Python use to define code blocks?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "Curly braces {}"
+            },
+            {
+                "id": "2",
+                "text": "Semicolons ;"
+            },
+            {
+                "id": "3",
+                "text": "Indentation"
+            },
+            {
+                "id": "4",
+                "text": "Keywords begin/end"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "last-element",
+        "title": "Last Element",
+        "prompt": "Return last element of list.",
+        "functionName": "get_last",
+        "signature": "get_last(nums)",
+        "starterCode": "def get_last(nums: list[int]) -> int:\n    return nums[-1] if nums else None",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3
+                    ]
+                ],
+                "output": 3
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        0
+                    ]
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-exponent",
+        "title": "Python Exponent",
+        "prompt": "Which operator is used for exponentiation (2^3) in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "^"
+            },
+            {
+                "id": "2",
+                "text": "**"
+            },
+            {
+                "id": "3",
+                "text": "exp()"
+            },
+            {
+                "id": "4",
+                "text": "^^"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "is-positive",
+        "title": "Is Positive",
+        "prompt": "Return True if n > 0.",
+        "functionName": "is_positive",
+        "signature": "is_positive(n)",
+        "starterCode": "def is_positive(n: int) -> bool:\n    return n > 0",
+        "publicTests": [
+            {
+                "input": [
+                    5
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    -1
+                ],
+                "output": false
+            },
+            {
+                "input": [
+                    0
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-range-func",
+        "title": "Python Range",
+        "prompt": "What does range(5) generate (conceptually)?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "1, 2, 3, 4, 5"
+            },
+            {
+                "id": "2",
+                "text": "0, 1, 2, 3, 4"
+            },
+            {
+                "id": "3",
+                "text": "0, 1, 2, 3, 4, 5"
+            },
+            {
+                "id": "4",
+                "text": "5, 4, 3, 2, 1"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "repeat-string",
+        "title": "Repeat String",
+        "prompt": "Return string s repeated n times.",
+        "functionName": "repeat",
+        "signature": "repeat(s, n)",
+        "starterCode": "def repeat(s: str, n: int) -> str:\n    return s * n",
+        "publicTests": [
+            {
+                "input": [
+                    "a",
+                    3
+                ],
+                "output": "aaa"
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "bc",
+                    2
+                ],
+                "output": "bcbc"
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-logical-and",
+        "title": "Logical AND",
+        "prompt": "What is (True and False)?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "True"
+            },
+            {
+                "id": "2",
+                "text": "False"
+            },
+            {
+                "id": "3",
+                "text": "None"
+            },
+            {
+                "id": "4",
+                "text": "Error"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "get-min-easy",
+        "title": "Find Min",
+        "prompt": "Return smallest number in list.",
+        "functionName": "get_min",
+        "signature": "get_min(nums)",
+        "starterCode": "def get_min(nums: list[int]) -> int:\n    return min(nums)",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        5,
+                        2,
+                        8
+                    ]
+                ],
+                "output": 2
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        -1,
+                        -5
+                    ]
+                ],
+                "output": -5
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-string-slicing",
+        "title": "String Slicing",
+        "prompt": "What does 'hello'[1:3] return?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "'he'"
+            },
+            {
+                "id": "2",
+                "text": "'el'"
+            },
+            {
+                "id": "3",
+                "text": "'ell'"
+            },
+            {
+                "id": "4",
+                "text": "'hel'"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "add-two-numbers",
+        "title": "Simple Add",
+        "prompt": "Return a + b.",
+        "functionName": "add",
+        "signature": "add(a, b)",
+        "starterCode": "def add(a: int, b: int) -> int:\n    return a + b",
+        "publicTests": [
+            {
+                "input": [
+                    1,
+                    2
+                ],
+                "output": 3
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    -1,
+                    1
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-list-pop",
+        "title": "List Pop",
+        "prompt": "What does list.pop() do by default in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "Removes the first item"
+            },
+            {
+                "id": "2",
+                "text": "Removes the last item"
+            },
+            {
+                "id": "3",
+                "text": "Clears the list"
+            },
+            {
+                "id": "4",
+                "text": "Sorts the list"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "all-true",
+        "title": "All True",
+        "prompt": "Return True if all elements in list are True.",
+        "functionName": "all_true",
+        "signature": "all_true(items)",
+        "starterCode": "def all_true(items: list[bool]) -> bool:\n    return all(items)",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        true,
+                        true
+                    ]
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        true,
+                        false
+                    ]
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-int-division",
+        "title": "Integer Division",
+        "prompt": "What is 7 // 2 in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "3.5"
+            },
+            {
+                "id": "2",
+                "text": "3"
+            },
+            {
+                "id": "3",
+                "text": "4"
+            },
+            {
+                "id": "4",
+                "text": "3.0"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "is-empty",
+        "title": "Is Empty",
+        "prompt": "Return True if list is empty.",
+        "functionName": "is_empty",
+        "signature": "is_empty(nums)",
+        "starterCode": "def is_empty(nums: list) -> bool:\n    return not nums",
+        "publicTests": [
+            {
+                "input": [
+                    []
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        1
+                    ]
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-elif",
+        "title": "Else If",
+        "prompt": "What keyword does Python use for 'else if'?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "elseif"
+            },
+            {
+                "id": "2",
+                "text": "elsif"
+            },
+            {
+                "id": "3",
+                "text": "elif"
+            },
+            {
+                "id": "4",
+                "text": "case"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "multiply-all",
+        "title": "Product of List",
+        "prompt": "Return product of all numbers in list.",
+        "functionName": "product",
+        "signature": "product(nums)",
+        "starterCode": "def product(nums: list[int]) -> int:\n    res = 1\n    for n in nums: res *= n\n    return res",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3,
+                        4
+                    ]
+                ],
+                "output": 24
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        0,
+                        5
+                    ]
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-none-type",
+        "title": "None Type",
+        "prompt": "What does a Python function return by default if no return statement?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "0"
+            },
+            {
+                "id": "2",
+                "text": "False"
+            },
+            {
+                "id": "3",
+                "text": "None"
+            },
+            {
+                "id": "4",
+                "text": "null"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "count-element",
+        "title": "Count Element",
+        "prompt": "Return how many times x appears in nums.",
+        "functionName": "count_occ",
+        "signature": "count_occ(nums, x)",
+        "starterCode": "def count_occ(nums: list[int], x: int) -> int:\n    return nums.count(x)",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        1,
+                        3
+                    ],
+                    1
+                ],
+                "output": 2
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [],
+                    5
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-string-concat",
+        "title": "String Concat",
+        "prompt": "What is 'py' + 'thon'?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "'py thon'"
+            },
+            {
+                "id": "2",
+                "text": "'python'"
+            },
+            {
+                "id": "3",
+                "text": "'py+thon'"
+            },
+            {
+                "id": "4",
+                "text": "Error"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "filter-even",
+        "title": "Filter Even",
+        "prompt": "Return only even numbers from list.",
+        "functionName": "get_evens",
+        "signature": "get_evens(nums)",
+        "starterCode": "def get_evens(nums: list[int]) -> list[int]:\n    return [x for x in nums if x % 2 == 0]",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3,
+                        4
+                    ]
+                ],
+                "output": [
+                    2,
+                    4
+                ]
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        3,
+                        5
+                    ]
+                ],
+                "output": []
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-list-len",
+        "title": "List Length",
+        "prompt": "How do you get the number of items in list 'L'?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "L.size()"
+            },
+            {
+                "id": "2",
+                "text": "L.length()"
+            },
+            {
+                "id": "3",
+                "text": "len(L)"
+            },
+            {
+                "id": "4",
+                "text": "count(L)"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "find-index",
+        "title": "Find Index",
+        "prompt": "Return first index of x in nums, or -1.",
+        "functionName": "find_idx",
+        "signature": "find_idx(nums, x)",
+        "starterCode": "def find_idx(nums: list[int], x: int) -> int:\n    try: return nums.index(x)\n    except: return -1",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3
+                    ],
+                    2
+                ],
+                "output": 1
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        2,
+                        3
+                    ],
+                    5
+                ],
+                "output": -1
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-bool-values",
+        "title": "Boolean Values",
+        "prompt": "Which of these is NOT a Boolean value in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "True"
+            },
+            {
+                "id": "2",
+                "text": "False"
+            },
+            {
+                "id": "3",
+                "text": "Maybe"
+            },
+            {
+                "id": "4",
+                "text": "None"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    }
 ]

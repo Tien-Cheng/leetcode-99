@@ -59,6 +59,7 @@ function GamePageContent() {
   // Local editor state
   const [code, setCode] = useState(currentProblem?.starterCode || "");
   const [codeVersion, setCodeVersion] = useState(1);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +74,7 @@ function GamePageContent() {
     if (currentProblem) {
       setCode(currentProblem.starterCode);
       setCodeVersion(1);
+      setSelectedOptionId(null);
     }
   }, [currentProblem?.problemId]);
 
@@ -124,16 +126,19 @@ function GamePageContent() {
     }
   }, [activeDebuff, code, isRunning, runCode]);
 
-  // Handle Submit code
+  // Handle Submit code / option
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await submitCode(code);
+      const submission = currentProblem?.problemType === "mcq"
+        ? (selectedOptionId || "")
+        : code;
+      await submitCode(submission);
     } finally {
       setIsSubmitting(false);
     }
-  }, [code, isSubmitting, submitCode]);
+  }, [code, isSubmitting, submitCode, currentProblem, selectedOptionId]);
 
   // Handle shop toggle
   const handleShopToggle = () => {
@@ -322,11 +327,15 @@ function GamePageContent() {
                 difficulty: currentProblem.difficulty,
                 prompt: currentProblem.prompt,
                 signature: currentProblem.signature,
-                publicTests: currentProblem.publicTests.map((t) => ({
+                publicTests: (currentProblem.publicTests || []).map((t) => ({
                   input: String(t.input),
                   output: String(t.output),
                 })),
                 isGarbage: currentProblem.isGarbage,
+                problemType: currentProblem.problemType as any,
+                options: currentProblem.options as any,
+                selectedOptionId: selectedOptionId || undefined,
+                onOptionSelect: (id) => setSelectedOptionId(id),
               }}
               testResults={lastJudgeResult?.publicTests.map((t) => ({
                 index: t.index,
@@ -357,15 +366,21 @@ function GamePageContent() {
             className={`flex-1 min-h-0 ${vimLocked ? "vim-cursor-blink" : ""}`}
             noPadding
           >
-            <EditorWrapper
-              code={code}
-              onChange={handleCodeChange}
-              language="python"
-              vimMode={vimMode}
-              vimLocked={vimLocked}
-              onVimModeChange={setVimMode}
-              className="h-full"
-            />
+            {currentProblem?.problemType === "mcq" ? (
+              <div className="flex items-center justify-center h-full text-muted font-mono text-sm border-2 border-dashed border-secondary m-4">
+                Select an option on the left to solve this problem
+              </div>
+            ) : (
+              <EditorWrapper
+                code={code}
+                onChange={handleCodeChange}
+                language="python"
+                vimMode={vimMode}
+                vimLocked={vimLocked}
+                onVimModeChange={setVimMode}
+                className="h-full"
+              />
+            )}
           </Panel>
 
           {/* Horizontal Resizer */}

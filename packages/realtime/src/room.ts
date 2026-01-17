@@ -781,7 +781,7 @@ export default class Room implements Party.Server {
 
       p.currentProblem = this.toClientView(current);
       p.queued = queued;
-      p.code = current.starterCode;
+      p.code = current.problemType === "code" ? current.starterCode : "";
       p.codeVersion = 1;
       p.revealedHints = [];
       p.stackSize = queued.length;
@@ -2027,10 +2027,13 @@ export default class Room implements Party.Server {
       kind: "submit",
       problemId: problem.problemId,
       passed,
-      publicTests: problem.publicTests.map((_, index) => ({
-        index,
-        passed,
-      })),
+      publicTests:
+        problem.problemType === "code"
+          ? problem.publicTests.map((_, index) => ({
+              index,
+              passed,
+            }))
+          : [],
       hiddenTestsPassed: passed,
     };
 
@@ -2252,7 +2255,7 @@ export default class Room implements Party.Server {
 
     if (nextProblem) {
       player.currentProblem = this.toClientView(nextProblem);
-      player.code = nextProblem.starterCode;
+      player.code = nextProblem.problemType === "code" ? nextProblem.starterCode : "";
       player.codeVersion = 1;
       player.revealedHints = [];
     }
@@ -2514,15 +2517,25 @@ export default class Room implements Party.Server {
     problem: ProblemFull,
     code: string,
   ): JudgeResult {
-    // Simple simulation: pass if code contains the function name
-    const passed = code.includes(problem.functionName) && code.length > 50;
+    let passed = false;
 
-    const publicTests = problem.publicTests.map((_, index) => ({
-      index,
-      passed,
-      expected: passed ? undefined : "expected",
-      received: passed ? undefined : "received",
-    }));
+    if (problem.problemType === "mcq") {
+      // For MCQ, 'code' is the selected option ID
+      passed = code === problem.correctAnswer;
+    } else {
+      // Simple simulation: pass if code contains the function name
+      passed = code.includes(problem.functionName) && code.length > 50;
+    }
+
+    const publicTests =
+      problem.problemType === "code"
+        ? (problem.publicTests || []).map((_, index) => ({
+            index,
+            passed,
+            expected: passed ? undefined : "expected",
+            received: passed ? undefined : "received",
+          }))
+        : [];
 
     return {
       kind,
@@ -2856,11 +2869,19 @@ export default class Room implements Party.Server {
 
   private toClientView(problem: ProblemFull): ProblemClientView {
     // Strip hidden tests and server-only fields
-    const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
-    return {
-      ...clientView,
-      hintCount: hints?.length,
-    };
+    if (problem.problemType === "code") {
+      const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
+      return {
+        ...clientView,
+        hintCount: hints?.length,
+      };
+    } else {
+      const { hiddenTests: _hiddenTests, hints, correctAnswer: _correctAnswer, ...clientView } = problem;
+      return {
+        ...clientView,
+        hintCount: hints?.length,
+      };
+    }
   }
 
   async onAlarm() {
