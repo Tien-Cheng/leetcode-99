@@ -9,7 +9,7 @@ import {
     type EventLogEntry,
 } from "@leet99/contracts";
 
-const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
+const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
 
 type StoredAuth = {
     roomId: string;
@@ -40,7 +40,7 @@ export function useRoom(roomId: string) {
     const socket = usePartySocket({
         host: PARTY_HOST,
         room: roomId,
-        party: "main",
+        party: "leet99",
         onOpen: () => setConnected(true),
         onClose: () => setConnected(false),
         onMessage: (evt) => {

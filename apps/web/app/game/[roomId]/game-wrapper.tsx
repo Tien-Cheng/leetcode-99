@@ -28,12 +28,17 @@ export function GameWrapper({ children, roomId }: GameWrapperProps) {
         setPlayerToken(auth.playerToken);
         // Use stored wsUrl or fallback
         const url = auth.wsUrl || process.env.NEXT_PUBLIC_PARTYKIT_HOST
-          ? `ws://${process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999"}/parties/main/${roomId}`
-          : `ws://localhost:1999/parties/main/${roomId}`;
+          ? `ws://${process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999"}/parties/leet99/${roomId}`
+          : `ws://127.0.0.1:1999/parties/leet99/${roomId}`;
 
         // If the stored URL is from server, it might be fully qualified. 
         // CreateRoom returns full wsUrl.
-        setWsUrl(auth.wsUrl || url);
+        let finalUrl = auth.wsUrl || url;
+        // Fix for potential IPv6 localhost issues
+        if (finalUrl.includes("localhost")) {
+          finalUrl = finalUrl.replace("localhost", "127.0.0.1");
+        }
+        setWsUrl(finalUrl);
         setConnectionReady(true);
       } catch (e) {
         console.error("Failed to parse stored auth", e);

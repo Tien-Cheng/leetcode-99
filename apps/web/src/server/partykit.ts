@@ -8,7 +8,7 @@ import {
 } from "@leet99/contracts";
 
 export function partyBaseUrl(): string {
-  return process.env.PARTYKIT_HOST || "http://localhost:1999";
+  return process.env.PARTYKIT_HOST || "http://127.0.0.1:1999";
 }
 
 export function partyProject(): string {
@@ -24,7 +24,7 @@ export function toWsUrl(roomId: string): string {
   const wsBase = new URL(base.origin);
   wsBase.protocol = wsProtocol;
 
-  return `${wsBase.origin}/parties/main/${roomId}`;
+  return `${wsBase.origin}/parties/${partyProject()}/${roomId}`;
 }
 
 export type RegisterPartyPlayerOk = {
@@ -62,7 +62,7 @@ export async function registerPartyPlayer(
   }
 
   const url = new URL(
-    `/parties/main/${roomId}/register`,
+    `/parties/${partyProject()}/${roomId}/register`,
     partyBaseUrl(),
   );
 

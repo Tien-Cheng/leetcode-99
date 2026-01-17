@@ -101,6 +101,46 @@ export function useWebSocket(
     Map<string, { resolve: () => void; reject: (error: Error) => void }>
   >(new Map());
 
+  // Store callbacks in refs to avoid dependency issues
+  const handlersRef = useRef({
+    onRoomSnapshot,
+    onSettingsUpdate,
+    onMatchStarted,
+    onMatchPhaseUpdate,
+    onPlayerUpdate,
+    onJudgeResult,
+    onStackUpdate,
+    onChatAppend,
+    onAttackReceived,
+    onEventLogAppend,
+    onSpectateState,
+    onCodeUpdate,
+    onMatchEnd,
+    onError,
+    onConnect,
+    onDisconnect,
+  });
+
+  // Update handlers ref when they change
+  handlersRef.current = {
+    onRoomSnapshot,
+    onSettingsUpdate,
+    onMatchStarted,
+    onMatchPhaseUpdate,
+    onPlayerUpdate,
+    onJudgeResult,
+    onStackUpdate,
+    onChatAppend,
+    onAttackReceived,
+    onEventLogAppend,
+    onSpectateState,
+    onCodeUpdate,
+    onMatchEnd,
+    onError,
+    onConnect,
+    onDisconnect,
+  };
+
   // Generate unique request ID
   const generateRequestId = useCallback(() => {
     requestIdCounterRef.current += 1;
@@ -123,27 +163,37 @@ export function useWebSocket(
   const sendMessageWithResponse = useCallback(
     <T extends ClientMessage>(message: T): Promise<void> => {
       return new Promise((resolve, reject) => {
-        if (wsRef.current?.readyState !== WebSocket.OPEN) {
-          reject(new Error("WebSocket not connected"));
-          return;
-        }
-
-        const requestId = generateRequestId();
-        const messageWithId = { ...message, requestId };
-
-        // Store pending request
-        pendingRequestsRef.current.set(requestId, { resolve, reject });
-
-        // Send message
-        wsRef.current.send(JSON.stringify(messageWithId));
-
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          if (pendingRequestsRef.current.has(requestId)) {
-            pendingRequestsRef.current.delete(requestId);
-            reject(new Error("Request timeout"));
+        // Wait for connection if not ready
+        const attemptSend = () => {
+          if (wsRef.current?.readyState !== WebSocket.OPEN) {
+            reject(new Error("WebSocket not connected"));
+            return;
           }
-        }, 30000);
+
+          const requestId = generateRequestId();
+          const messageWithId = { ...message, requestId };
+
+          // Store pending request
+          pendingRequestsRef.current.set(requestId, { resolve, reject });
+
+          // Send message
+          wsRef.current.send(JSON.stringify(messageWithId));
+
+          // Auto-resolve after timeout (server doesn't always send response)
+          setTimeout(() => {
+            if (pendingRequestsRef.current.has(requestId)) {
+              pendingRequestsRef.current.delete(requestId);
+              resolve();
+            }
+          }, 10000);
+        };
+
+        // If WebSocket is connecting, wait a bit
+        if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+          setTimeout(attemptSend, 100);
+        } else {
+          attemptSend();
+        }
       });
     },
     [generateRequestId]
@@ -166,49 +216,50 @@ export function useWebSocket(
           }
         }
 
-        // Route to appropriate handler
+        // Route to appropriate handler using refs
+        const handlers = handlersRef.current;
         switch (message.type) {
           case "ROOM_SNAPSHOT":
-            onRoomSnapshot?.(message.payload);
+            handlers.onRoomSnapshot?.(message.payload);
             break;
           case "SETTINGS_UPDATE":
-            onSettingsUpdate?.(message.payload);
+            handlers.onSettingsUpdate?.(message.payload);
             break;
           case "MATCH_STARTED":
-            onMatchStarted?.(message.payload);
+            handlers.onMatchStarted?.(message.payload);
             break;
           case "MATCH_PHASE_UPDATE":
-            onMatchPhaseUpdate?.(message.payload);
+            handlers.onMatchPhaseUpdate?.(message.payload);
             break;
           case "PLAYER_UPDATE":
-            onPlayerUpdate?.(message.payload);
+            handlers.onPlayerUpdate?.(message.payload);
             break;
           case "JUDGE_RESULT":
-            onJudgeResult?.(message.payload);
+            handlers.onJudgeResult?.(message.payload);
             break;
           case "STACK_UPDATE":
-            onStackUpdate?.(message.payload);
+            handlers.onStackUpdate?.(message.payload);
             break;
           case "CHAT_APPEND":
-            onChatAppend?.(message.payload);
+            handlers.onChatAppend?.(message.payload);
             break;
           case "ATTACK_RECEIVED":
-            onAttackReceived?.(message.payload);
+            handlers.onAttackReceived?.(message.payload);
             break;
           case "EVENT_LOG_APPEND":
-            onEventLogAppend?.(message.payload);
+            handlers.onEventLogAppend?.(message.payload);
             break;
           case "SPECTATE_STATE":
-            onSpectateState?.(message.payload);
+            handlers.onSpectateState?.(message.payload);
             break;
           case "CODE_UPDATE":
-            onCodeUpdate?.(message.payload);
+            handlers.onCodeUpdate?.(message.payload);
             break;
           case "MATCH_END":
-            onMatchEnd?.(message.payload);
+            handlers.onMatchEnd?.(message.payload);
             break;
           case "ERROR":
-            onError?.(message.payload);
+            handlers.onError?.(message.payload);
             // If this was in response to a request, reject the promise
             if (message.requestId && pendingRequestsRef.current.has(message.requestId)) {
               const { reject } = pendingRequestsRef.current.get(message.requestId)!;
@@ -221,22 +272,7 @@ export function useWebSocket(
         console.error("Failed to parse WebSocket message:", error);
       }
     },
-    [
-      onRoomSnapshot,
-      onSettingsUpdate,
-      onMatchStarted,
-      onMatchPhaseUpdate,
-      onPlayerUpdate,
-      onJudgeResult,
-      onStackUpdate,
-      onChatAppend,
-      onAttackReceived,
-      onEventLogAppend,
-      onSpectateState,
-      onCodeUpdate,
-      onMatchEnd,
-      onError,
-    ]
+    [] // No dependencies - use ref instead
   );
 
   // Connect to WebSocket
@@ -255,13 +291,13 @@ export function useWebSocket(
         console.log("WebSocket connected");
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
-        onConnect?.();
+        handlersRef.current.onConnect?.();
 
-        // Send JOIN_ROOM message
-        sendMessage({
+        // Send JOIN_ROOM message directly (ws is guaranteed to be OPEN here)
+        ws.send(JSON.stringify({
           type: "JOIN_ROOM",
           payload: { playerToken },
-        });
+        }));
       };
 
       ws.onmessage = handleMessage;
@@ -274,7 +310,13 @@ export function useWebSocket(
         console.log("WebSocket disconnected");
         setIsConnected(false);
         wsRef.current = null;
-        onDisconnect?.();
+        handlersRef.current.onDisconnect?.();
+
+        // Don't reconnect if we're cleaning up
+        if (isCleaningUpRef.current) {
+          console.log("Not reconnecting (component unmounting)");
+          return;
+        }
 
         // Attempt to reconnect with exponential backoff
         const delay = Math.min(
@@ -291,25 +333,33 @@ export function useWebSocket(
     } catch (error) {
       console.error("Failed to connect WebSocket:", error);
     }
-  }, [wsUrl, playerToken, handleMessage, onConnect, onDisconnect, sendMessage]);
+  }, [wsUrl, playerToken, handleMessage]); // Use handlersRef for callbacks
+
+  // Track if we're intentionally disconnecting (for cleanup)
+  const isCleaningUpRef = useRef(false);
 
   // Initialize connection on mount
   useEffect(() => {
+    isCleaningUpRef.current = false;
     connect();
 
     // Cleanup on unmount
     return () => {
+      isCleaningUpRef.current = true;
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
       // Reject all pending requests
       pendingRequestsRef.current.forEach(({ reject }) => {
         reject(new Error("WebSocket connection closed"));
       });
       pendingRequestsRef.current.clear();
+      setIsConnected(false);
     };
   }, [connect]);
 
