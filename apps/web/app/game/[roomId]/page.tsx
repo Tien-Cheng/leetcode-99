@@ -151,9 +151,24 @@ function GamePageContent() {
   useKeyboardShortcuts({
     shortcuts: [
       { key: "r", altKey: true, action: handleRun, description: "Run Code" },
-      { key: "s", altKey: true, action: handleSubmit, description: "Submit Code" },
-      { key: "b", altKey: true, action: handleShopToggle, description: "Toggle Shop" },
-      { key: "t", altKey: true, action: handleTargetingToggle, description: "Targeting Mode" },
+      {
+        key: "s",
+        altKey: true,
+        action: handleSubmit,
+        description: "Submit Code",
+      },
+      {
+        key: "b",
+        altKey: true,
+        action: handleShopToggle,
+        description: "Toggle Shop",
+      },
+      {
+        key: "t",
+        altKey: true,
+        action: handleTargetingToggle,
+        description: "Targeting Mode",
+      },
     ],
     enabled: true,
   });
@@ -166,9 +181,15 @@ function GamePageContent() {
 
     // Add/remove flashbang transition class
     if (activeDebuff?.type === "flashbang") {
-      document.documentElement.classList.add("transition-colors", "duration-1000");
+      document.documentElement.classList.add(
+        "transition-colors",
+        "duration-1000",
+      );
     } else {
-      document.documentElement.classList.remove("transition-colors", "duration-1000");
+      document.documentElement.classList.remove(
+        "transition-colors",
+        "duration-1000",
+      );
     }
   }, [activeDebuff]);
 
@@ -187,7 +208,10 @@ function GamePageContent() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - startRef.current.x;
-      const newWidth = Math.min(Math.max(startRef.current.w + deltaX, 240), 600);
+      const newWidth = Math.min(
+        Math.max(startRef.current.w + deltaX, 240),
+        600,
+      );
       setProblemWidth(newWidth);
     };
 
@@ -213,7 +237,10 @@ function GamePageContent() {
     const handleMouseMove = (e: MouseEvent) => {
       // Delta is positive when dragging UP (terminal gets taller)
       const deltaY = startRef.current.y - e.clientY;
-      const newHeight = Math.min(Math.max(startRef.current.h + deltaY, 64), 600);
+      const newHeight = Math.min(
+        Math.max(startRef.current.h + deltaY, 64),
+        600,
+      );
       setTerminalHeight(newHeight);
     };
 
@@ -233,12 +260,22 @@ function GamePageContent() {
   }, [isResizingHeight]);
 
   const startWidthResize = (e: React.MouseEvent) => {
-    startRef.current = { x: e.clientX, y: e.clientY, w: problemWidth, h: terminalHeight };
+    startRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      w: problemWidth,
+      h: terminalHeight,
+    };
     setIsResizingWidth(true);
   };
 
   const startHeightResize = (e: React.MouseEvent) => {
-    startRef.current = { x: e.clientX, y: e.clientY, w: problemWidth, h: terminalHeight };
+    startRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      w: problemWidth,
+      h: terminalHeight,
+    };
     setIsResizingHeight(true);
   };
 
@@ -295,13 +332,16 @@ function GamePageContent() {
             <span className="text-error animate-pulse">(Disconnected)</span>
           )}
           {activeDebuff && (
-            <span className={`
+            <span
+              className={`
               px-2 py-0.5 text-xs font-bold border
               ${activeDebuff.type === "ddos" ? "border-error text-error animate-pulse" : ""}
               ${activeDebuff.type === "flashbang" ? "border-warning text-warning" : ""}
               ${activeDebuff.type === "vimLock" ? "border-success text-success vim-cursor-blink" : ""}
               ${activeDebuff.type === "memoryLeak" ? "border-warning text-warning glitch-text" : ""}
-            `} data-text={`[${activeDebuff.type.toUpperCase()}]`}>
+            `}
+              data-text={`[${activeDebuff.type.toUpperCase()}]`}
+            >
               [{activeDebuff.type.toUpperCase()}]
             </span>
           )}
@@ -311,10 +351,7 @@ function GamePageContent() {
       {/* Main Game Layout */}
       <div className="flex flex-1 gap-1 min-h-0">
         {/* Left: Problem Panel */}
-        <div
-          className="flex-shrink-0"
-          style={{ width: `${problemWidth}px` }}
-        >
+        <div className="flex-shrink-0" style={{ width: `${problemWidth}px` }}>
           {currentProblem ? (
             <ProblemDisplay
               problem={{
@@ -379,21 +416,19 @@ function GamePageContent() {
             className="flex-shrink-0"
             style={{ height: `${terminalHeight}px` }}
           >
-            <Panel
-              title="TERMINAL LOG"
-              className="h-full"
-              noPadding
-            >
+            <Panel title="TERMINAL LOG" className="h-full" noPadding>
               <TerminalLog messages={terminalMessages} />
             </Panel>
           </div>
 
           {/* Action Bar */}
-          <div className={`
+          <div
+            className={`
             flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0
             transition-all duration-300
             ${ddosActive ? "border-error animate-pulse-red" : ""}
-          `}>
+          `}
+          >
             <Button
               variant="primary"
               hotkey="Alt+R"
@@ -416,10 +451,18 @@ function GamePageContent() {
             >
               {isSubmitting ? "Submitting..." : "Submit"}
             </Button>
-            <Button variant="secondary" hotkey="Alt+B" onClick={handleShopToggle}>
+            <Button
+              variant="secondary"
+              hotkey="Alt+B"
+              onClick={handleShopToggle}
+            >
               Shop
             </Button>
-            <Button variant="secondary" hotkey="Alt+T" onClick={handleTargetingToggle}>
+            <Button
+              variant="secondary"
+              hotkey="Alt+T"
+              onClick={handleTargetingToggle}
+            >
               Target
             </Button>
             <div className="flex-1"></div>
@@ -427,8 +470,11 @@ function GamePageContent() {
             {/* Score Display with animations */}
             <ScoreDisplay score={score} streak={solveStreak} />
 
-            <div className="font-mono text-xs text-muted">
-              Target: <span className="text-primary">{targetingMode.toUpperCase()}</span>
+            <div className="font-mono text-xs text-muted max-w-[120px] truncate text-right">
+              T:{" "}
+              <span className="text-primary">
+                {targetingMode.toUpperCase()}
+              </span>
             </div>
           </div>
         </div>
