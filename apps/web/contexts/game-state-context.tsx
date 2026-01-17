@@ -30,6 +30,7 @@ interface GameStateContextValue {
   playersPublic: PlayerPublic[];
   roomSettings: RoomSettings | null;
   matchPhase: MatchPhase;
+  matchEndAt: string | null;
 
   // Player state
   playerId: string | null;
@@ -92,6 +93,7 @@ export function GameStateProvider({
   const [playersPublic, setPlayersPublic] = useState<PlayerPublic[]>([]);
   const [roomSettings, setRoomSettings] = useState<RoomSettings | null>(null);
   const [matchPhase, setMatchPhase] = useState<MatchPhase>("lobby");
+  const [matchEndAt, setMatchEndAt] = useState<string | null>(null);
 
   // Player state
   const [username, setUsername] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export function GameStateProvider({
     setPlayersPublic(payload.players);
     setRoomSettings(payload.match.settings);
     setMatchPhase(payload.match.phase);
+    setMatchEndAt(payload.match.endAt ?? null);
     setUsername(payload.me.username);
     setIsHost(payload.me.isHost);
     setChat(payload.chat);
@@ -351,6 +354,7 @@ export function GameStateProvider({
     playersPublic,
     roomSettings,
     matchPhase,
+    matchEndAt,
 
     // Player state
     playerId,

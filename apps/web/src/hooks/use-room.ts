@@ -1,5 +1,5 @@
 import usePartySocket from "partysocket/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     type WSMessage,
@@ -52,56 +52,49 @@ export function useRoom(roomId: string) {
                     break;
 
                 case "PLAYER_UPDATE":
-                    if (snapshot) {
-                        const newPlayers = [...snapshot.players];
+                    // Use functional update to avoid stale closure
+                    setSnapshot(prev => {
+                        if (!prev) return prev;
+                        const newPlayers = [...prev.players];
                         const idx = newPlayers.findIndex(p => p.playerId === msg.payload.player.playerId);
                         if (idx >= 0) {
                             newPlayers[idx] = msg.payload.player;
                         } else {
                             newPlayers.push(msg.payload.player);
                         }
-                        setSnapshot({ ...snapshot, players: newPlayers });
-                    }
+                        return { ...prev, players: newPlayers };
+                    });
                     break;
 
                 case "MATCH_STARTED":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            match: msg.payload.match
-                        });
-                    }
+                    setSnapshot(prev => {
+                        if (!prev) return prev;
+                        return { ...prev, match: msg.payload.match };
+                    });
                     break;
 
                 case "CHAT_APPEND":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            chat: [...snapshot.chat, msg.payload.message]
-                        });
-                    }
+                    setSnapshot(prev => {
+                        if (!prev) return prev;
+                        return { ...prev, chat: [...prev.chat, msg.payload.message] };
+                    });
                     break;
 
                 case "EVENT_LOG_APPEND":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            eventLog: [...snapshot.eventLog, msg.payload.entry]
-                        });
-                    }
+                    setSnapshot(prev => {
+                        if (!prev) return prev;
+                        return { ...prev, eventLog: [...prev.eventLog, msg.payload.entry] };
+                    });
                     break;
 
-                // TODO: Other message types (SETTINGS_UPDATE, etc)
                 case "SETTINGS_UPDATE":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            match: {
-                                ...snapshot.match,
-                                settings: msg.payload.settings
-                            }
-                        });
-                    }
+                    setSnapshot(prev => {
+                        if (!prev) return prev;
+                        return {
+                            ...prev,
+                            match: { ...prev.match, settings: msg.payload.settings }
+                        };
+                    });
                     break;
             }
         },

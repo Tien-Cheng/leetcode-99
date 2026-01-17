@@ -224,7 +224,6 @@ export function useWebSocket(
     (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data) as ServerMessage;
-        console.log("[WS] Received:", message.type);
 
         // If this is a response to a pending request, resolve it
         if (message.requestId && pendingRequestsRef.current.has(message.requestId)) {
@@ -315,18 +314,14 @@ export function useWebSocket(
     }
 
     try {
-      console.log(`[WS ${thisConnectionId}] Connecting to ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         // Ignore if this is a stale connection
         if (connectionIdRef.current !== thisConnectionId) {
-          console.log(`[WS ${thisConnectionId}] Ignoring stale onopen (current: ${connectionIdRef.current})`);
           return;
         }
-
-        console.log(`[WS ${thisConnectionId}] Connected!`);
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
         handlersRef.current.onConnect?.();
@@ -377,7 +372,6 @@ export function useWebSocket(
       ws.onclose = (event) => {
         // Ignore if this is a stale connection
         if (connectionIdRef.current !== thisConnectionId) {
-          console.log(`[WS ${thisConnectionId}] Ignoring stale onclose (current: ${connectionIdRef.current})`);
           return;
         }
 

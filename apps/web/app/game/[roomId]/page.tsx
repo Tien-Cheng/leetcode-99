@@ -36,6 +36,7 @@ function GamePageContent() {
     eventLog,
     lastJudgeResult,
     serverTime,
+    matchEndAt,
     runCode,
     submitCode,
     purchaseItem,
@@ -220,7 +221,7 @@ function GamePageContent() {
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
         <Timer
-          endsAt={roomSettings?.matchDurationSec ? new Date(Date.now() + roomSettings.matchDurationSec * 1000).toISOString() : new Date().toISOString()}
+          endsAt={matchEndAt || new Date().toISOString()}
           serverTime={serverTime || new Date().toISOString()}
         />
         <div className="font-mono text-sm text-muted">
