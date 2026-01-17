@@ -53,6 +53,7 @@ interface PlayerInternal {
   code?: string;
   codeVersion?: number;
   revealedHints?: string[];
+  lastProblemArrivalAt?: number; // Timestamp of last problem arrival (for per-player timing)
 }
 
 interface RoomState {
@@ -66,6 +67,7 @@ interface RoomState {
   nextJoinOrder: number;
   nextBotNumber: number;
   playerProblemHistory: Map<string, Set<string>>;
+  nextProblemArrivalAt: number | null; // Timestamp for next problem arrival
 }
 
 // ============================================================================
@@ -93,6 +95,7 @@ export default class Room implements Party.Server {
       nextJoinOrder: 0,
       nextBotNumber: 1,
       playerProblemHistory: new Map(),
+      nextProblemArrivalAt: null,
     };
   }
 
@@ -119,7 +122,62 @@ export default class Room implements Party.Server {
             ([k, v]) => [k, new Set(v as string[])],
           ),
         ),
+        nextProblemArrivalAt: (stored as any).nextProblemArrivalAt ?? null,
       };
+
+      // Initialize lastProblemArrivalAt for players if missing (for restored state)
+      const now = Date.now();
+      for (const player of this.state.players.values()) {
+        if (
+          (player.role === "player" || player.role === "bot") &&
+          !player.lastProblemArrivalAt &&
+          this.state.match.phase !== "lobby" &&
+          this.state.match.phase !== "ended"
+        ) {
+          // Initialize to match start time if available, otherwise use now
+          player.lastProblemArrivalAt = this.state.match.startAt
+            ? new Date(this.state.match.startAt).getTime()
+            : now;
+        }
+      }
+
+      // Reschedule alarms if match is active
+      if (
+        this.state.match.phase !== "lobby" &&
+        this.state.match.phase !== "ended"
+      ) {
+        // Reschedule problem arrivals if needed
+        if (this.state.nextProblemArrivalAt) {
+          if (this.state.nextProblemArrivalAt > now) {
+            // Still in the future, reschedule (recalculates based on current player states)
+            await this.scheduleNextProblemArrival();
+          } else {
+            // Past due, handle immediately
+            await this.handleProblemArrivals();
+          }
+        } else {
+          // No arrival scheduled, schedule one
+          await this.scheduleNextProblemArrival();
+        }
+
+        // Reschedule phase transition if in warmup
+        if (this.state.match.phase === "warmup" && this.state.match.startAt) {
+          const warmupEndAt =
+            new Date(this.state.match.startAt).getTime() +
+            this.state.settings.matchDurationSec * 1000 * 0.1;
+          if (warmupEndAt > now) {
+            await this.room.storage.setAlarm(warmupEndAt);
+          }
+        }
+
+        // Reschedule match end check
+        if (this.state.match.endAt) {
+          const matchEndAt = new Date(this.state.match.endAt).getTime();
+          if (matchEndAt > now) {
+            await this.room.storage.setAlarm(matchEndAt);
+          }
+        }
+      }
     }
   }
 
@@ -470,6 +528,7 @@ export default class Room implements Party.Server {
       p.codeVersion = 1;
       p.revealedHints = [];
       p.stackSize = queued.length;
+      p.lastProblemArrivalAt = now.getTime(); // Initialize to match start time
     }
 
     // Persist
@@ -478,6 +537,9 @@ export default class Room implements Party.Server {
     // Schedule warmup -> main transition
     const warmupDurationMs = this.state.settings.matchDurationSec * 1000 * 0.1;
     await this.room.storage.setAlarm(Date.now() + warmupDurationMs);
+
+    // Schedule first problem arrival
+    await this.scheduleNextProblemArrival();
 
     // Broadcast MATCH_STARTED
     this.broadcast({
@@ -644,6 +706,9 @@ export default class Room implements Party.Server {
       settings: this.state.settings,
     };
 
+    // Clear problem arrival schedule
+    this.state.nextProblemArrivalAt = null;
+
     // Reset all players
     for (const p of this.state.players.values()) {
       p.status = "lobby";
@@ -657,6 +722,7 @@ export default class Room implements Party.Server {
       p.code = undefined;
       p.codeVersion = undefined;
       p.revealedHints = undefined;
+      p.lastProblemArrivalAt = undefined;
     }
 
     // Clear problem history and event log
@@ -739,6 +805,108 @@ export default class Room implements Party.Server {
       chat: this.state.chat,
       eventLog: this.state.eventLog,
     };
+  }
+
+  // ============================================================================
+  // Game State Management
+  // ============================================================================
+
+  /**
+   * Add a problem to the top of a player's queue
+   * Returns true if player was eliminated due to overflow
+   */
+  private addProblemToQueue(
+    player: PlayerInternal,
+    problem: ProblemFull,
+  ): boolean {
+    if (player.role !== "player" && player.role !== "bot") {
+      return false;
+    }
+
+    if (player.status === "eliminated") {
+      return false;
+    }
+
+    // Ensure queued array exists
+    if (!player.queued) {
+      player.queued = [];
+    }
+
+    // Check for overflow (stackSize counts queued only, current excluded)
+    if (player.stackSize >= this.state.match.settings.stackLimit) {
+      // Eliminate player
+      player.status = "eliminated";
+      player.stackSize = player.stackSize + 1; // Show overflow
+      this.addEventLog(
+        "warning",
+        `${player.username} was eliminated (stack overflow)`,
+      );
+      this.broadcastPlayerUpdate(player);
+      return true;
+    }
+
+    // Push to top of queue (index 0)
+    const summary: ProblemSummary = {
+      problemId: problem.problemId,
+      title: problem.title,
+      difficulty: problem.difficulty,
+      isGarbage: problem.isGarbage,
+    };
+    player.queued.unshift(summary);
+    player.stackSize = player.queued.length;
+    return false;
+  }
+
+  /**
+   * Advance player to next problem (pop from queue or sample new)
+   */
+  private advanceToNextProblem(player: PlayerInternal): void {
+    if (
+      (player.role !== "player" && player.role !== "bot") ||
+      player.status === "eliminated"
+    ) {
+      return;
+    }
+
+    // Ensure queued array exists
+    if (!player.queued) {
+      player.queued = [];
+    }
+
+    // Pop from queue if available
+    let nextProblem: ProblemFull | null = null;
+    if (player.queued.length > 0) {
+      const nextSummary = player.queued.shift();
+      player.stackSize = player.queued.length;
+
+      if (nextSummary) {
+        // Find the full problem by ID
+        const allProblems = this.loadProblems();
+        nextProblem =
+          allProblems.find((p) => p.problemId === nextSummary.problemId) ??
+          null;
+      }
+    }
+
+    // If queue empty, sample a new problem
+    if (!nextProblem) {
+      try {
+        nextProblem = this.sampleProblem(player.playerId, true);
+      } catch (error) {
+        console.error(
+          `[${this.state.roomId}] Failed to sample problem for ${player.playerId}:`,
+          error,
+        );
+        return;
+      }
+    }
+
+    if (nextProblem) {
+      player.currentProblem = this.toClientView(nextProblem);
+      player.code = nextProblem.starterCode;
+      player.codeVersion = 1;
+      player.revealedHints = [];
+    }
   }
 
   // ============================================================================
@@ -874,6 +1042,225 @@ export default class Room implements Party.Server {
   }
 
   // ============================================================================
+  // Timed Problem Arrivals
+  // ============================================================================
+
+  /**
+   * Calculate the problem arrival interval for a player based on phase and buffs/debuffs
+   */
+  private calculateProblemArrivalInterval(player: PlayerInternal): number {
+    // Base interval based on phase
+    const baseIntervalSec =
+      this.state.match.phase === "warmup" ? 90 : 60;
+
+    // Apply multipliers
+    let memoryLeakMultiplier = 1;
+    if (
+      player.activeDebuff?.type === "memoryLeak" &&
+      new Date(player.activeDebuff.endsAt) > new Date()
+    ) {
+      memoryLeakMultiplier = 0.5;
+    }
+
+    let rateLimiterMultiplier = 1;
+    if (
+      player.activeBuff?.type === "rateLimiter" &&
+      new Date(player.activeBuff.endsAt) > new Date()
+    ) {
+      rateLimiterMultiplier = 2;
+    }
+
+    const effectiveIntervalSec =
+      baseIntervalSec * memoryLeakMultiplier * rateLimiterMultiplier;
+
+    return effectiveIntervalSec * 1000; // Convert to milliseconds
+  }
+
+  /**
+   * Handle timed problem arrivals for all alive players
+   * Checks each player individually based on their effective interval
+   */
+  private async handleProblemArrivals(): Promise<void> {
+    if (
+      this.state.match.phase === "lobby" ||
+      this.state.match.phase === "ended"
+    ) {
+      this.state.nextProblemArrivalAt = null;
+      return;
+    }
+
+    // Check if match has ended due to time expiration
+    if (
+      this.state.match.endAt &&
+      new Date(this.state.match.endAt) <= new Date()
+    ) {
+      // Match ended, stop problem arrivals
+      // TODO: Handle match end logic (set phase to "ended", determine winner, etc.)
+      this.state.nextProblemArrivalAt = null;
+      await this.persistState();
+      return;
+    }
+
+    const now = Date.now();
+    const alivePlayers = Array.from(this.state.players.values()).filter(
+      (p) =>
+        (p.role === "player" || p.role === "bot") &&
+        p.status !== "eliminated",
+    );
+
+    if (alivePlayers.length === 0) {
+      // No alive players, cancel future arrivals
+      this.state.nextProblemArrivalAt = null;
+      await this.persistState();
+      return;
+    }
+
+    // Check each player individually based on their effective interval
+    for (const player of alivePlayers) {
+      // Initialize lastProblemArrivalAt if not set (shouldn't happen, but safety check)
+      if (!player.lastProblemArrivalAt) {
+        player.lastProblemArrivalAt = now;
+      }
+
+      // Calculate this player's effective interval
+      const effectiveIntervalMs = this.calculateProblemArrivalInterval(player);
+
+      // Check if enough time has passed for this player
+      const timeSinceLastArrival = now - player.lastProblemArrivalAt;
+      if (timeSinceLastArrival >= effectiveIntervalMs) {
+        try {
+          const problem = this.sampleProblem(player.playerId, false); // Allow garbage
+          const eliminated = this.addProblemToQueue(player, problem);
+
+          // Update last arrival time
+          player.lastProblemArrivalAt = now;
+
+          if (eliminated) {
+            // Player was eliminated due to overflow
+            // Already handled in addProblemToQueue (event log + broadcast)
+            console.log(
+              `[${this.state.roomId}] Player ${player.username} eliminated by stack overflow`,
+            );
+          } else {
+            // Broadcast stack update for this player
+            this.broadcastPlayerUpdate(player);
+          }
+        } catch (error) {
+          console.error(
+            `[${this.state.roomId}] Failed to sample problem for ${player.playerId}:`,
+            error,
+          );
+        }
+      }
+    }
+
+    // Schedule next problem arrival based on when the next player needs one
+    await this.scheduleNextProblemArrival();
+
+    await this.persistState();
+  }
+
+  /**
+   * Schedule the next problem arrival alarm
+   * Finds the minimum time until any player needs a problem based on their effective intervals
+   */
+  private async scheduleNextProblemArrival(): Promise<void> {
+    if (
+      this.state.match.phase === "lobby" ||
+      this.state.match.phase === "ended"
+    ) {
+      this.state.nextProblemArrivalAt = null;
+      return;
+    }
+
+    // Check if match has ended due to time expiration
+    if (
+      this.state.match.endAt &&
+      new Date(this.state.match.endAt) <= new Date()
+    ) {
+      this.state.nextProblemArrivalAt = null;
+      return;
+    }
+
+    const now = Date.now();
+    const alivePlayers = Array.from(this.state.players.values()).filter(
+      (p) =>
+        (p.role === "player" || p.role === "bot") &&
+        p.status !== "eliminated",
+    );
+
+    if (alivePlayers.length === 0) {
+      this.state.nextProblemArrivalAt = null;
+      return;
+    }
+
+    // Find the minimum time until any player needs a problem
+    let minTimeUntilNextArrival = Infinity;
+
+    for (const player of alivePlayers) {
+      // Initialize if not set
+      if (!player.lastProblemArrivalAt) {
+        player.lastProblemArrivalAt = now;
+      }
+
+      // Calculate this player's effective interval
+      const effectiveIntervalMs = this.calculateProblemArrivalInterval(player);
+
+      // Calculate time since last arrival
+      const timeSinceLastArrival = now - player.lastProblemArrivalAt;
+
+      // Calculate time until next arrival for this player
+      const timeUntilNextArrival = Math.max(
+        0,
+        effectiveIntervalMs - timeSinceLastArrival,
+      );
+
+      minTimeUntilNextArrival = Math.min(
+        minTimeUntilNextArrival,
+        timeUntilNextArrival,
+      );
+    }
+
+    // If all players are already due (shouldn't happen, but handle gracefully)
+    if (minTimeUntilNextArrival === Infinity || minTimeUntilNextArrival < 0) {
+      // Schedule a very short delay to check again soon
+      minTimeUntilNextArrival = 1000; // 1 second
+    }
+
+    const nextArrivalAt = now + minTimeUntilNextArrival;
+
+    // Don't schedule beyond match end time
+    if (
+      this.state.match.endAt &&
+      nextArrivalAt > new Date(this.state.match.endAt).getTime()
+    ) {
+      this.state.nextProblemArrivalAt = null;
+      return;
+    }
+
+    this.state.nextProblemArrivalAt = nextArrivalAt;
+
+    // Schedule alarm (use the earlier of phase transition, problem arrival, or match end)
+    const warmupEndAt =
+      this.state.match.startAt &&
+      this.state.match.phase === "warmup"
+        ? new Date(this.state.match.startAt).getTime() +
+          this.state.settings.matchDurationSec * 1000 * 0.1
+        : Infinity;
+
+    const matchEndAt = this.state.match.endAt
+      ? new Date(this.state.match.endAt).getTime()
+      : Infinity;
+
+    const alarmAt = Math.min(nextArrivalAt, warmupEndAt, matchEndAt);
+    await this.room.storage.setAlarm(alarmAt);
+
+    console.log(
+      `[${this.state.roomId}] Scheduled next problem arrival at ${new Date(nextArrivalAt).toISOString()} (${Math.round(minTimeUntilNextArrival / 1000)}s from now)`,
+    );
+  }
+
+  // ============================================================================
   // Problem Management
   // ============================================================================
 
@@ -978,6 +1365,28 @@ export default class Room implements Party.Server {
   }
 
   async onAlarm() {
+    const now = Date.now();
+
+    // Check if match has ended due to time expiration
+    if (
+      this.state.match.endAt &&
+      new Date(this.state.match.endAt) <= new Date()
+    ) {
+      // TODO: Handle match end logic (set phase to "ended", determine winner, broadcast MATCH_END, etc.)
+      this.state.nextProblemArrivalAt = null;
+      await this.persistState();
+      return;
+    }
+
+    // Check if it's time for problem arrivals
+    if (
+      this.state.nextProblemArrivalAt !== null &&
+      now >= this.state.nextProblemArrivalAt
+    ) {
+      await this.handleProblemArrivals();
+      return;
+    }
+
     // Handle warmup -> main transition
     if (this.state.match.phase === "warmup") {
       this.state.match.phase = "main";
@@ -993,6 +1402,9 @@ export default class Room implements Party.Server {
 
       this.addEventLog("info", "Main phase started");
       console.log(`[${this.state.roomId}] Transitioned to main phase`);
+
+      // Reschedule problem arrivals with new phase interval
+      await this.scheduleNextProblemArrival();
     }
   }
 

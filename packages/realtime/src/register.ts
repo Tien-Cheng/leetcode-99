@@ -46,6 +46,12 @@ export interface PlayerInternal {
   activeBuff: { type: string; endsAt: string } | null;
   connectionId: string | null;
   joinOrder: number;
+  // Private state (only during match)
+  currentProblem?: import("@leet99/contracts").ProblemClientView | null;
+  queued?: import("@leet99/contracts").ProblemSummary[];
+  code?: string;
+  codeVersion?: number;
+  revealedHints?: string[];
 }
 
 export interface RoomState {
@@ -57,6 +63,8 @@ export interface RoomState {
   chat: unknown[];
   eventLog: unknown[];
   nextJoinOrder: number;
+  nextBotNumber?: number;
+  playerProblemHistory?: Map<string, Set<string>>;
 }
 
 export type PartyRegisterRequest = {
@@ -183,6 +191,12 @@ export function applyPartyRegister(
     activeBuff: null,
     connectionId: null,
     joinOrder: state.nextJoinOrder++,
+    // Private state (initialized during match start)
+    currentProblem: undefined,
+    queued: undefined,
+    code: undefined,
+    codeVersion: undefined,
+    revealedHints: undefined,
   };
 
   state.players.set(req.playerId, player);
