@@ -21,27 +21,6 @@
     "solutionSketch": "Iterate through array, for each element check if (target - element) exists in hashmap. Store index as value."
   },
   {
-    "problemId": "reverse-string",
-    "title": "Reverse String",
-    "prompt": "Write a function that reverses a string. The input string is given as a list of characters `s`.\n\nYou must do this by modifying the input list in-place.",
-    "functionName": "reverse_string",
-    "signature": "def reverse_string(s: list[str]) -> None",
-    "starterCode": "def reverse_string(s: list[str]) -> None:\n    # Modify s in-place\n    pass",
-    "publicTests": [
-      { "input": [[["h", "e", "l", "l", "o"]]], "output": null },
-      { "input": [[["H", "a", "n", "n", "a", "h"]]], "output": null }
-    ],
-    "hiddenTests": [
-      { "input": [[["a"]]], "output": null },
-      { "input": [[["a", "b"]]], "output": null }
-    ],
-    "difficulty": "easy",
-    "timeLimitMs": 5000,
-    "isGarbage": false,
-    "hints": ["Use two pointers, one at start and one at end."],
-    "solutionSketch": "Two pointers swap from outside in."
-  },
-  {
     "problemId": "valid-parentheses",
     "title": "Valid Parentheses",
     "prompt": "Given a string `s` containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.",
