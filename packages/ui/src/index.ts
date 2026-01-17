@@ -5,12 +5,20 @@
  * They receive data as props and render UI.
  */
 
-// Components will be added here as they are built:
+// Primitive components
+export * from "./button";
+export * from "./input";
+export * from "./panel";
+export * from "./tile";
+export * from "./dropdown";
+
+// Game-specific components (to be added)
 // export * from './minimap'
-// export * from './stack'
+// export * from './stack-panel'
 // export * from './terminal-log'
 // export * from './editor-wrapper'
-// etc.
+// export * from './problem-display'
+// export * from './shop-modal'
+// export * from './timer'
 
-// Placeholder export to make the module valid
 export const UI_VERSION = "0.1.0";

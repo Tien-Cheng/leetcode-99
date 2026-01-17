@@ -14,7 +14,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@leet99/ui": ["../../packages/ui/src"],
+      "@leet99/ui/*": ["../../packages/ui/src/*"],
+      "@leet99/contracts": ["../../packages/contracts/src"],
+      "@leet99/contracts/*": ["../../packages/contracts/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
