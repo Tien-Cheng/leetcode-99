@@ -96,6 +96,89 @@ export function ProblemDisplay({
 
   const allPassed = testResults.length > 0 && testResults.every((t) => t.passed);
 
+  /**
+   * Parse prompt text and render code blocks in code boxes
+   */
+  const renderPrompt = (prompt: string) => {
+    // Match code blocks: ```language ... ``` or ``` ... ```
+    // Handles both with and without newlines after language tag
+    const codeBlockRegex = /```(\w+)?\s*\n?([\s\S]*?)```/g;
+    const parts: Array<{ type: "text" | "code"; content: string; language?: string }> = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(prompt)) !== null) {
+      // Add text before code block
+      if (match.index > lastIndex) {
+        parts.push({
+          type: "text",
+          content: prompt.slice(lastIndex, match.index),
+        });
+      }
+
+      // Add code block
+      parts.push({
+        type: "code",
+        content: (match[2] ?? "").trim(),
+        language: match[1] || "text",
+      });
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < prompt.length) {
+      parts.push({
+        type: "text",
+        content: prompt.slice(lastIndex),
+      });
+    }
+
+    // If no code blocks found, return original text
+    if (parts.length === 0) {
+      return <>{prompt}</>;
+    }
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          if (part.type === "code") {
+            // Split code by newlines and render each line explicitly
+            const codeLines = part.content.split("\n");
+            return (
+              <div
+                key={index}
+                className="my-2 border border-secondary bg-base-300 p-3 rounded overflow-x-auto"
+              >
+                <code className="font-mono text-xs text-base-content block">
+                  {codeLines.map((line, lineIndex) => (
+                    <React.Fragment key={lineIndex}>
+                      {line}
+                      {lineIndex < codeLines.length - 1 && <br />}
+                    </React.Fragment>
+                  ))}
+                </code>
+              </div>
+            );
+          }
+          // Render text with explicit newline preservation
+          // Split by newlines and join with <br> to ensure they're displayed
+          const textLines = part.content.split("\n");
+          return (
+            <span key={index}>
+              {textLines.map((line, lineIndex) => (
+                <React.Fragment key={lineIndex}>
+                  {line}
+                  {lineIndex < textLines.length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </span>
+          );
+        })}
+      </>
+    );
+  };
+
   return (
     <div
       className={`
@@ -136,8 +219,8 @@ export function ProblemDisplay({
       )}
 
       {/* Prompt */}
-      <div className="text-sm text-base-content leading-relaxed max-h-32 overflow-y-auto">
-        {problem.prompt}
+      <div className="text-sm text-base-content leading-relaxed max-h-96 overflow-y-auto whitespace-pre-wrap">
+        {renderPrompt(problem.prompt)}
       </div>
 
       {/* MCQ Options or Function Signature */}

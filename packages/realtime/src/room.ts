@@ -1813,7 +1813,9 @@ export default class Room implements Party.Server {
     const garbageProblems = allProblems.filter((p) => p.isGarbage);
 
     if (garbageProblems.length > 0) {
-      const selected = garbageProblems[Math.floor(Math.random() * garbageProblems.length)];
+      // Shuffle for better randomization
+      const shuffled = this.shuffleArray(garbageProblems);
+      const selected = shuffled[0];
       if (selected) return selected;
     }
 
@@ -1821,10 +1823,14 @@ export default class Room implements Party.Server {
     const easyProblems = allProblems.filter((p) => p.difficulty === "easy");
     let problem: ProblemFull | undefined;
     if (easyProblems.length > 0) {
-      problem = easyProblems[Math.floor(Math.random() * easyProblems.length)];
+      // Shuffle for better randomization
+      const shuffled = this.shuffleArray(easyProblems);
+      problem = shuffled[0];
     }
     if (!problem && allProblems.length > 0) {
-      problem = allProblems[Math.floor(Math.random() * allProblems.length)];
+      // Shuffle for better randomization
+      const shuffled = this.shuffleArray(allProblems);
+      problem = shuffled[0];
     }
 
     if (!problem) {
@@ -2916,6 +2922,18 @@ export default class Room implements Party.Server {
     return this.cachedProblems;
   }
 
+  /**
+   * Fisher-Yates shuffle for better randomization
+   */
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   private sampleProblem(
     playerId: string,
     excludeGarbage: boolean = true,
@@ -2949,6 +2967,9 @@ export default class Room implements Party.Server {
       pool = unseen;
     }
 
+    // Shuffle pool first for better randomization
+    pool = this.shuffleArray(pool);
+
     // Apply difficulty weights
     const weights = this.getDifficultyWeights();
     const weightedPool: { problem: ProblemFull; weight: number }[] = [];
@@ -2958,14 +2979,17 @@ export default class Room implements Party.Server {
       weightedPool.push({ problem, weight });
     }
 
+    // Shuffle weighted pool to avoid sequential bias
+    const shuffledWeightedPool = this.shuffleArray(weightedPool);
+
     // Weighted random selection
-    const totalWeight = weightedPool.reduce(
+    const totalWeight = shuffledWeightedPool.reduce(
       (sum, item) => sum + item.weight,
       0,
     );
     let random = Math.random() * totalWeight;
 
-    for (const item of weightedPool) {
+    for (const item of shuffledWeightedPool) {
       random -= item.weight;
       if (random <= 0) {
         // Add to history
@@ -2975,7 +2999,7 @@ export default class Room implements Party.Server {
     }
 
     // Fallback (should never reach here, but handle it safely)
-    const selected = weightedPool[0]?.problem ?? pool[0];
+    const selected = shuffledWeightedPool[0]?.problem ?? pool[0];
     if (selected) {
       history.add(selected.problemId);
       return selected;

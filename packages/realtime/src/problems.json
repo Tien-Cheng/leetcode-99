@@ -1460,5 +1460,167 @@
         "correctAnswer": "3",
         "difficulty": "easy",
         "timeLimitMs": 5000
+    },
+    {
+        "problemId": "choose-correct-algorithm-majority-element",
+        "title": "Choose Correct Algorithm: Majority Element",
+        "prompt": "You are given an array where a majority element (appearing more than n/2 times) is guaranteed to exist. Which algorithm is best suited in O(n) time and O(1) space?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "Sort the array and pick the middle element"
+            },
+            {
+                "id": "b",
+                "text": "Use a hash map to count frequencies"
+            },
+            {
+                "id": "c",
+                "text": "Use Boyer-Moore majority vote algorithm"
+            },
+            {
+                "id": "d",
+                "text": "Use binary search on all possible values"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "medium",
+        "timeLimitMs": 8000
+    },
+    {
+        "problemId": "identify-edge-case-empty-and-single",
+        "title": "Identify Edge Case: Min in List",
+        "prompt": "You are implementing a function `min_in_list(nums)` that returns the minimum element. Which edge cases must be handled explicitly to avoid runtime errors?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "List containing only zeros"
+            },
+            {
+                "id": "b",
+                "text": "Empty list"
+            },
+            {
+                "id": "c",
+                "text": "List with both positive and negative numbers"
+            },
+            {
+                "id": "d",
+                "text": "List with exactly one element"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "sudden-death-mcq-short-circuit",
+        "title": "Sudden-Death MCQ: Short-Circuit",
+        "prompt": "In Python, given `x = 0`, which expression will NOT raise a `ZeroDivisionError`?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "x != 0 and 1 / x"
+            },
+            {
+                "id": "b",
+                "text": "x == 0 or 1 / x"
+            },
+            {
+                "id": "c",
+                "text": "(1 / x) and x != 0"
+            },
+            {
+                "id": "d",
+                "text": "(1 / x) or x == 0"
+            }
+        ],
+        "correctAnswer": "c",
+        "difficulty": "medium",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "one-expression-solution-clamp",
+        "title": "One-Expression Solution: Clamp Value",
+        "prompt": "Best **single-expression** implementation of clamp (limit value between min_val and max_val):",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "return min_val if value < min_val else max_val if value > max_val else value"
+            },
+            {
+                "id": "b",
+                "text": "return max(min_val, min(value, max_val))"
+            },
+            {
+                "id": "c",
+                "text": "return value if min_val <= value <= max_val else min_val + max_val"
+            },
+            {
+                "id": "d",
+                "text": "return (min_val + max_val) // 2"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "compare-implementations-set-vs-list-contains",
+        "title": "Compare Implementations: Membership Testing",
+        "prompt": "Which statement best describes these two membership check approaches for 10,000+ lookups on a collection of 1 million items?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "list version will almost always be faster"
+            },
+            {
+                "id": "b",
+                "text": "set version is dramatically faster for lookups"
+            },
+            {
+                "id": "c",
+                "text": "They have practically identical performance"
+            },
+            {
+                "id": "d",
+                "text": "list version uses much less memory"
+            }
+        ],
+        "correctAnswer": "b",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "one-expression-solution-flatten-oneliner",
+        "title": "One-Expression Solution: Shallow Flatten",
+        "prompt": "Best single-expression way to shallow flatten a list of lists?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "a",
+                "text": "[item for sublist in lst for item in sublist]"
+            },
+            {
+                "id": "b",
+                "text": "list(sum(lst, []))"
+            },
+            {
+                "id": "c",
+                "text": "list(itertools.chain(*lst))"
+            },
+            {
+                "id": "d",
+                "text": "lst[::] if not any(isinstance(x, list) for x in lst) else lst"
+            }
+        ],
+        "correctAnswer": "a",
+        "difficulty": "medium",
+        "timeLimitMs": 7000
     }
 ]
