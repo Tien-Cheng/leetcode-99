@@ -1050,8 +1050,7 @@ export default class Room implements Party.Server {
    */
   private calculateProblemArrivalInterval(player: PlayerInternal): number {
     // Base interval based on phase
-    const baseIntervalSec =
-      this.state.match.phase === "warmup" ? 90 : 60;
+    const baseIntervalSec = this.state.match.phase === "warmup" ? 90 : 60;
 
     // Apply multipliers
     let memoryLeakMultiplier = 1;
@@ -1104,8 +1103,7 @@ export default class Room implements Party.Server {
     const now = Date.now();
     const alivePlayers = Array.from(this.state.players.values()).filter(
       (p) =>
-        (p.role === "player" || p.role === "bot") &&
-        p.status !== "eliminated",
+        (p.role === "player" || p.role === "bot") && p.status !== "eliminated",
     );
 
     if (alivePlayers.length === 0) {
@@ -1185,8 +1183,7 @@ export default class Room implements Party.Server {
     const now = Date.now();
     const alivePlayers = Array.from(this.state.players.values()).filter(
       (p) =>
-        (p.role === "player" || p.role === "bot") &&
-        p.status !== "eliminated",
+        (p.role === "player" || p.role === "bot") && p.status !== "eliminated",
     );
 
     if (alivePlayers.length === 0) {
@@ -1242,8 +1239,7 @@ export default class Room implements Party.Server {
 
     // Schedule alarm (use the earlier of phase transition, problem arrival, or match end)
     const warmupEndAt =
-      this.state.match.startAt &&
-      this.state.match.phase === "warmup"
+      this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
           this.state.settings.matchDurationSec * 1000 * 0.1
         : Infinity;
@@ -1480,11 +1476,36 @@ export default class Room implements Party.Server {
 
     // GET /parties/leet99/:roomId/state - Get room state (for debugging)
     if (req.method === "GET" && url.pathname.endsWith("/state")) {
+      // Count players by role and status
+      let activePlayers = 0;
+      let spectators = 0;
+      let bots = 0;
+
+      for (const player of this.state.players.values()) {
+        if (player.role === "bot") {
+          bots++;
+        } else if (player.role === "spectator") {
+          spectators++;
+        } else if (player.role === "player") {
+          // Players who were eliminated become spectators in the count
+          if (player.status === "eliminated") {
+            spectators++;
+          } else {
+            activePlayers++;
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({
           roomId: this.state.roomId,
           phase: this.state.match.phase,
-          playerCount: this.state.players.size,
+          playerCount: this.state.players.size, // Total for backwards compatibility
+          playerCounts: {
+            players: activePlayers,
+            spectators: spectators,
+            bots: bots,
+          },
           settings: this.state.settings,
         }),
         {
