@@ -8,7 +8,8 @@
     "build": "tsc",
     "deploy": "partykit deploy",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
   },
   "dependencies": {
     "@leet99/contracts": "workspace:*",
