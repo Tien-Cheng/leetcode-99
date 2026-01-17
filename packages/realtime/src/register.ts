@@ -46,16 +46,12 @@ export interface PlayerInternal {
   activeBuff: { type: string; endsAt: string } | null;
   connectionId: string | null;
   joinOrder: number;
-  // Game state (only for players during match)
-  currentProblemId: string | null;
-  queuedProblemIds: string[]; // LIFO stack, newest at index 0
-  code: string;
-  codeVersion: number;
-  revealedHints: string[];
-  problemState: {
-    seenProblemIds: Set<string>;
-    availableProblemIds: Set<string>;
-  } | null;
+  // Private state (only during match)
+  currentProblem?: import("@leet99/contracts").ProblemClientView | null;
+  queued?: import("@leet99/contracts").ProblemSummary[];
+  code?: string;
+  codeVersion?: number;
+  revealedHints?: string[];
 }
 
 export interface RoomState {
@@ -67,6 +63,8 @@ export interface RoomState {
   chat: unknown[];
   eventLog: unknown[];
   nextJoinOrder: number;
+  nextBotNumber?: number;
+  playerProblemHistory?: Map<string, Set<string>>;
 }
 
 export type PartyRegisterRequest = {
@@ -193,13 +191,12 @@ export function applyPartyRegister(
     activeBuff: null,
     connectionId: null,
     joinOrder: state.nextJoinOrder++,
-    // Game state (initialized during match start)
-    currentProblemId: null,
-    queuedProblemIds: [],
-    code: "",
-    codeVersion: 0,
-    revealedHints: [],
-    problemState: null,
+    // Private state (initialized during match start)
+    currentProblem: undefined,
+    queued: undefined,
+    code: undefined,
+    codeVersion: undefined,
+    revealedHints: undefined,
   };
 
   state.players.set(req.playerId, player);

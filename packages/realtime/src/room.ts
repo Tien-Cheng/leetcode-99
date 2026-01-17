@@ -9,6 +9,9 @@ import type {
   MatchPublic,
   PlayerPrivateState,
   PlayerPublic,
+  ProblemClientView,
+  ProblemFull,
+  ProblemSummary,
   RoomSettings,
   RoomSnapshotPayload,
   WSMessage,
@@ -17,23 +20,40 @@ import {
   DEFAULT_SHOP_CATALOG,
   PartyRegisterRequestSchema,
   PartyRegisterResponseSchema,
+  ProblemFullSchema,
   RoomSettingsSchema,
 } from "@leet99/contracts";
+import { randomUUID } from "node:crypto";
 
-import { applyPartyRegister, type PlayerInternal } from "./register.ts";
-import {
-  getProblemClientView,
-  initPlayerProblemState,
-  sampleGarbageProblem,
-  sampleProblem,
-  toClientView,
-  toSummary,
-  type PlayerProblemState,
-} from "./problem-loader.ts";
+import { applyPartyRegister } from "./register.ts";
+import PROBLEMS_DATA from "./problems.json" with { type: "json" };
 
 // ============================================================================
 // Room State Types
 // ============================================================================
+
+interface PlayerInternal {
+  playerId: string;
+  playerToken: string;
+  username: string;
+  role: "player" | "bot" | "spectator";
+  isHost: boolean;
+  status: "lobby" | "coding" | "error" | "underAttack" | "eliminated";
+  score: number;
+  streak: number;
+  targetingMode: "random" | "attackers" | "topScore" | "nearDeath";
+  stackSize: number;
+  activeDebuff: { type: string; endsAt: string } | null;
+  activeBuff: { type: string; endsAt: string } | null;
+  connectionId: string | null;
+  joinOrder: number;
+  // Private state (only during match)
+  currentProblem?: ProblemClientView | null;
+  queued?: ProblemSummary[];
+  code?: string;
+  codeVersion?: number;
+  revealedHints?: string[];
+}
 
 interface RoomState {
   roomId: string;
@@ -44,6 +64,8 @@ interface RoomState {
   chat: ChatMessage[];
   eventLog: EventLogEntry[];
   nextJoinOrder: number;
+  nextBotNumber: number;
+  playerProblemHistory: Map<string, Set<string>>;
 }
 
 // ============================================================================
@@ -69,6 +91,8 @@ export default class Room implements Party.Server {
       chat: [],
       eventLog: [],
       nextJoinOrder: 0,
+      nextBotNumber: 1,
+      playerProblemHistory: new Map(),
     };
   }
 
@@ -87,6 +111,12 @@ export default class Room implements Party.Server {
         players: new Map(
           Object.entries(
             stored.players as unknown as Record<string, PlayerInternal>,
+          ),
+        ),
+        nextBotNumber: (stored as any).nextBotNumber ?? 1,
+        playerProblemHistory: new Map(
+          Object.entries((stored as any).playerProblemHistory ?? {}).map(
+            ([k, v]) => [k, new Set(v as string[])],
           ),
         ),
       };
@@ -143,14 +173,32 @@ export default class Room implements Party.Server {
           );
           break;
 
+        case "UPDATE_SETTINGS":
+          await this.handleUpdateSettings(
+            sender,
+            parsed.payload as { patch: Partial<RoomSettings> },
+            parsed.requestId,
+          );
+          break;
+
         case "START_MATCH":
           await this.handleStartMatch(sender, parsed.requestId);
           break;
 
+        case "ADD_BOTS":
+          await this.handleAddBots(
+            sender,
+            parsed.payload as { count: number },
+            parsed.requestId,
+          );
+          break;
+
+        case "RETURN_TO_LOBBY":
+          await this.handleReturnToLobby(sender, parsed.requestId);
+          break;
+
         // TODO: Implement other message handlers
         // case 'SET_TARGET_MODE':
-        // case 'UPDATE_SETTINGS':
-        // case 'ADD_BOTS':
         // case 'RUN_CODE':
         // case 'SUBMIT_CODE':
         // case 'SPEND_POINTS':
@@ -222,77 +270,6 @@ export default class Room implements Party.Server {
     this.broadcastPlayerUpdate(player);
   }
 
-  private async handleStartMatch(
-    conn: Party.Connection,
-    requestId?: string,
-  ) {
-    // Find player by connection
-    const player = this.findPlayerByConnection(conn.id);
-    if (!player) {
-      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
-      return;
-    }
-
-    // Only host can start match
-    if (!player.isHost) {
-      this.sendError(conn, "FORBIDDEN", "Only the host can start the match", requestId);
-      return;
-    }
-
-    // Only allowed in lobby
-    if (this.state.match.phase !== "lobby") {
-      this.sendError(conn, "FORBIDDEN", "Match already started", requestId);
-      return;
-    }
-
-    // Initialize match
-    const matchId = `m_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const now = new Date();
-    const durationMs = this.state.match.settings.matchDurationSec * 1000;
-    const endAt = new Date(now.getTime() + durationMs);
-
-    this.state.match = {
-      matchId,
-      phase: "warmup",
-      startAt: now.toISOString(),
-      endAt: endAt.toISOString(),
-      settings: this.state.match.settings,
-    };
-
-    // Initialize game state for all players
-    for (const p of this.state.players.values()) {
-      if (p.role === "player") {
-        this.initializePlayerGameState(p);
-      }
-    }
-
-    // Broadcast match started
-    this.broadcast({
-      type: "MATCH_STARTED",
-      payload: {
-        match: this.state.match,
-      },
-    });
-
-    // Send updated ROOM_SNAPSHOT to all connected players
-    for (const p of this.state.players.values()) {
-      if (p.connectionId) {
-        const conn = this.room.getConnection(p.connectionId);
-        if (conn) {
-          const snapshot = this.buildRoomSnapshot(p);
-          const msg: WSMessage<"ROOM_SNAPSHOT", RoomSnapshotPayload> = {
-            type: "ROOM_SNAPSHOT",
-            payload: snapshot,
-          };
-          conn.send(JSON.stringify(msg));
-        }
-      }
-    }
-
-    this.addEventLog("info", "Match started");
-    console.log(`[${this.state.roomId}] Match started: ${matchId}`);
-  }
-
   private async handleSendChat(
     conn: Party.Connection,
     payload: { text: string },
@@ -345,6 +322,370 @@ export default class Room implements Party.Server {
     });
   }
 
+  private async handleUpdateSettings(
+    conn: Party.Connection,
+    payload: { patch: Partial<RoomSettings> },
+    requestId?: string,
+  ) {
+    // Auth check
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Host check
+    if (!player.isHost) {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Only host can update settings",
+        requestId,
+      );
+      return;
+    }
+
+    // Lobby check
+    if (this.state.match.phase !== "lobby") {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Can only update settings in lobby",
+        requestId,
+      );
+      return;
+    }
+
+    // Validate patch
+    const validation = RoomSettingsSchema.partial().safeParse(payload.patch);
+    if (!validation.success) {
+      this.sendError(conn, "BAD_REQUEST", "Invalid settings", requestId);
+      return;
+    }
+
+    // Merge settings
+    this.state.settings = {
+      ...this.state.settings,
+      ...validation.data,
+    };
+    this.state.match.settings = this.state.settings;
+
+    // Persist
+    await this.persistState();
+
+    // Broadcast update
+    this.broadcast({
+      type: "SETTINGS_UPDATE",
+      payload: {
+        settings: this.state.settings,
+      },
+    });
+
+    console.log(
+      `[${this.state.roomId}] Settings updated by ${player.username}`,
+    );
+  }
+
+  private async handleStartMatch(conn: Party.Connection, requestId?: string) {
+    // Auth check
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Host check
+    if (!player.isHost) {
+      this.sendError(conn, "FORBIDDEN", "Only host can start match", requestId);
+      return;
+    }
+
+    // Lobby check
+    if (this.state.match.phase !== "lobby") {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Match already started or ended",
+        requestId,
+      );
+      return;
+    }
+
+    // Check we have at least 2 participants (including host)
+    const participants = Array.from(this.state.players.values()).filter(
+      (p) => p.role === "player" || p.role === "bot",
+    );
+    if (participants.length < 2) {
+      this.sendError(
+        conn,
+        "BAD_REQUEST",
+        "Need at least 2 participants to start",
+        requestId,
+      );
+      return;
+    }
+
+    // Generate match ID
+    const matchId = `m_${this.state.roomId}_${Date.now()}`;
+    const now = new Date();
+    const startAt = now.toISOString();
+    const endAt = new Date(
+      now.getTime() + this.state.settings.matchDurationSec * 1000,
+    ).toISOString();
+
+    // Update match state
+    this.state.match = {
+      matchId,
+      phase: "warmup",
+      startAt,
+      endAt,
+      settings: this.state.settings,
+    };
+
+    // Initialize all players
+    for (const p of participants) {
+      p.status = "coding";
+      p.score = 0;
+      p.streak = 0;
+      p.stackSize = 0;
+      p.activeDebuff = null;
+      p.activeBuff = null;
+
+      // Sample initial problems
+      const current = this.sampleProblem(p.playerId, true);
+      const queued: ProblemSummary[] = [];
+      for (let i = 0; i < this.state.settings.startingQueued; i++) {
+        const prob = this.sampleProblem(p.playerId, true);
+        queued.push({
+          problemId: prob.problemId,
+          title: prob.title,
+          difficulty: prob.difficulty,
+          isGarbage: prob.isGarbage,
+        });
+      }
+
+      p.currentProblem = this.toClientView(current);
+      p.queued = queued;
+      p.code = current.starterCode;
+      p.codeVersion = 1;
+      p.revealedHints = [];
+      p.stackSize = queued.length;
+    }
+
+    // Persist
+    await this.persistState();
+
+    // Schedule warmup -> main transition
+    const warmupDurationMs = this.state.settings.matchDurationSec * 1000 * 0.1;
+    await this.room.storage.setAlarm(Date.now() + warmupDurationMs);
+
+    // Broadcast MATCH_STARTED
+    this.broadcast({
+      type: "MATCH_STARTED",
+      payload: {
+        match: this.state.match,
+      },
+    });
+
+    // Send each player their snapshot with private state
+    for (const conn of this.room.getConnections()) {
+      const p = this.findPlayerByConnection(conn.id);
+      if (p) {
+        const snapshot = this.buildRoomSnapshot(p);
+        conn.send(
+          JSON.stringify({
+            type: "ROOM_SNAPSHOT",
+            payload: snapshot,
+          }),
+        );
+      }
+    }
+
+    // Add system chat and event log
+    this.addSystemChat("Match started! Good luck!");
+    this.addEventLog("info", "Match started");
+
+    console.log(`[${this.state.roomId}] Match started: ${matchId}`);
+  }
+
+  private async handleAddBots(
+    conn: Party.Connection,
+    payload: { count: number },
+    requestId?: string,
+  ) {
+    // Auth check
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Host check
+    if (!player.isHost) {
+      this.sendError(conn, "FORBIDDEN", "Only host can add bots", requestId);
+      return;
+    }
+
+    // Lobby check
+    if (this.state.match.phase !== "lobby") {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Can only add bots in lobby",
+        requestId,
+      );
+      return;
+    }
+
+    // Validate count
+    const count = payload.count;
+    if (!Number.isInteger(count) || count < 1 || count > 20) {
+      this.sendError(
+        conn,
+        "BAD_REQUEST",
+        "Invalid bot count (must be 1-20)",
+        requestId,
+      );
+      return;
+    }
+
+    // Create bots
+    const addedBots: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const botId = `bot_${randomUUID()}`;
+      const botUsername = `Bot ${this.state.nextBotNumber}`;
+      this.state.nextBotNumber++;
+
+      const bot: PlayerInternal = {
+        playerId: botId,
+        playerToken: "",
+        username: botUsername,
+        role: "bot",
+        isHost: false,
+        status: "lobby",
+        score: 0,
+        streak: 0,
+        targetingMode: "random",
+        stackSize: 0,
+        activeDebuff: null,
+        activeBuff: null,
+        connectionId: null,
+        joinOrder: this.state.nextJoinOrder++,
+      };
+
+      this.state.players.set(botId, bot);
+      addedBots.push(botUsername);
+    }
+
+    // Persist
+    await this.persistState();
+
+    // Send fresh snapshot to all (roster changed)
+    for (const conn of this.room.getConnections()) {
+      const p = this.findPlayerByConnection(conn.id);
+      if (p) {
+        const snapshot = this.buildRoomSnapshot(p);
+        conn.send(
+          JSON.stringify({
+            type: "ROOM_SNAPSHOT",
+            payload: snapshot,
+          }),
+        );
+      }
+    }
+
+    // Add system chat for each bot
+    for (const botName of addedBots) {
+      this.addSystemChat(`${botName} joined the lobby`);
+    }
+
+    console.log(
+      `[${this.state.roomId}] Added ${count} bots: ${addedBots.join(", ")}`,
+    );
+  }
+
+  private async handleReturnToLobby(
+    conn: Party.Connection,
+    requestId?: string,
+  ) {
+    // Auth check
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Host check
+    if (!player.isHost) {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Only host can return to lobby",
+        requestId,
+      );
+      return;
+    }
+
+    // Ended check
+    if (this.state.match.phase !== "ended") {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Can only return to lobby after match ends",
+        requestId,
+      );
+      return;
+    }
+
+    // Reset match state
+    this.state.match = {
+      matchId: null,
+      phase: "lobby",
+      settings: this.state.settings,
+    };
+
+    // Reset all players
+    for (const p of this.state.players.values()) {
+      p.status = "lobby";
+      p.score = 0;
+      p.streak = 0;
+      p.stackSize = 0;
+      p.activeDebuff = null;
+      p.activeBuff = null;
+      p.currentProblem = undefined;
+      p.queued = undefined;
+      p.code = undefined;
+      p.codeVersion = undefined;
+      p.revealedHints = undefined;
+    }
+
+    // Clear problem history and event log
+    this.state.playerProblemHistory.clear();
+    this.state.eventLog = [];
+
+    // Persist
+    await this.persistState();
+
+    // Send fresh snapshot to all
+    for (const conn of this.room.getConnections()) {
+      const p = this.findPlayerByConnection(conn.id);
+      if (p) {
+        const snapshot = this.buildRoomSnapshot(p);
+        conn.send(
+          JSON.stringify({
+            type: "ROOM_SNAPSHOT",
+            payload: snapshot,
+          }),
+        );
+      }
+    }
+
+    // Add system chat
+    this.addSystemChat("Returned to lobby");
+
+    console.log(`[${this.state.roomId}] Returned to lobby`);
+  }
+
   // ============================================================================
   // State Builders
   // ============================================================================
@@ -371,23 +712,12 @@ export default class Room implements Party.Server {
     let self: PlayerPrivateState | undefined;
     if (forPlayer.role === "player" && this.state.match.phase !== "lobby") {
       // During match, include private state
-      const currentProblem = forPlayer.currentProblemId
-        ? getProblemClientView(forPlayer.currentProblemId) ?? null
-        : null;
-
-      const queued = forPlayer.queuedProblemIds
-        .map((id) => {
-          const problem = getProblemClientView(id);
-          return problem ? toSummary(problem) : null;
-        })
-        .filter((p): p is NonNullable<typeof p> => p !== null);
-
       self = {
-        currentProblem,
-        queued,
-        code: forPlayer.code,
-        codeVersion: forPlayer.codeVersion,
-        revealedHints: forPlayer.revealedHints,
+        currentProblem: forPlayer.currentProblem ?? null,
+        queued: forPlayer.queued ?? [],
+        code: forPlayer.code ?? "",
+        codeVersion: forPlayer.codeVersion ?? 1,
+        revealedHints: forPlayer.revealedHints ?? [],
       };
     }
 
@@ -416,55 +746,24 @@ export default class Room implements Party.Server {
   // ============================================================================
 
   /**
-   * Initialize game state for a player at match start
-   */
-  private initializePlayerGameState(player: PlayerInternal): void {
-    if (player.role !== "player") {
-      return;
-    }
-
-    // Initialize problem state
-    player.problemState = initPlayerProblemState();
-
-    // Sample initial current problem
-    const currentProblem = sampleProblem(
-      player.problemState,
-      this.state.match.settings.difficultyProfile,
-    );
-    if (!currentProblem) {
-      console.error(`[${this.state.roomId}] Failed to sample initial problem for ${player.playerId}`);
-      return;
-    }
-
-    player.currentProblemId = currentProblem.problemId;
-    player.code = currentProblem.starterCode;
-    player.codeVersion = 1;
-    player.revealedHints = [];
-
-    // Sample starting queued problems
-    player.queuedProblemIds = [];
-    const startingQueued = this.state.match.settings.startingQueued;
-    for (let i = 0; i < startingQueued; i++) {
-      const queuedProblem = sampleProblem(
-        player.problemState,
-        this.state.match.settings.difficultyProfile,
-      );
-      if (queuedProblem) {
-        player.queuedProblemIds.push(queuedProblem.problemId);
-      }
-    }
-
-    player.stackSize = player.queuedProblemIds.length;
-    player.status = "coding";
-  }
-
-  /**
    * Add a problem to the top of a player's queue
    * Returns true if player was eliminated due to overflow
    */
-  private addProblemToQueue(player: PlayerInternal, problemId: string): boolean {
-    if (player.role !== "player" || player.status === "eliminated") {
+  private addProblemToQueue(
+    player: PlayerInternal,
+    problem: ProblemFull,
+  ): boolean {
+    if (player.role !== "player" && player.role !== "bot") {
       return false;
+    }
+
+    if (player.status === "eliminated") {
+      return false;
+    }
+
+    // Ensure queued array exists
+    if (!player.queued) {
+      player.queued = [];
     }
 
     // Check for overflow (stackSize counts queued only, current excluded)
@@ -472,14 +771,23 @@ export default class Room implements Party.Server {
       // Eliminate player
       player.status = "eliminated";
       player.stackSize = player.stackSize + 1; // Show overflow
-      this.addEventLog("warning", `${player.username} was eliminated (stack overflow)`);
+      this.addEventLog(
+        "warning",
+        `${player.username} was eliminated (stack overflow)`,
+      );
       this.broadcastPlayerUpdate(player);
       return true;
     }
 
     // Push to top of queue (index 0)
-    player.queuedProblemIds.unshift(problemId);
-    player.stackSize = player.queuedProblemIds.length;
+    const summary: ProblemSummary = {
+      problemId: problem.problemId,
+      title: problem.title,
+      difficulty: problem.difficulty,
+      isGarbage: problem.isGarbage,
+    };
+    player.queued.unshift(summary);
+    player.stackSize = player.queued.length;
     return false;
   }
 
@@ -487,36 +795,51 @@ export default class Room implements Party.Server {
    * Advance player to next problem (pop from queue or sample new)
    */
   private advanceToNextProblem(player: PlayerInternal): void {
-    if (player.role !== "player" || player.status === "eliminated") {
+    if (
+      (player.role !== "player" && player.role !== "bot") ||
+      player.status === "eliminated"
+    ) {
       return;
     }
 
+    // Ensure queued array exists
+    if (!player.queued) {
+      player.queued = [];
+    }
+
     // Pop from queue if available
-    let nextProblemId: string | null = null;
-    if (player.queuedProblemIds.length > 0) {
-      nextProblemId = player.queuedProblemIds.shift() ?? null;
-      player.stackSize = player.queuedProblemIds.length;
+    let nextProblem: ProblemFull | null = null;
+    if (player.queued.length > 0) {
+      const nextSummary = player.queued.shift();
+      player.stackSize = player.queued.length;
+
+      if (nextSummary) {
+        // Find the full problem by ID
+        const allProblems = this.loadProblems();
+        nextProblem =
+          allProblems.find((p) => p.problemId === nextSummary.problemId) ??
+          null;
+      }
     }
 
     // If queue empty, sample a new problem
-    if (!nextProblemId && player.problemState) {
-      const newProblem = sampleProblem(
-        player.problemState,
-        this.state.match.settings.difficultyProfile,
-      );
-      if (newProblem) {
-        nextProblemId = newProblem.problemId;
+    if (!nextProblem) {
+      try {
+        nextProblem = this.sampleProblem(player.playerId, true);
+      } catch (error) {
+        console.error(
+          `[${this.state.roomId}] Failed to sample problem for ${player.playerId}:`,
+          error,
+        );
+        return;
       }
     }
 
-    if (nextProblemId) {
-      player.currentProblemId = nextProblemId;
-      const problem = getProblemClientView(nextProblemId);
-      if (problem) {
-        player.code = problem.starterCode;
-        player.codeVersion = 1;
-        player.revealedHints = [];
-      }
+    if (nextProblem) {
+      player.currentProblem = this.toClientView(nextProblem);
+      player.code = nextProblem.starterCode;
+      player.codeVersion = 1;
+      player.revealedHints = [];
     }
   }
 
@@ -624,7 +947,7 @@ export default class Room implements Party.Server {
     conn.send(JSON.stringify(msg));
   }
 
-  private addEventLog(level: "info" | "warning" | "error", message: string): void {
+  private addEventLog(level: "info" | "warning" | "error", message: string) {
     const entry: EventLogEntry = {
       id: `e_${Date.now()}_${Math.random().toString(36).slice(2)}`,
       at: new Date().toISOString(),
@@ -633,15 +956,146 @@ export default class Room implements Party.Server {
     };
     this.state.eventLog.push(entry);
 
-    // Keep only last 100 entries
-    if (this.state.eventLog.length > 100) {
-      this.state.eventLog = this.state.eventLog.slice(-100);
-    }
-
     this.broadcast({
       type: "EVENT_LOG_APPEND",
       payload: { entry },
     });
+  }
+
+  private async persistState() {
+    await this.room.storage.put("state", {
+      ...this.state,
+      players: Object.fromEntries(this.state.players),
+      playerProblemHistory: Object.fromEntries(
+        Array.from(this.state.playerProblemHistory.entries()).map(([k, v]) => [
+          k,
+          Array.from(v),
+        ]),
+      ),
+    });
+  }
+
+  // ============================================================================
+  // Problem Management
+  // ============================================================================
+
+  private cachedProblems: ProblemFull[] | null = null;
+
+  private loadProblems(): ProblemFull[] {
+    if (!this.cachedProblems) {
+      // Validate and cache problems
+      this.cachedProblems = PROBLEMS_DATA.map((p) =>
+        ProblemFullSchema.parse(p),
+      );
+    }
+    return this.cachedProblems;
+  }
+
+  private sampleProblem(
+    playerId: string,
+    excludeGarbage: boolean = true,
+  ): ProblemFull {
+    const allProblems = this.loadProblems();
+    let pool = excludeGarbage
+      ? allProblems.filter((p) => !p.isGarbage)
+      : allProblems;
+
+    if (pool.length === 0) {
+      throw new Error("No problems available in pool");
+    }
+
+    // Get player's history
+    let history = this.state.playerProblemHistory.get(playerId);
+    if (!history) {
+      history = new Set();
+      this.state.playerProblemHistory.set(playerId, history);
+    }
+
+    // Filter out seen problems
+    const unseen = pool.filter((p) => !history.has(p.problemId));
+
+    // If all seen, reset history and use full pool
+    if (unseen.length === 0) {
+      history.clear();
+      pool = excludeGarbage
+        ? allProblems.filter((p) => !p.isGarbage)
+        : allProblems;
+    } else {
+      pool = unseen;
+    }
+
+    // Apply difficulty weights
+    const weights = this.getDifficultyWeights();
+    const weightedPool: { problem: ProblemFull; weight: number }[] = [];
+
+    for (const problem of pool) {
+      const weight = weights[problem.difficulty] || 1;
+      weightedPool.push({ problem, weight });
+    }
+
+    // Weighted random selection
+    const totalWeight = weightedPool.reduce(
+      (sum, item) => sum + item.weight,
+      0,
+    );
+    let random = Math.random() * totalWeight;
+
+    for (const item of weightedPool) {
+      random -= item.weight;
+      if (random <= 0) {
+        // Add to history
+        history.add(item.problem.problemId);
+        return item.problem;
+      }
+    }
+
+    // Fallback (should never reach here, but handle it safely)
+    const selected = weightedPool[0]?.problem ?? pool[0];
+    if (selected) {
+      history.add(selected.problemId);
+      return selected;
+    }
+
+    // Ultimate fallback - this should never happen
+    throw new Error("Failed to sample problem");
+  }
+
+  private getDifficultyWeights(): Record<"easy" | "medium" | "hard", number> {
+    const profile = this.state.settings.difficultyProfile;
+    const DIFFICULTY_WEIGHTS = {
+      beginner: { easy: 70, medium: 25, hard: 5 },
+      moderate: { easy: 40, medium: 40, hard: 20 },
+      competitive: { easy: 20, medium: 40, hard: 40 },
+    };
+    return DIFFICULTY_WEIGHTS[profile];
+  }
+
+  private toClientView(problem: ProblemFull): ProblemClientView {
+    // Strip hidden tests and server-only fields
+    const { hiddenTests, hints, solutionSketch, ...clientView } = problem;
+    return {
+      ...clientView,
+      hintCount: hints?.length,
+    };
+  }
+
+  async onAlarm() {
+    // Handle warmup -> main transition
+    if (this.state.match.phase === "warmup") {
+      this.state.match.phase = "main";
+      await this.persistState();
+
+      this.broadcast({
+        type: "MATCH_PHASE_UPDATE",
+        payload: {
+          matchId: this.state.match.matchId!,
+          phase: "main",
+        },
+      });
+
+      this.addEventLog("info", "Main phase started");
+      console.log(`[${this.state.roomId}] Transitioned to main phase`);
+    }
   }
 
   // ============================================================================
