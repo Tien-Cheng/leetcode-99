@@ -63,7 +63,7 @@ export default function CreateRoomPage() {
         body: JSON.stringify({
           username: trimmedUsername,
           settings: {
-            matchDurationSec: parseInt(duration) * 60,
+            matchDurationSec: parseInt(duration),
             difficultyProfile: difficulty,
             attackIntensity: attackIntensity,
           },

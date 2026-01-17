@@ -20,10 +20,12 @@ export function GameWrapper({ children, roomId }: GameWrapperProps) {
   const [playerToken, setPlayerToken] = useState("");
 
   useEffect(() => {
+    console.log(`[GameWrapper] roomId changed: ${roomId}`);
     const stored = localStorage.getItem(`room_${roomId}`);
     if (stored) {
       try {
         const auth = JSON.parse(stored);
+        console.log(`[GameWrapper] Restoring auth for player: ${auth.playerId}`);
         setPlayerId(auth.playerId);
         setPlayerToken(auth.playerToken);
         // Use stored wsUrl or fallback
