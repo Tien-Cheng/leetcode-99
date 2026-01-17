@@ -118,8 +118,8 @@ function GamePageContent() {
     type: (entry.level === "error"
       ? "danger"
       : entry.level === "warning"
-      ? "warning"
-      : "info") as "info" | "success" | "warning" | "danger" | "system",
+        ? "warning"
+        : "info") as "info" | "success" | "warning" | "danger" | "system",
     content: entry.message,
     timestamp: new Date(entry.at).toLocaleTimeString(),
   }));
@@ -172,7 +172,7 @@ function GamePageContent() {
 
         {/* Center: Editor */}
         <div className="flex-1 flex flex-col gap-2 min-w-0">
-          <Panel title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`} className="flex-1 min-h-0">
+          <Panel title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`} className="flex-1 min-h-0" noPadding>
             <EditorWrapper
               code={code}
               onChange={handleCodeChange}
