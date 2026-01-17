@@ -131,6 +131,7 @@ export default function CreateRoomPage() {
               onChange={(e) => setDuration(e.target.value)}
               disabled={loading}
               options={[
+                { value: "120", label: "2 minutes" },
                 { value: "360", label: "6 minutes" },
                 { value: "480", label: "8 minutes" },
                 { value: "600", label: "10 minutes" },
