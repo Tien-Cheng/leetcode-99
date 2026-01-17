@@ -6,6 +6,7 @@ import {
   type PartyRegisterRequest,
   type PartyRegisterResponse,
 } from "@leet99/contracts";
+import { z } from "zod";
 
 export function partyBaseUrl(): string {
   return process.env.PARTYKIT_HOST || "http://localhost:1999";
@@ -125,6 +126,109 @@ export async function registerPartyPlayer(
         error: {
           code: "INTERNAL_ERROR",
           message: "Invalid PartyKit register response",
+          details: parsedOk.error.flatten(),
+        },
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: parsedOk.data,
+  };
+}
+
+export type FetchRoomStateOk = {
+  ok: true;
+  data: {
+    roomId: string;
+    phase: string;
+    playerCount: number;
+    settings: Record<string, unknown>;
+  };
+};
+
+export type FetchRoomStateErr = {
+  ok: false;
+  status: number;
+  error: HttpErrorResponse;
+};
+
+export type FetchRoomStateResult = FetchRoomStateOk | FetchRoomStateErr;
+
+export async function fetchRoomState(
+  roomId: string,
+): Promise<FetchRoomStateResult> {
+  const url = new URL(
+    `/parties/${partyProject()}/${roomId}/state`,
+    partyBaseUrl(),
+  );
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      status: 502,
+      error: {
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to reach PartyKit",
+          details: err instanceof Error ? err.message : err,
+        },
+      },
+    };
+  }
+
+  const status = response.status;
+
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    const parsedError = HttpErrorResponseSchema.safeParse(body);
+    return {
+      ok: false,
+      status,
+      error: parsedError.success
+        ? parsedError.data
+        : {
+            error: {
+              code: "INTERNAL_ERROR",
+              message: "PartyKit state fetch failed",
+              details: { status },
+            },
+          },
+    };
+  }
+
+  const parsedOk = z
+    .object({
+      roomId: z.string(),
+      phase: z.string(),
+      playerCount: z.number(),
+      settings: z.record(z.unknown()),
+    })
+    .safeParse(body);
+
+  if (!parsedOk.success) {
+    return {
+      ok: false,
+      status,
+      error: {
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Invalid PartyKit state response",
           details: parsedOk.error.flatten(),
         },
       },
