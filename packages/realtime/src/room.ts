@@ -150,6 +150,7 @@ export default class Room implements Party.Server {
   }
 
   async onMessage(message: string, sender: Party.Connection) {
+    console.log(`[Room ${this.state.roomId}][RX] ${message.slice(0, 100)}`);
     try {
       const parsed = JSON.parse(message) as WSMessage<
         ClientMessageType,

@@ -17,6 +17,8 @@
     "monaco-editor": "^0.55.1",
     "monaco-vim": "^0.4.4",
     "next": "^15.1.0",
+    "partykit": "0.0.115",
+    "partysocket": "^1.1.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
