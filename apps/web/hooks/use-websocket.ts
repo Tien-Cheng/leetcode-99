@@ -97,6 +97,7 @@ export function useWebSocket(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const requestIdCounterRef = useRef(0);
+  const connectionIdRef = useRef(0); // Track connection attempts to ignore stale callbacks
   const pendingRequestsRef = useRef<
     Map<string, { resolve: () => void; reject: (error: Error) => void }>
   >(new Map());
@@ -223,6 +224,7 @@ export function useWebSocket(
     (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data) as ServerMessage;
+        console.log("[WS] Received:", message.type);
 
         // If this is a response to a pending request, resolve it
         if (message.requestId && pendingRequestsRef.current.has(message.requestId)) {
@@ -296,18 +298,35 @@ export function useWebSocket(
 
   // Connect to WebSocket
   const connect = useCallback(() => {
-    // Clean up existing connection
-    if (wsRef.current) {
+    // Don't connect if wsUrl or playerToken is missing
+    if (!wsUrl || !playerToken) {
+      console.log("WebSocket: waiting for wsUrl and playerToken");
+      return;
+    }
+
+    // Increment connection ID to invalidate callbacks from previous connections
+    connectionIdRef.current += 1;
+    const thisConnectionId = connectionIdRef.current;
+
+    // Clean up existing connection (only if open or connecting)
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
       wsRef.current.close();
       wsRef.current = null;
     }
 
     try {
+      console.log(`[WS ${thisConnectionId}] Connecting to ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log("WebSocket connected");
+        // Ignore if this is a stale connection
+        if (connectionIdRef.current !== thisConnectionId) {
+          console.log(`[WS ${thisConnectionId}] Ignoring stale onopen (current: ${connectionIdRef.current})`);
+          return;
+        }
+
+        console.log(`[WS ${thisConnectionId}] Connected!`);
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
         handlersRef.current.onConnect?.();
@@ -322,12 +341,20 @@ export function useWebSocket(
       ws.onmessage = handleMessage;
 
       ws.onerror = (error) => {
+        // Ignore if this is a stale connection
+        if (connectionIdRef.current !== thisConnectionId) return;
+
+        // Ignore errors during cleanup (expected in React Strict Mode)
+        if (isCleaningUpRef.current) {
+          return;
+        }
+
         const state = ws.readyState;
         const stateName = state === WebSocket.CONNECTING ? "CONNECTING" :
                          state === WebSocket.OPEN ? "OPEN" :
                          state === WebSocket.CLOSING ? "CLOSING" :
                          state === WebSocket.CLOSED ? "CLOSED" : "UNKNOWN";
-        
+
         // Extract host from URL for better error messages
         let hostInfo = "";
         try {
@@ -336,7 +363,7 @@ export function useWebSocket(
         } catch {
           hostInfo = wsUrl;
         }
-        
+
         console.error("WebSocket error:", {
           type: error.type,
           readyState: stateName,
@@ -348,12 +375,25 @@ export function useWebSocket(
       };
 
       ws.onclose = (event) => {
+        // Ignore if this is a stale connection
+        if (connectionIdRef.current !== thisConnectionId) {
+          console.log(`[WS ${thisConnectionId}] Ignoring stale onclose (current: ${connectionIdRef.current})`);
+          return;
+        }
+
+        // During cleanup, silently handle close without logging errors
+        if (isCleaningUpRef.current) {
+          setIsConnected(false);
+          wsRef.current = null;
+          return;
+        }
+
         const closeInfo = {
           code: event.code,
           reason: event.reason || "No reason provided",
           wasClean: event.wasClean,
         };
-        
+
         // Provide helpful error messages for common close codes
         let errorMessage = "";
         if (event.code === 1006) {
@@ -371,22 +411,16 @@ export function useWebSocket(
         } else if (event.code === 1011) {
           errorMessage = "Server error";
         }
-        
+
         if (errorMessage && !event.wasClean) {
           console.error("WebSocket disconnected:", errorMessage, closeInfo);
         } else {
           console.log("WebSocket disconnected", closeInfo);
         }
-        
+
         setIsConnected(false);
         wsRef.current = null;
         handlersRef.current.onDisconnect?.();
-
-        // Don't reconnect if we're cleaning up
-        if (isCleaningUpRef.current) {
-          console.log("Not reconnecting (component unmounting)");
-          return;
-        }
 
         // Attempt to reconnect with exponential backoff
         const delay = Math.min(
