@@ -1,11 +1,16 @@
 import type * as Party from "partykit/server";
 import type {
+  AttackType,
   ChatMessage,
   ClientMessageType,
+  CodeUpdateClientPayload,
+  DebuffType,
   ErrorPayload,
   EventLogEntry,
   HttpErrorResponse,
   JoinRoomPayload,
+  JudgeResult,
+  MatchEndReason,
   MatchPublic,
   PlayerPrivateState,
   PlayerPublic,
@@ -14,6 +19,14 @@ import type {
   ProblemSummary,
   RoomSettings,
   RoomSnapshotPayload,
+  RunCodePayload,
+  SetTargetModePayload,
+  ShopItem,
+  SpectateView,
+  SpendPointsPayload,
+  StandingEntry,
+  SubmitCodePayload,
+  TargetingMode,
   WSMessage,
 } from "@leet99/contracts";
 import {
@@ -27,10 +40,53 @@ import { randomUUID } from "node:crypto";
 
 import { applyPartyRegister } from "./register.ts";
 import PROBLEMS_DATA from "./problems.json" with { type: "json" };
+import { saveMatch, type MatchPlayerEntry } from "@leet99/supabase";
+
+// ============================================================================
+// Rate Limiting Constants (per spec section 6)
+// ============================================================================
+
+const RATE_LIMITS = {
+  RUN_CODE: { intervalMs: 2000, maxRequests: 1 },
+  SUBMIT_CODE: { intervalMs: 3000, maxRequests: 1 },
+  CODE_UPDATE: { intervalMs: 100, maxRequests: 10 }, // 10 per second
+  SPECTATE_PLAYER: { intervalMs: 1000, maxRequests: 1 },
+  SEND_CHAT: { intervalMs: 500, maxRequests: 2 }, // 2 per second
+};
+
+const CODE_MAX_BYTES = 50000;
+
+// ============================================================================
+// Attack Durations (per spec section 8.6)
+// ============================================================================
+
+const BASE_DEBUFF_DURATIONS: Record<DebuffType, number> = {
+  ddos: 12000, // 12s
+  flashbang: 25000, // 25s
+  vimLock: 12000, // 12s
+  memoryLeak: 30000, // 30s
+};
+
+const DEBUFF_GRACE_PERIOD_MS = 5000; // 5s immunity after debuff ends
+
+// ============================================================================
+// Scoring Constants (per spec section 8.2)
+// ============================================================================
+
+const DIFFICULTY_SCORES: Record<"easy" | "medium" | "hard", number> = {
+  easy: 5,
+  medium: 10,
+  hard: 20,
+};
 
 // ============================================================================
 // Room State Types
 // ============================================================================
+
+interface RateLimitState {
+  lastRequestAt: number;
+  requestCount: number;
+}
 
 interface PlayerInternal {
   playerId: string;
@@ -41,10 +97,10 @@ interface PlayerInternal {
   status: "lobby" | "coding" | "error" | "underAttack" | "eliminated";
   score: number;
   streak: number;
-  targetingMode: "random" | "attackers" | "topScore" | "nearDeath";
+  targetingMode: TargetingMode;
   stackSize: number;
-  activeDebuff: { type: string; endsAt: string } | null;
-  activeBuff: { type: string; endsAt: string } | null;
+  activeDebuff: { type: DebuffType; endsAt: string } | null;
+  activeBuff: { type: "rateLimiter"; endsAt: string } | null;
   connectionId: string | null;
   joinOrder: number;
   // Private state (only during match)
@@ -54,6 +110,20 @@ interface PlayerInternal {
   codeVersion?: number;
   revealedHints?: string[];
   lastProblemArrivalAt?: number; // Timestamp of last problem arrival (for per-player timing)
+  // Rate limiting
+  rateLimits?: Map<string, RateLimitState>;
+  // Attack tracking
+  recentAttackers?: Map<string, number>; // playerId -> lastAttackedAt timestamp
+  // Debuff grace period
+  debuffGraceEndsAt?: number;
+  // Shop cooldowns
+  shopCooldowns?: Map<ShopItem, number>; // item -> cooldown ends at
+  // Spectating
+  spectatingPlayerId?: string | null;
+  // Bot simulation
+  nextBotActionAt?: number;
+  // Elimination tracking
+  eliminatedAt?: string | null;
 }
 
 interface RoomState {
@@ -68,6 +138,34 @@ interface RoomState {
   nextBotNumber: number;
   playerProblemHistory: Map<string, Set<string>>;
   nextProblemArrivalAt: number | null; // Timestamp for next problem arrival
+  nextBotActionAt: number | null; // Timestamp for next bot action
+}
+
+// ============================================================================
+// Judge Configuration (from environment)
+// ============================================================================
+
+interface JudgeConfig {
+  judge0Url: string;
+  judge0ApiKey: string;
+  rapidApiHost?: string;
+  pythonLanguageId?: number;
+}
+
+function getJudgeConfig(): JudgeConfig | null {
+  const judge0Url = process.env.JUDGE0_URL;
+  const judge0ApiKey = process.env.JUDGE0_API_KEY;
+  if (!judge0Url || !judge0ApiKey) {
+    return null;
+  }
+  return {
+    judge0Url,
+    judge0ApiKey,
+    rapidApiHost: process.env.JUDGE0_RAPIDAPI_HOST,
+    pythonLanguageId: process.env.JUDGE0_PYTHON_LANGUAGE_ID
+      ? parseInt(process.env.JUDGE0_PYTHON_LANGUAGE_ID, 10)
+      : undefined,
+  };
 }
 
 // ============================================================================
@@ -96,6 +194,7 @@ export default class Room implements Party.Server {
       nextBotNumber: 1,
       playerProblemHistory: new Map(),
       nextProblemArrivalAt: null,
+      nextBotActionAt: null,
     };
   }
 
@@ -123,7 +222,29 @@ export default class Room implements Party.Server {
           ),
         ),
         nextProblemArrivalAt: (stored as any).nextProblemArrivalAt ?? null,
+        nextBotActionAt: (stored as any).nextBotActionAt ?? null,
       };
+
+      // Restore Maps for players
+      for (const player of this.state.players.values()) {
+        if (player.rateLimits) {
+          player.rateLimits = new Map(
+            Object.entries(player.rateLimits as unknown as Record<string, RateLimitState>),
+          );
+        }
+        if (player.recentAttackers) {
+          player.recentAttackers = new Map(
+            Object.entries(player.recentAttackers as unknown as Record<string, number>),
+          );
+        }
+        if (player.shopCooldowns) {
+          player.shopCooldowns = new Map(
+            Object.entries(player.shopCooldowns as unknown as Record<string, number>).map(
+              ([k, v]) => [k as ShopItem, v] as const,
+            ),
+          );
+        }
+      }
 
       // Initialize lastProblemArrivalAt for players if missing (for restored state)
       const now = Date.now();
@@ -177,6 +298,9 @@ export default class Room implements Party.Server {
             await this.room.storage.setAlarm(matchEndAt);
           }
         }
+
+        // Reschedule bot actions
+        await this.scheduleBotActions();
       }
     }
   }
@@ -256,13 +380,57 @@ export default class Room implements Party.Server {
           await this.handleReturnToLobby(sender, parsed.requestId);
           break;
 
-        // TODO: Implement other message handlers
-        // case 'SET_TARGET_MODE':
-        // case 'RUN_CODE':
-        // case 'SUBMIT_CODE':
-        // case 'SPEND_POINTS':
-        // case 'SPECTATE_PLAYER':
-        // case 'CODE_UPDATE':
+        case "SET_TARGET_MODE":
+          await this.handleSetTargetMode(
+            sender,
+            parsed.payload as SetTargetModePayload,
+            parsed.requestId,
+          );
+          break;
+
+        case "CODE_UPDATE":
+          await this.handleCodeUpdate(
+            sender,
+            parsed.payload as CodeUpdateClientPayload,
+            parsed.requestId,
+          );
+          break;
+
+        case "RUN_CODE":
+          await this.handleRunCode(
+            sender,
+            parsed.payload as RunCodePayload,
+            parsed.requestId,
+          );
+          break;
+
+        case "SUBMIT_CODE":
+          await this.handleSubmitCode(
+            sender,
+            parsed.payload as SubmitCodePayload,
+            parsed.requestId,
+          );
+          break;
+
+        case "SPEND_POINTS":
+          await this.handleSpendPoints(
+            sender,
+            parsed.payload as SpendPointsPayload,
+            parsed.requestId,
+          );
+          break;
+
+        case "SPECTATE_PLAYER":
+          await this.handleSpectatePlayer(
+            sender,
+            parsed.payload as { playerId: string },
+            parsed.requestId,
+          );
+          break;
+
+        case "STOP_SPECTATE":
+          await this.handleStopSpectate(sender, parsed.requestId);
+          break;
 
         default:
           this.sendError(
@@ -276,6 +444,47 @@ export default class Room implements Party.Server {
       console.error(`[${this.state.roomId}] Error parsing message:`, err);
       this.sendError(sender, "BAD_REQUEST", "Invalid JSON message");
     }
+  }
+
+  // ============================================================================
+  // Rate Limiting
+  // ============================================================================
+
+  private checkRateLimit(
+    player: PlayerInternal,
+    action: keyof typeof RATE_LIMITS,
+  ): { allowed: boolean; retryAfterMs?: number } {
+    const limit = RATE_LIMITS[action];
+    if (!limit) return { allowed: true };
+
+    if (!player.rateLimits) {
+      player.rateLimits = new Map();
+    }
+
+    const now = Date.now();
+    const state = player.rateLimits.get(action);
+
+    if (!state) {
+      player.rateLimits.set(action, { lastRequestAt: now, requestCount: 1 });
+      return { allowed: true };
+    }
+
+    const elapsed = now - state.lastRequestAt;
+
+    if (elapsed >= limit.intervalMs) {
+      // Reset window
+      state.lastRequestAt = now;
+      state.requestCount = 1;
+      return { allowed: true };
+    }
+
+    if (state.requestCount >= limit.maxRequests) {
+      const retryAfterMs = limit.intervalMs - elapsed;
+      return { allowed: false, retryAfterMs };
+    }
+
+    state.requestCount++;
+    return { allowed: true };
   }
 
   // ============================================================================
@@ -341,6 +550,13 @@ export default class Room implements Party.Server {
       return;
     }
 
+    // Rate limit check
+    const rateCheck = this.checkRateLimit(player, "SEND_CHAT");
+    if (!rateCheck.allowed) {
+      this.sendError(conn, "RATE_LIMITED", "Too many chat messages", requestId, rateCheck.retryAfterMs);
+      return;
+    }
+
     // Only allow chat in lobby phase
     if (this.state.match.phase !== "lobby") {
       this.sendError(
@@ -353,7 +569,7 @@ export default class Room implements Party.Server {
     }
 
     const text = payload.text?.trim();
-    if (!text || text.length > 200) {
+    if (!text || text.length === 0 || text.length > 200) {
       this.sendError(conn, "BAD_REQUEST", "Invalid chat message", requestId);
       return;
     }
@@ -509,6 +725,10 @@ export default class Room implements Party.Server {
       p.stackSize = 0;
       p.activeDebuff = null;
       p.activeBuff = null;
+      p.eliminatedAt = null;
+      p.recentAttackers = new Map();
+      p.debuffGraceEndsAt = undefined;
+      p.shopCooldowns = new Map();
 
       // Sample initial problems
       const current = this.sampleProblem(p.playerId, true);
@@ -530,6 +750,11 @@ export default class Room implements Party.Server {
       p.revealedHints = [];
       p.stackSize = queued.length;
       p.lastProblemArrivalAt = now.getTime(); // Initialize to match start time
+
+      // Initialize bot simulation timing
+      if (p.role === "bot") {
+        p.nextBotActionAt = this.calculateNextBotActionTime(p);
+      }
     }
 
     // Persist
@@ -541,6 +766,9 @@ export default class Room implements Party.Server {
 
     // Schedule first problem arrival
     await this.scheduleNextProblemArrival();
+
+    // Schedule bot actions
+    await this.scheduleBotActions();
 
     // Broadcast MATCH_STARTED
     this.broadcast({
@@ -709,6 +937,7 @@ export default class Room implements Party.Server {
 
     // Clear problem arrival schedule
     this.state.nextProblemArrivalAt = null;
+    this.state.nextBotActionAt = null;
 
     // Reset all players
     for (const p of this.state.players.values()) {
@@ -724,6 +953,11 @@ export default class Room implements Party.Server {
       p.codeVersion = undefined;
       p.revealedHints = undefined;
       p.lastProblemArrivalAt = undefined;
+      p.recentAttackers = undefined;
+      p.debuffGraceEndsAt = undefined;
+      p.shopCooldowns = undefined;
+      p.spectatingPlayerId = undefined;
+      p.nextBotActionAt = undefined;
     }
 
     // Clear problem history and event log
@@ -751,6 +985,1030 @@ export default class Room implements Party.Server {
     this.addSystemChat("Returned to lobby");
 
     console.log(`[${this.state.roomId}] Returned to lobby`);
+  }
+
+  private async handleSetTargetMode(
+    conn: Party.Connection,
+    payload: SetTargetModePayload,
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    if (player.role !== "player") {
+      this.sendError(conn, "FORBIDDEN", "Only players can set target mode", requestId);
+      return;
+    }
+
+    const validModes: TargetingMode[] = ["random", "attackers", "topScore", "nearDeath"];
+    if (!validModes.includes(payload.mode)) {
+      this.sendError(conn, "BAD_REQUEST", "Invalid targeting mode", requestId);
+      return;
+    }
+
+    player.targetingMode = payload.mode;
+    await this.persistState();
+
+    // Broadcast player update
+    this.broadcastPlayerUpdate(player);
+
+    console.log(`[${this.state.roomId}] ${player.username} set targeting mode to ${payload.mode}`);
+  }
+
+  private async handleCodeUpdate(
+    conn: Party.Connection,
+    payload: CodeUpdateClientPayload,
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    if (player.role !== "player") {
+      this.sendError(conn, "FORBIDDEN", "Only players can update code", requestId);
+      return;
+    }
+
+    if (player.status === "eliminated") {
+      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      return;
+    }
+
+    // Rate limit check
+    const rateCheck = this.checkRateLimit(player, "CODE_UPDATE");
+    if (!rateCheck.allowed) {
+      this.sendError(conn, "RATE_LIMITED", "Too many code updates", requestId, rateCheck.retryAfterMs);
+      return;
+    }
+
+    // Payload size check
+    if (Buffer.byteLength(payload.code, "utf8") > CODE_MAX_BYTES) {
+      this.sendError(conn, "PAYLOAD_TOO_LARGE", "Code exceeds 50KB limit", requestId);
+      return;
+    }
+
+    // Version check - ignore out-of-order updates
+    if (player.codeVersion && payload.codeVersion <= player.codeVersion) {
+      return; // Silently ignore
+    }
+
+    // Problem ID check
+    if (player.currentProblem?.problemId !== payload.problemId) {
+      return; // Silently ignore updates for wrong problem
+    }
+
+    // Update code
+    player.code = payload.code;
+    player.codeVersion = payload.codeVersion;
+
+    // Relay to spectators
+    this.relayCodeUpdateToSpectators(player, payload);
+  }
+
+  private async handleRunCode(
+    conn: Party.Connection,
+    payload: RunCodePayload,
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    if (player.role !== "player") {
+      this.sendError(conn, "FORBIDDEN", "Only players can run code", requestId);
+      return;
+    }
+
+    if (player.status === "eliminated") {
+      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      return;
+    }
+
+    // Check for ddos debuff
+    if (player.activeDebuff?.type === "ddos") {
+      const endsAt = new Date(player.activeDebuff.endsAt).getTime();
+      const retryAfterMs = Math.max(0, endsAt - Date.now());
+      this.sendError(conn, "FORBIDDEN", "Run disabled by DDoS attack", requestId, retryAfterMs);
+      return;
+    }
+
+    // Rate limit check
+    const rateCheck = this.checkRateLimit(player, "RUN_CODE");
+    if (!rateCheck.allowed) {
+      this.sendError(conn, "RATE_LIMITED", "Too many run requests", requestId, rateCheck.retryAfterMs);
+      return;
+    }
+
+    // Problem ID check
+    if (player.currentProblem?.problemId !== payload.problemId) {
+      this.sendError(conn, "PROBLEM_NOT_FOUND", "Wrong problem ID", requestId);
+      return;
+    }
+
+    // Get full problem
+    const problem = this.getFullProblem(payload.problemId);
+    if (!problem) {
+      this.sendError(conn, "PROBLEM_NOT_FOUND", "Problem not found", requestId);
+      return;
+    }
+
+    // Get judge config
+    const judgeConfig = getJudgeConfig();
+    if (!judgeConfig) {
+      // No judge configured - simulate result for development
+      const result = this.simulateJudgeResult("run", problem, payload.code);
+      this.sendJudgeResult(conn, player, result, requestId);
+      return;
+    }
+
+    // Run public tests via judge
+    try {
+      const { runPublicTests } = await import("@leet99/judge");
+      const result = await runPublicTests(problem, payload.code, judgeConfig);
+
+      // Update player status based on result
+      player.status = result.passed ? "coding" : "error";
+      this.broadcastPlayerUpdate(player);
+
+      this.sendJudgeResult(conn, player, result, requestId);
+    } catch (error) {
+      console.error(`[${this.state.roomId}] Judge error:`, error);
+      this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+    }
+  }
+
+  private async handleSubmitCode(
+    conn: Party.Connection,
+    payload: SubmitCodePayload,
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    if (player.role !== "player") {
+      this.sendError(conn, "FORBIDDEN", "Only players can submit code", requestId);
+      return;
+    }
+
+    if (player.status === "eliminated") {
+      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      return;
+    }
+
+    // Rate limit check
+    const rateCheck = this.checkRateLimit(player, "SUBMIT_CODE");
+    if (!rateCheck.allowed) {
+      this.sendError(conn, "RATE_LIMITED", "Too many submit requests", requestId, rateCheck.retryAfterMs);
+      return;
+    }
+
+    // Problem ID check
+    if (player.currentProblem?.problemId !== payload.problemId) {
+      this.sendError(conn, "PROBLEM_NOT_FOUND", "Wrong problem ID", requestId);
+      return;
+    }
+
+    // Get full problem
+    const problem = this.getFullProblem(payload.problemId);
+    if (!problem) {
+      this.sendError(conn, "PROBLEM_NOT_FOUND", "Problem not found", requestId);
+      return;
+    }
+
+    // Get judge config
+    const judgeConfig = getJudgeConfig();
+    let result: JudgeResult;
+
+    if (!judgeConfig) {
+      // No judge configured - simulate result for development
+      result = this.simulateJudgeResult("submit", problem, payload.code);
+    } else {
+      // Run all tests via judge
+      try {
+        const { runAllTests } = await import("@leet99/judge");
+        result = await runAllTests(problem, payload.code, judgeConfig);
+      } catch (error) {
+        console.error(`[${this.state.roomId}] Judge error:`, error);
+        this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+        return;
+      }
+    }
+
+    // Process submission result
+    await this.processSubmissionResult(player, problem, result, requestId);
+  }
+
+  private async processSubmissionResult(
+    player: PlayerInternal,
+    problem: ProblemFull,
+    result: JudgeResult,
+    requestId?: string,
+  ) {
+    const conn = this.getPlayerConnection(player);
+
+    if (!result.passed) {
+      // Failed submission - reset streak, update status
+      player.streak = 0;
+      player.status = "error";
+      this.broadcastPlayerUpdate(player);
+
+      if (conn) {
+        this.sendJudgeResult(conn, player, result, requestId);
+      }
+      return;
+    }
+
+    // Passed submission
+    const isGarbage = problem.isGarbage ?? false;
+
+    if (!isGarbage) {
+      // Award points based on difficulty
+      const points = DIFFICULTY_SCORES[problem.difficulty] || 0;
+      player.score += points;
+      player.streak += 1;
+
+      // Send attack (unless streak is multiple of 3, then memoryLeak)
+      const attackType = this.determineAttackType(problem.difficulty, player.streak);
+      await this.sendAttack(player, attackType);
+
+      this.addEventLog(
+        "info",
+        `${player.username} solved ${problem.title} (+${points}) and sent ${attackType}`,
+      );
+    } else {
+      // Garbage problem - no points, no streak increment, no attack
+      this.addEventLog("info", `${player.username} cleared garbage: ${problem.title}`);
+    }
+
+    // Advance to next problem
+    this.advanceToNextProblem(player);
+    player.status = "coding";
+
+    // Broadcast updates
+    this.broadcastPlayerUpdate(player);
+    this.broadcastStackUpdate(player);
+
+    // Send judge result
+    if (conn) {
+      this.sendJudgeResult(conn, player, result, requestId);
+      // Send updated snapshot with new problem
+      const snapshot = this.buildRoomSnapshot(player);
+      conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+    }
+
+    // Update spectators
+    this.updateSpectators(player);
+
+    // Persist
+    await this.persistState();
+
+    // Check for match end conditions
+    await this.checkMatchEnd();
+  }
+
+  private async handleSpendPoints(
+    conn: Party.Connection,
+    payload: SpendPointsPayload,
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    if (player.role !== "player") {
+      this.sendError(conn, "FORBIDDEN", "Only players can spend points", requestId);
+      return;
+    }
+
+    if (player.status === "eliminated") {
+      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      return;
+    }
+
+    const item = payload.item;
+    const catalogItem = DEFAULT_SHOP_CATALOG.find((c) => c.item === item);
+    if (!catalogItem) {
+      this.sendError(conn, "BAD_REQUEST", "Unknown shop item", requestId);
+      return;
+    }
+
+    // Check score
+    if (player.score < catalogItem.cost) {
+      this.sendError(conn, "INSUFFICIENT_SCORE", "Not enough points", requestId);
+      return;
+    }
+
+    // Check cooldown
+    if (!player.shopCooldowns) {
+      player.shopCooldowns = new Map();
+    }
+    const cooldownEndsAt = player.shopCooldowns.get(item);
+    if (cooldownEndsAt && Date.now() < cooldownEndsAt) {
+      const retryAfterMs = cooldownEndsAt - Date.now();
+      this.sendError(conn, "ITEM_ON_COOLDOWN", "Item on cooldown", requestId, retryAfterMs);
+      return;
+    }
+
+    // Apply item effect
+    const success = await this.applyShopItem(player, item);
+    if (!success) {
+      this.sendError(conn, "BAD_REQUEST", "Cannot use this item now", requestId);
+      return;
+    }
+
+    // Deduct cost
+    player.score -= catalogItem.cost;
+
+    // Set cooldown if applicable
+    if (catalogItem.cooldownSec) {
+      player.shopCooldowns.set(item, Date.now() + catalogItem.cooldownSec * 1000);
+    }
+
+    // Broadcast updates
+    this.broadcastPlayerUpdate(player);
+
+    // Send updated snapshot
+    const snapshot = this.buildRoomSnapshot(player);
+    conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+
+    // Update spectators
+    this.updateSpectators(player);
+
+    // Persist
+    await this.persistState();
+
+    this.addEventLog("info", `${player.username} purchased ${item}`);
+    console.log(`[${this.state.roomId}] ${player.username} purchased ${item}`);
+  }
+
+  private async applyShopItem(player: PlayerInternal, item: ShopItem): Promise<boolean> {
+    switch (item) {
+      case "clearDebuff":
+        if (!player.activeDebuff) {
+          return false; // No debuff to clear
+        }
+        player.activeDebuff = null;
+        player.status = "coding";
+        return true;
+
+      case "memoryDefrag":
+        // Remove all garbage problems from queue
+        if (player.queued) {
+          player.queued = player.queued.filter((p) => !p.isGarbage);
+          player.stackSize = player.queued.length;
+          this.broadcastStackUpdate(player);
+        }
+        return true;
+
+      case "skipProblem":
+        // Advance to next problem without scoring
+        player.streak = 0;
+        this.advanceToNextProblem(player);
+        this.broadcastStackUpdate(player);
+        return true;
+
+      case "rateLimiter": {
+        // Apply rate limiter buff
+        const duration = 30000; // 30s
+        player.activeBuff = {
+          type: "rateLimiter",
+          endsAt: new Date(Date.now() + duration).toISOString(),
+        };
+        return true;
+      }
+
+      case "hint": {
+        // Reveal next hint for current problem
+        if (!player.currentProblem) {
+          return false;
+        }
+        const fullProblem = this.getFullProblem(player.currentProblem.problemId);
+        if (!fullProblem || !fullProblem.hints) {
+          return false;
+        }
+        if (!player.revealedHints) {
+          player.revealedHints = [];
+        }
+        if (player.revealedHints.length >= fullProblem.hints.length) {
+          return false; // No more hints
+        }
+        const nextHint = fullProblem.hints[player.revealedHints.length];
+        if (!nextHint) {
+          return false;
+        }
+        player.revealedHints.push(nextHint);
+        return true;
+      }
+
+      default:
+        return false;
+    }
+  }
+
+  private async handleSpectatePlayer(
+    conn: Party.Connection,
+    payload: { playerId: string },
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Check spectating permissions
+    const canSpectate =
+      player.role === "spectator" || player.status === "eliminated";
+    if (!canSpectate) {
+      this.sendError(conn, "FORBIDDEN", "You cannot spectate while alive", requestId);
+      return;
+    }
+
+    // Rate limit check
+    const rateCheck = this.checkRateLimit(player, "SPECTATE_PLAYER");
+    if (!rateCheck.allowed) {
+      this.sendError(conn, "RATE_LIMITED", "Too many spectate requests", requestId, rateCheck.retryAfterMs);
+      return;
+    }
+
+    // Find target player
+    const target = this.state.players.get(payload.playerId);
+    if (!target) {
+      this.sendError(conn, "PLAYER_NOT_FOUND", "Target player not found", requestId);
+      return;
+    }
+
+    // Can only spectate players/bots, not spectators
+    if (target.role === "spectator") {
+      this.sendError(conn, "BAD_REQUEST", "Cannot spectate a spectator", requestId);
+      return;
+    }
+
+    // Set spectating
+    player.spectatingPlayerId = payload.playerId;
+
+    // Send spectate state
+    const spectateView = this.buildSpectateView(target);
+    const msg: WSMessage<"SPECTATE_STATE", { spectating: SpectateView | null }> = {
+      type: "SPECTATE_STATE",
+      requestId,
+      payload: { spectating: spectateView },
+    };
+    conn.send(JSON.stringify(msg));
+
+    console.log(`[${this.state.roomId}] ${player.username} is now spectating ${target.username}`);
+  }
+
+  private async handleStopSpectate(conn: Party.Connection, requestId?: string) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    player.spectatingPlayerId = null;
+
+    // Send spectate state with null
+    const msg: WSMessage<"SPECTATE_STATE", { spectating: SpectateView | null }> = {
+      type: "SPECTATE_STATE",
+      requestId,
+      payload: { spectating: null },
+    };
+    conn.send(JSON.stringify(msg));
+  }
+
+  // ============================================================================
+  // Attack System
+  // ============================================================================
+
+  private determineAttackType(difficulty: "easy" | "medium" | "hard", streak: number): AttackType {
+    // If streak is multiple of 3, send memoryLeak
+    if (streak > 0 && streak % 3 === 0) {
+      return "memoryLeak";
+    }
+
+    switch (difficulty) {
+      case "easy":
+        return "garbageDrop";
+      case "medium":
+        return Math.random() < 0.5 ? "flashbang" : "vimLock";
+      case "hard":
+        return "ddos";
+      default:
+        return "garbageDrop";
+    }
+  }
+
+  private async sendAttack(attacker: PlayerInternal, attackType: AttackType) {
+    // Find target based on targeting mode
+    const target = this.selectTarget(attacker);
+    if (!target) {
+      return; // No valid target (attacker is last alive)
+    }
+
+    // Record attack for "attackers" targeting mode
+    if (!target.recentAttackers) {
+      target.recentAttackers = new Map();
+    }
+    target.recentAttackers.set(attacker.playerId, Date.now());
+
+    // Apply attack
+    if (attackType === "garbageDrop") {
+      // Add garbage problem to queue
+      const garbageProblem = this.sampleGarbageProblem();
+      const eliminated = this.addProblemToQueue(target, garbageProblem);
+
+      // Send attack received event
+      const targetConn = this.getPlayerConnection(target);
+      if (targetConn) {
+        const msg: WSMessage<"ATTACK_RECEIVED", {
+          type: AttackType;
+          fromPlayerId: string;
+          addedProblem?: ProblemSummary;
+        }> = {
+          type: "ATTACK_RECEIVED",
+          payload: {
+            type: "garbageDrop",
+            fromPlayerId: attacker.playerId,
+            addedProblem: {
+              problemId: garbageProblem.problemId,
+              title: garbageProblem.title,
+              difficulty: garbageProblem.difficulty,
+              isGarbage: true,
+            },
+          },
+        };
+        targetConn.send(JSON.stringify(msg));
+      }
+
+      if (!eliminated) {
+        this.broadcastStackUpdate(target);
+        this.updateSpectators(target);
+      }
+    } else {
+      // Timed debuff
+      const debuffType = attackType as DebuffType;
+
+      // Check grace period
+      if (target.debuffGraceEndsAt && Date.now() < target.debuffGraceEndsAt) {
+        // Target is immune
+        this.addEventLog(
+          "info",
+          `${target.username} was immune to ${attackType} from ${attacker.username}`,
+        );
+        return;
+      }
+
+      // Calculate duration with intensity scaling
+      let duration = BASE_DEBUFF_DURATIONS[debuffType];
+      if (this.state.settings.attackIntensity === "high") {
+        duration = Math.round(duration * 1.3);
+      }
+
+      const endsAt = new Date(Date.now() + duration).toISOString();
+      target.activeDebuff = { type: debuffType, endsAt };
+      target.status = "underAttack";
+
+      // Schedule debuff expiry
+      this.scheduleDebuffExpiry(target, duration);
+
+      // Send attack received event
+      const targetConn = this.getPlayerConnection(target);
+      if (targetConn) {
+        const msg: WSMessage<"ATTACK_RECEIVED", {
+          type: AttackType;
+          fromPlayerId: string;
+          endsAt?: string;
+        }> = {
+          type: "ATTACK_RECEIVED",
+          payload: {
+            type: attackType,
+            fromPlayerId: attacker.playerId,
+            endsAt,
+          },
+        };
+        targetConn.send(JSON.stringify(msg));
+      }
+
+      this.broadcastPlayerUpdate(target);
+      this.updateSpectators(target);
+    }
+
+    this.addEventLog(
+      "info",
+      `${attacker.username} attacked ${target.username} with ${attackType}`,
+    );
+  }
+
+  private selectTarget(attacker: PlayerInternal): PlayerInternal | null {
+    // Get valid targets: alive, non-spectator, not self
+    const validTargets = Array.from(this.state.players.values()).filter(
+      (p) =>
+        p.playerId !== attacker.playerId &&
+        p.role !== "spectator" &&
+        p.status !== "eliminated",
+    );
+
+    if (validTargets.length === 0) {
+      return null;
+    }
+
+    switch (attacker.targetingMode) {
+      case "random":
+        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+
+      case "attackers": {
+        // Find recent attackers (within 20s)
+        const now = Date.now();
+        const recentAttackers = validTargets.filter((t) => {
+          const lastAttacked = attacker.recentAttackers?.get(t.playerId);
+          return lastAttacked && now - lastAttacked <= 20000;
+        });
+        if (recentAttackers.length > 0) {
+          return recentAttackers[Math.floor(Math.random() * recentAttackers.length)] ?? null;
+        }
+        // Fallback to random
+        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+      }
+
+      case "topScore": {
+        // Find highest score, tie-break randomly
+        const maxScore = Math.max(...validTargets.map((t) => t.score));
+        const topScorers = validTargets.filter((t) => t.score === maxScore);
+        return topScorers[Math.floor(Math.random() * topScorers.length)] ?? null;
+      }
+
+      case "nearDeath": {
+        // Find highest stackSize/stackLimit ratio, tie-break randomly
+        const stackLimit = this.state.settings.stackLimit;
+        const ratios = validTargets.map((t) => ({
+          player: t,
+          ratio: t.stackSize / stackLimit,
+        }));
+        const maxRatio = Math.max(...ratios.map((r) => r.ratio));
+        const nearDeathPlayers = ratios.filter((r) => r.ratio === maxRatio);
+        const selected = nearDeathPlayers[Math.floor(Math.random() * nearDeathPlayers.length)];
+        return selected?.player ?? null;
+      }
+
+      default:
+        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+    }
+  }
+
+  private async scheduleDebuffExpiry(player: PlayerInternal, durationMs: number) {
+    // For simplicity, we'll handle debuff expiry in onAlarm
+    // The alarm system will check for expired debuffs
+    const expiryAt = Date.now() + durationMs;
+    await this.room.storage.setAlarm(expiryAt);
+  }
+
+  private handleExpiredDebuffs() {
+    const now = Date.now();
+    for (const player of this.state.players.values()) {
+      if (player.activeDebuff) {
+        const endsAt = new Date(player.activeDebuff.endsAt).getTime();
+        if (now >= endsAt) {
+          player.activeDebuff = null;
+          player.debuffGraceEndsAt = now + DEBUFF_GRACE_PERIOD_MS;
+          if (player.status === "underAttack") {
+            player.status = "coding";
+          }
+          this.broadcastPlayerUpdate(player);
+          this.updateSpectators(player);
+        }
+      }
+
+      // Also check buff expiry
+      if (player.activeBuff) {
+        const endsAt = new Date(player.activeBuff.endsAt).getTime();
+        if (now >= endsAt) {
+          player.activeBuff = null;
+          this.broadcastPlayerUpdate(player);
+        }
+      }
+    }
+  }
+
+  private sampleGarbageProblem(): ProblemFull {
+    const allProblems = this.loadProblems();
+    const garbageProblems = allProblems.filter((p) => p.isGarbage);
+
+    if (garbageProblems.length > 0) {
+      const selected = garbageProblems[Math.floor(Math.random() * garbageProblems.length)];
+      if (selected) return selected;
+    }
+
+    // Fallback: pick any easy problem and mark as garbage
+    const easyProblems = allProblems.filter((p) => p.difficulty === "easy");
+    let problem: ProblemFull | undefined;
+    if (easyProblems.length > 0) {
+      problem = easyProblems[Math.floor(Math.random() * easyProblems.length)];
+    }
+    if (!problem && allProblems.length > 0) {
+      problem = allProblems[Math.floor(Math.random() * allProblems.length)];
+    }
+
+    if (!problem) {
+      throw new Error("No problems available for garbage");
+    }
+
+    return { ...problem, isGarbage: true };
+  }
+
+  // ============================================================================
+  // Match End Logic
+  // ============================================================================
+
+  private async checkMatchEnd() {
+    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+      return;
+    }
+
+    // Get alive players (non-spectators who aren't eliminated)
+    const alivePlayers = Array.from(this.state.players.values()).filter(
+      (p) => p.role !== "spectator" && p.status !== "eliminated",
+    );
+
+    let endReason: MatchEndReason | null = null;
+
+    // Check if only one player remains
+    if (alivePlayers.length <= 1) {
+      endReason = "lastAlive";
+    }
+
+    // Check if time expired
+    if (this.state.match.endAt && new Date(this.state.match.endAt) <= new Date()) {
+      endReason = "timeExpired";
+    }
+
+    if (!endReason) {
+      return;
+    }
+
+    await this.endMatch(endReason);
+  }
+
+  private async endMatch(endReason: MatchEndReason) {
+    // Determine winner and standings
+    const participants = Array.from(this.state.players.values()).filter(
+      (p) => p.role !== "spectator",
+    );
+
+    // Sort by: alive first, then score desc, then stackSize asc, then playerId
+    const sorted = [...participants].sort((a, b) => {
+      // Alive players first
+      const aAlive = a.status !== "eliminated" ? 1 : 0;
+      const bAlive = b.status !== "eliminated" ? 1 : 0;
+      if (aAlive !== bAlive) return bAlive - aAlive;
+
+      // Higher score first
+      if (a.score !== b.score) return b.score - a.score;
+
+      // Lower stack size first
+      if (a.stackSize !== b.stackSize) return a.stackSize - b.stackSize;
+
+      // Stable by playerId
+      return a.playerId.localeCompare(b.playerId);
+    });
+
+    let winner: PlayerInternal | undefined;
+    if (endReason === "lastAlive") {
+      winner = sorted.find((p) => p.status !== "eliminated");
+    } else {
+      winner = sorted[0];
+    }
+
+    const standings: StandingEntry[] = sorted.map((p, i) => ({
+      rank: i + 1,
+      playerId: p.playerId,
+      username: p.username,
+      role: p.role,
+      score: p.score,
+    }));
+
+    // Set actual end time
+    const actualEndAt = new Date().toISOString();
+
+    // Update match state
+    this.state.match.phase = "ended";
+    this.state.match.endReason = endReason;
+    this.state.match.endAt = actualEndAt;
+
+    // Clear scheduled arrivals
+    this.state.nextProblemArrivalAt = null;
+    this.state.nextBotActionAt = null;
+
+    // Broadcast MATCH_END
+    this.broadcast({
+      type: "MATCH_END",
+      payload: {
+        matchId: this.state.match.matchId!,
+        endReason,
+        winnerPlayerId: winner?.playerId ?? sorted[0]?.playerId ?? "",
+        standings,
+      },
+    });
+
+    // Persist to PartyKit storage
+    await this.persistState();
+
+    // Persist to Supabase (Section 9.2)
+    const matchPlayers: MatchPlayerEntry[] = sorted
+      .filter((p) => p.role === "player" || p.role === "bot")
+      .map((p, i) => ({
+        playerId: p.playerId,
+        username: p.username,
+        role: p.role as "player" | "bot",
+        score: p.score,
+        rank: i + 1,
+        eliminatedAt: p.eliminatedAt ?? null,
+      }));
+
+    const saveResult = await saveMatch(
+      this.state.match.matchId!,
+      this.state.roomId,
+      this.state.match.startAt!,
+      actualEndAt,
+      endReason,
+      this.state.match.settings,
+      matchPlayers,
+    );
+
+    if (!saveResult.ok) {
+      console.error(
+        `[${this.state.roomId}] Failed to persist match to Supabase:`,
+        saveResult.error,
+      );
+      // Continue anyway - match end is already broadcast
+    } else {
+      console.log(
+        `[${this.state.roomId}] Match persisted to Supabase: ${this.state.match.matchId}`,
+      );
+    }
+
+    this.addEventLog(
+      "info",
+      `Match ended: ${winner?.username ?? "Unknown"} wins! (${endReason})`,
+    );
+    console.log(
+      `[${this.state.roomId}] Match ended: ${endReason}, winner: ${winner?.username}`,
+    );
+  }
+
+  // ============================================================================
+  // Bot Simulation
+  // ============================================================================
+
+  private calculateNextBotActionTime(bot: PlayerInternal): number {
+    if (!bot.currentProblem) return Date.now() + 60000;
+
+    // Solve time based on difficulty
+    const difficulty = bot.currentProblem.difficulty;
+    let minTime: number, maxTime: number;
+    switch (difficulty) {
+      case "easy":
+        minTime = 30000;
+        maxTime = 60000;
+        break;
+      case "medium":
+        minTime = 45000;
+        maxTime = 90000;
+        break;
+      case "hard":
+        minTime = 60000;
+        maxTime = 120000;
+        break;
+      default:
+        minTime = 45000;
+        maxTime = 90000;
+    }
+
+    const solveTime = minTime + Math.random() * (maxTime - minTime);
+    return Date.now() + solveTime;
+  }
+
+  private async scheduleBotActions() {
+    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+      this.state.nextBotActionAt = null;
+      return;
+    }
+
+    const bots = Array.from(this.state.players.values()).filter(
+      (p) => p.role === "bot" && p.status !== "eliminated",
+    );
+
+    if (bots.length === 0) {
+      this.state.nextBotActionAt = null;
+      return;
+    }
+
+    // Find the earliest bot action time
+    let earliestActionAt = Infinity;
+    for (const bot of bots) {
+      if (!bot.nextBotActionAt) {
+        bot.nextBotActionAt = this.calculateNextBotActionTime(bot);
+      }
+      earliestActionAt = Math.min(earliestActionAt, bot.nextBotActionAt);
+    }
+
+    if (earliestActionAt === Infinity) {
+      this.state.nextBotActionAt = null;
+      return;
+    }
+
+    this.state.nextBotActionAt = earliestActionAt;
+    await this.room.storage.setAlarm(earliestActionAt);
+  }
+
+  private async handleBotActions() {
+    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+      return;
+    }
+
+    const now = Date.now();
+    const bots = Array.from(this.state.players.values()).filter(
+      (p) => p.role === "bot" && p.status !== "eliminated",
+    );
+
+    for (const bot of bots) {
+      if (bot.nextBotActionAt && now >= bot.nextBotActionAt) {
+        await this.simulateBotSubmission(bot);
+      }
+    }
+
+    await this.scheduleBotActions();
+    await this.persistState();
+  }
+
+  private async simulateBotSubmission(bot: PlayerInternal) {
+    if (!bot.currentProblem) return;
+
+    const problem = this.getFullProblem(bot.currentProblem.problemId);
+    if (!problem) return;
+
+    // 20% failure rate
+    const passed = Math.random() > 0.2;
+
+    const result: JudgeResult = {
+      kind: "submit",
+      problemId: problem.problemId,
+      passed,
+      publicTests: problem.publicTests.map((_, index) => ({
+        index,
+        passed,
+      })),
+      hiddenTestsPassed: passed,
+    };
+
+    // Process result (similar to player submission but without connection)
+    if (!result.passed) {
+      bot.streak = 0;
+      bot.status = "error";
+      this.broadcastPlayerUpdate(bot);
+    } else {
+      const isGarbage = problem.isGarbage ?? false;
+
+      if (!isGarbage) {
+        const points = DIFFICULTY_SCORES[problem.difficulty] || 0;
+        bot.score += points;
+        bot.streak += 1;
+
+        // Send attack
+        const attackType = this.determineAttackType(problem.difficulty, bot.streak);
+        await this.sendAttack(bot, attackType);
+
+        this.addEventLog(
+          "info",
+          `${bot.username} solved ${problem.title} (+${points}) and sent ${attackType}`,
+        );
+      } else {
+        this.addEventLog("info", `${bot.username} cleared garbage: ${problem.title}`);
+      }
+
+      this.advanceToNextProblem(bot);
+      bot.status = "coding";
+      this.broadcastPlayerUpdate(bot);
+      this.broadcastStackUpdate(bot);
+
+      // Check for match end
+      await this.checkMatchEnd();
+    }
+
+    // Schedule next action
+    bot.nextBotActionAt = this.calculateNextBotActionTime(bot);
   }
 
   // ============================================================================
@@ -788,6 +2046,15 @@ export default class Room implements Party.Server {
       };
     }
 
+    // Build spectate view if spectating
+    let spectating: SpectateView | null = null;
+    if (forPlayer.spectatingPlayerId) {
+      const target = this.state.players.get(forPlayer.spectatingPlayerId);
+      if (target) {
+        spectating = this.buildSpectateView(target);
+      }
+    }
+
     return {
       roomId: this.state.roomId,
       serverTime: new Date().toISOString(),
@@ -802,9 +2069,28 @@ export default class Room implements Party.Server {
       match: this.state.match,
       shopCatalog: DEFAULT_SHOP_CATALOG,
       self,
-      spectating: null,
+      spectating,
       chat: this.state.chat,
       eventLog: this.state.eventLog,
+    };
+  }
+
+  private buildSpectateView(target: PlayerInternal): SpectateView {
+    return {
+      playerId: target.playerId,
+      username: target.username,
+      status: target.status,
+      score: target.score,
+      streak: target.streak,
+      targetingMode: target.targetingMode,
+      stackSize: target.stackSize,
+      activeDebuff: target.activeDebuff as SpectateView["activeDebuff"],
+      activeBuff: target.activeBuff as SpectateView["activeBuff"],
+      currentProblem: target.currentProblem ?? null,
+      queued: target.queued ?? [],
+      code: target.code ?? "",
+      codeVersion: target.codeVersion ?? 1,
+      revealedHints: target.revealedHints ?? [],
     };
   }
 
@@ -837,6 +2123,7 @@ export default class Room implements Party.Server {
     if (player.stackSize >= this.state.match.settings.stackLimit) {
       // Eliminate player
       player.status = "eliminated";
+      player.eliminatedAt = new Date().toISOString();
       player.stackSize = player.stackSize + 1; // Show overflow
       this.addEventLog(
         "warning",
@@ -925,6 +2212,16 @@ export default class Room implements Party.Server {
     return undefined;
   }
 
+  private getPlayerConnection(player: PlayerInternal): Party.Connection | undefined {
+    if (!player.connectionId) return undefined;
+    for (const conn of this.room.getConnections()) {
+      if (conn.id === player.connectionId) {
+        return conn;
+      }
+    }
+    return undefined;
+  }
+
   private transferHost() {
     // Find first connected human player by join order
     let newHost: PlayerInternal | undefined;
@@ -948,6 +2245,9 @@ export default class Room implements Party.Server {
         `[${this.state.roomId}] Host transferred to: ${newHost.username}`,
       );
       this.addSystemChat(`${newHost.username} is now the host`);
+    } else {
+      // No connected human players remain
+      console.log(`[${this.state.roomId}] No connected players, host is null`);
     }
   }
 
@@ -999,19 +2299,103 @@ export default class Room implements Party.Server {
     });
   }
 
+  private broadcastStackUpdate(player: PlayerInternal) {
+    this.broadcast({
+      type: "STACK_UPDATE",
+      payload: {
+        playerId: player.playerId,
+        stackSize: player.stackSize,
+      },
+    });
+  }
+
   private sendError(
     conn: Party.Connection,
     code: string,
     message: string,
     requestId?: string,
+    retryAfterMs?: number,
   ) {
-    const payload: ErrorPayload = { code, message };
+    const payload: ErrorPayload = { code, message, retryAfterMs };
     const msg: WSMessage<"ERROR", ErrorPayload> = {
       type: "ERROR",
       requestId,
       payload,
     };
     conn.send(JSON.stringify(msg));
+  }
+
+  private sendJudgeResult(
+    conn: Party.Connection,
+    player: PlayerInternal,
+    result: JudgeResult,
+    requestId?: string,
+  ) {
+    const msg: WSMessage<"JUDGE_RESULT", JudgeResult> = {
+      type: "JUDGE_RESULT",
+      requestId,
+      payload: result,
+    };
+    conn.send(JSON.stringify(msg));
+
+    // Also send to spectators
+    this.sendJudgeResultToSpectators(player, result);
+  }
+
+  private sendJudgeResultToSpectators(player: PlayerInternal, result: JudgeResult) {
+    for (const spectator of this.state.players.values()) {
+      if (spectator.spectatingPlayerId === player.playerId) {
+        const conn = this.getPlayerConnection(spectator);
+        if (conn) {
+          const msg: WSMessage<"JUDGE_RESULT", JudgeResult> = {
+            type: "JUDGE_RESULT",
+            payload: result,
+          };
+          conn.send(JSON.stringify(msg));
+        }
+      }
+    }
+  }
+
+  private relayCodeUpdateToSpectators(player: PlayerInternal, payload: CodeUpdateClientPayload) {
+    for (const spectator of this.state.players.values()) {
+      if (spectator.spectatingPlayerId === player.playerId) {
+        const conn = this.getPlayerConnection(spectator);
+        if (conn) {
+          const msg: WSMessage<"CODE_UPDATE", {
+            playerId: string;
+            problemId: string;
+            code: string;
+            codeVersion: number;
+          }> = {
+            type: "CODE_UPDATE",
+            payload: {
+              playerId: player.playerId,
+              problemId: payload.problemId,
+              code: payload.code,
+              codeVersion: payload.codeVersion,
+            },
+          };
+          conn.send(JSON.stringify(msg));
+        }
+      }
+    }
+  }
+
+  private updateSpectators(player: PlayerInternal) {
+    for (const spectator of this.state.players.values()) {
+      if (spectator.spectatingPlayerId === player.playerId) {
+        const conn = this.getPlayerConnection(spectator);
+        if (conn) {
+          const spectateView = this.buildSpectateView(player);
+          const msg: WSMessage<"SPECTATE_STATE", { spectating: SpectateView | null }> = {
+            type: "SPECTATE_STATE",
+            payload: { spectating: spectateView },
+          };
+          conn.send(JSON.stringify(msg));
+        }
+      }
+    }
   }
 
   private addEventLog(level: "info" | "warning" | "error", message: string) {
@@ -1030,9 +2414,26 @@ export default class Room implements Party.Server {
   }
 
   private async persistState() {
+    // Serialize Maps for storage
+    const serializedPlayers: Record<string, unknown> = {};
+    for (const [id, player] of this.state.players) {
+      serializedPlayers[id] = {
+        ...player,
+        rateLimits: player.rateLimits
+          ? Object.fromEntries(player.rateLimits)
+          : undefined,
+        recentAttackers: player.recentAttackers
+          ? Object.fromEntries(player.recentAttackers)
+          : undefined,
+        shopCooldowns: player.shopCooldowns
+          ? Object.fromEntries(player.shopCooldowns)
+          : undefined,
+      };
+    }
+
     await this.room.storage.put("state", {
       ...this.state,
-      players: Object.fromEntries(this.state.players),
+      players: serializedPlayers,
       playerProblemHistory: Object.fromEntries(
         Array.from(this.state.playerProblemHistory.entries()).map(([k, v]) => [
           k,
@@ -1040,6 +2441,41 @@ export default class Room implements Party.Server {
         ]),
       ),
     });
+  }
+
+  // ============================================================================
+  // Judge Simulation (for development without Judge0)
+  // ============================================================================
+
+  private simulateJudgeResult(
+    kind: "run" | "submit",
+    problem: ProblemFull,
+    code: string,
+  ): JudgeResult {
+    // Simple simulation: pass if code contains the function name
+    const passed = code.includes(problem.functionName) && code.length > 50;
+
+    const publicTests = problem.publicTests.map((_, index) => ({
+      index,
+      passed,
+      expected: passed ? undefined : "expected",
+      received: passed ? undefined : "received",
+    }));
+
+    return {
+      kind,
+      problemId: problem.problemId,
+      passed,
+      publicTests,
+      runtimeMs: Math.floor(Math.random() * 100) + 10,
+      hiddenTestsPassed: kind === "submit" ? passed : undefined,
+      hiddenFailureMessage: kind === "submit" && !passed ? "Failed hidden tests" : undefined,
+    };
+  }
+
+  private getFullProblem(problemId: string): ProblemFull | undefined {
+    const allProblems = this.loadProblems();
+    return allProblems.find((p) => p.problemId === problemId);
   }
 
   // ============================================================================
@@ -1051,8 +2487,7 @@ export default class Room implements Party.Server {
    */
   private calculateProblemArrivalInterval(player: PlayerInternal): number {
     // Base interval based on phase
-    const baseIntervalSec =
-      this.state.match.phase === "warmup" ? 90 : 60;
+    const baseIntervalSec = this.state.match.phase === "warmup" ? 90 : 60;
 
     // Apply multipliers
     let memoryLeakMultiplier = 1;
@@ -1095,18 +2530,14 @@ export default class Room implements Party.Server {
       this.state.match.endAt &&
       new Date(this.state.match.endAt) <= new Date()
     ) {
-      // Match ended, stop problem arrivals
-      // TODO: Handle match end logic (set phase to "ended", determine winner, etc.)
-      this.state.nextProblemArrivalAt = null;
-      await this.persistState();
+      await this.checkMatchEnd();
       return;
     }
 
     const now = Date.now();
     const alivePlayers = Array.from(this.state.players.values()).filter(
       (p) =>
-        (p.role === "player" || p.role === "bot") &&
-        p.status !== "eliminated",
+        (p.role === "player" || p.role === "bot") && p.status !== "eliminated",
     );
 
     if (alivePlayers.length === 0) {
@@ -1145,6 +2576,8 @@ export default class Room implements Party.Server {
           } else {
             // Broadcast stack update for this player
             this.broadcastPlayerUpdate(player);
+            this.broadcastStackUpdate(player);
+            this.updateSpectators(player);
           }
         } catch (error) {
           console.error(
@@ -1157,6 +2590,9 @@ export default class Room implements Party.Server {
 
     // Schedule next problem arrival based on when the next player needs one
     await this.scheduleNextProblemArrival();
+
+    // Check for match end
+    await this.checkMatchEnd();
 
     await this.persistState();
   }
@@ -1186,8 +2622,7 @@ export default class Room implements Party.Server {
     const now = Date.now();
     const alivePlayers = Array.from(this.state.players.values()).filter(
       (p) =>
-        (p.role === "player" || p.role === "bot") &&
-        p.status !== "eliminated",
+        (p.role === "player" || p.role === "bot") && p.status !== "eliminated",
     );
 
     if (alivePlayers.length === 0) {
@@ -1241,10 +2676,9 @@ export default class Room implements Party.Server {
 
     this.state.nextProblemArrivalAt = nextArrivalAt;
 
-    // Schedule alarm (use the earlier of phase transition, problem arrival, or match end)
+    // Schedule alarm (use the earlier of phase transition, problem arrival, bot action, or match end)
     const warmupEndAt =
-      this.state.match.startAt &&
-      this.state.match.phase === "warmup"
+      this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
           this.state.settings.matchDurationSec * 1000 * 0.1
         : Infinity;
@@ -1253,11 +2687,13 @@ export default class Room implements Party.Server {
       ? new Date(this.state.match.endAt).getTime()
       : Infinity;
 
-    const alarmAt = Math.min(nextArrivalAt, warmupEndAt, matchEndAt);
+    const botActionAt = this.state.nextBotActionAt ?? Infinity;
+
+    const alarmAt = Math.min(nextArrivalAt, warmupEndAt, matchEndAt, botActionAt);
     await this.room.storage.setAlarm(alarmAt);
 
     console.log(
-      `[${this.state.roomId}] Scheduled next problem arrival at ${new Date(nextArrivalAt).toISOString()} (${Math.round(minTimeUntilNextArrival / 1000)}s from now)`,
+      `[${this.state.roomId}] Scheduled next alarm at ${new Date(alarmAt).toISOString()}`,
     );
   }
 
@@ -1358,7 +2794,7 @@ export default class Room implements Party.Server {
 
   private toClientView(problem: ProblemFull): ProblemClientView {
     // Strip hidden tests and server-only fields
-    const { hiddenTests, hints, solutionSketch, ...clientView } = problem;
+    const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
     return {
       ...clientView,
       hintCount: hints?.length,
@@ -1368,15 +2804,24 @@ export default class Room implements Party.Server {
   async onAlarm() {
     const now = Date.now();
 
+    // Handle expired debuffs and buffs
+    this.handleExpiredDebuffs();
+
     // Check if match has ended due to time expiration
     if (
       this.state.match.endAt &&
       new Date(this.state.match.endAt) <= new Date()
     ) {
-      // TODO: Handle match end logic (set phase to "ended", determine winner, broadcast MATCH_END, etc.)
-      this.state.nextProblemArrivalAt = null;
-      await this.persistState();
+      await this.checkMatchEnd();
       return;
+    }
+
+    // Check if it's time for bot actions
+    if (
+      this.state.nextBotActionAt !== null &&
+      now >= this.state.nextBotActionAt
+    ) {
+      await this.handleBotActions();
     }
 
     // Check if it's time for problem arrivals
@@ -1482,11 +2927,36 @@ export default class Room implements Party.Server {
 
     // GET /parties/leet99/:roomId/state - Get room state (for debugging)
     if (req.method === "GET" && url.pathname.endsWith("/state")) {
+      // Count players by role and status
+      let activePlayers = 0;
+      let spectators = 0;
+      let bots = 0;
+
+      for (const player of this.state.players.values()) {
+        if (player.role === "bot") {
+          bots++;
+        } else if (player.role === "spectator") {
+          spectators++;
+        } else if (player.role === "player") {
+          // Players who were eliminated become spectators in the count
+          if (player.status === "eliminated") {
+            spectators++;
+          } else {
+            activePlayers++;
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({
           roomId: this.state.roomId,
           phase: this.state.match.phase,
-          playerCount: this.state.players.size,
+          playerCount: this.state.players.size, // Total for backwards compatibility
+          playerCounts: {
+            players: activePlayers,
+            spectators: spectators,
+            bots: bots,
+          },
           settings: this.state.settings,
         }),
         {

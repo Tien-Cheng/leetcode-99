@@ -17,6 +17,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@leet99/contracts": "workspace:*",
     "@supabase/supabase-js": "^2.49.0"
   },
   "devDependencies": {

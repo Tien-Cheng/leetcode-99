@@ -9,10 +9,12 @@
     "deploy": "partykit deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "node --test test/**/*.test.ts"
+    "test": "node --experimental-strip-types --test test/*.test.ts"
   },
   "dependencies": {
     "@leet99/contracts": "workspace:*",
+    "@leet99/judge": "workspace:*",
+    "@leet99/supabase": "workspace:*",
     "partykit": "0.0.115"
   },
   "devDependencies": {

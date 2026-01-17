@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+export * from "./queries.js";
+
 /**
  * @leet99/supabase - Supabase client helpers
  *
