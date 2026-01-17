@@ -351,9 +351,9 @@ export function useWebSocket(
 
         const state = ws.readyState;
         const stateName = state === WebSocket.CONNECTING ? "CONNECTING" :
-                         state === WebSocket.OPEN ? "OPEN" :
-                         state === WebSocket.CLOSING ? "CLOSING" :
-                         state === WebSocket.CLOSED ? "CLOSED" : "UNKNOWN";
+          state === WebSocket.OPEN ? "OPEN" :
+            state === WebSocket.CLOSING ? "CLOSING" :
+              state === WebSocket.CLOSED ? "CLOSED" : "UNKNOWN";
 
         // Extract host from URL for better error messages
         let hostInfo = "";
@@ -444,18 +444,23 @@ export function useWebSocket(
 
   // Initialize connection on mount
   useEffect(() => {
+    console.log(`[WS] useEffect mount, wsUrl: ${wsUrl}`);
     isCleaningUpRef.current = false;
     connect();
 
     // Cleanup on unmount
     return () => {
+      console.log(`[WS] useEffect cleanup, wsUrl: ${wsUrl}`);
       isCleaningUpRef.current = true;
 
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
-        wsRef.current.close();
+        const socket = wsRef.current;
+        if (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
         wsRef.current = null;
       }
       // Reject all pending requests
@@ -465,7 +470,7 @@ export function useWebSocket(
       pendingRequestsRef.current.clear();
       setIsConnected(false);
     };
-  }, [connect]);
+  }, [connect, wsUrl]); // Added wsUrl for easier debugging of changes
 
   // Public API methods
   const sendChat = useCallback(
