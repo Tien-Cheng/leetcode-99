@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Panel,
   EditorWrapper,
@@ -16,6 +16,7 @@ import {
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
 import { useKeyboardShortcuts } from "../../../hooks/use-keyboard-shortcuts";
+import type { PlayerPublic, EventLogEntry } from "@leet99/contracts";
 import { GameWrapper } from "./game-wrapper";
 
 function GamePageContent() {
@@ -114,15 +115,85 @@ function GamePageContent() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [activeDebuff]);
 
-  // Check if Vim is locked
+  // Resizable state
+  const [problemWidth, setProblemWidth] = useState(320);
+  const [terminalHeight, setTerminalHeight] = useState(160);
+
+  const [isResizingWidth, setIsResizingWidth] = useState(false);
+  const [isResizingHeight, setIsResizingHeight] = useState(false);
+
+  const startRef = useRef({ x: 0, y: 0, w: 0, h: 0 });
+
+  // Handle horizontal resize (Problem Panel)
+  useEffect(() => {
+    if (!isResizingWidth) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startRef.current.x;
+      const newWidth = Math.min(Math.max(startRef.current.w + deltaX, 240), 600);
+      setProblemWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingWidth(false);
+      document.body.style.cursor = "default";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingWidth]);
+
+  // Handle vertical resize (Terminal Log)
+  useEffect(() => {
+    if (!isResizingHeight) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Delta is positive when dragging UP (terminal gets taller)
+      const deltaY = startRef.current.y - e.clientY;
+      const newHeight = Math.min(Math.max(startRef.current.h + deltaY, 64), 600);
+      setTerminalHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingHeight(false);
+      document.body.style.cursor = "default";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "row-resize";
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingHeight]);
+
+  const startWidthResize = (e: React.MouseEvent) => {
+    startRef.current = { x: e.clientX, y: e.clientY, w: problemWidth, h: terminalHeight };
+    setIsResizingWidth(true);
+  };
+
+  const startHeightResize = (e: React.MouseEvent) => {
+    startRef.current = { x: e.clientX, y: e.clientY, w: problemWidth, h: terminalHeight };
+    setIsResizingHeight(true);
+  };
+
+  // Derived state
   const vimLocked = activeDebuff?.type === "vimLock";
   const memoryLeakActive = activeDebuff?.type === "memoryLeak";
   const ddosActive = activeDebuff?.type === "ddos";
 
   // Map players for minimap (filter out lobby players)
   const minimapPlayers = playersPublic
-    .filter((p) => p.status !== "lobby")
-    .map((p) => ({
+    .filter((p: PlayerPublic) => p.status !== "lobby")
+    .map((p: PlayerPublic) => ({
       id: p.playerId,
       username: p.username,
       status: p.status as "coding" | "error" | "underAttack" | "eliminated",
@@ -130,7 +201,7 @@ function GamePageContent() {
     }));
 
   // Terminal messages
-  const terminalMessages = eventLog.map((entry) => ({
+  const terminalMessages = eventLog.map((entry: EventLogEntry) => ({
     type: (entry.level === "error"
       ? "danger"
       : entry.level === "warning"
@@ -141,7 +212,11 @@ function GamePageContent() {
   }));
 
   return (
-    <main className="flex min-h-screen flex-col p-2">
+    <main className="flex h-screen flex-col p-2 overflow-hidden relative">
+      {/* Resizing Overlay to prevent Monaco interference */}
+      {(isResizingWidth || isResizingHeight) && (
+        <div className="fixed inset-0 z-[100] cursor-move" />
+      )}
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
         <Timer
@@ -154,9 +229,12 @@ function GamePageContent() {
       </div>
 
       {/* Main Game Layout */}
-      <div className="flex flex-1 gap-2 min-h-0">
+      <div className="flex flex-1 gap-1 min-h-0">
         {/* Left: Problem Panel */}
-        <div className="w-80 flex-shrink-0">
+        <div
+          className="flex-shrink-0"
+          style={{ width: `${problemWidth}px` }}
+        >
           {currentProblem ? (
             <ProblemDisplay
               problem={{
@@ -186,8 +264,14 @@ function GamePageContent() {
           )}
         </div>
 
+        {/* Vertical Resizer */}
+        <div
+          className="w-1.5 hover:bg-primary/50 cursor-col-resize transition-colors active:bg-primary z-50"
+          onMouseDown={startWidthResize}
+        />
+
         {/* Center: Editor */}
-        <div className="flex-1 flex flex-col gap-2 min-w-0">
+        <div className="flex-1 flex flex-col gap-1 min-w-0">
           <Panel title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`} className="flex-1 min-h-0" noPadding>
             <EditorWrapper
               code={code}
@@ -200,10 +284,25 @@ function GamePageContent() {
             />
           </Panel>
 
+          {/* Horizontal Resizer */}
+          <div
+            className="h-1.5 hover:bg-primary/50 cursor-row-resize transition-colors active:bg-primary z-50"
+            onMouseDown={startHeightResize}
+          />
+
           {/* Terminal Log */}
-          <Panel title="TERMINAL LOG" className="h-32 flex-shrink-0" noPadding>
-            <TerminalLog messages={terminalMessages} />
-          </Panel>
+          <div
+            className="flex-shrink-0"
+            style={{ height: `${terminalHeight}px` }}
+          >
+            <Panel
+              title="TERMINAL LOG"
+              className="h-full"
+              noPadding
+            >
+              <TerminalLog messages={terminalMessages} />
+            </Panel>
+          </div>
 
           {/* Action Bar */}
           <div className="flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0">
