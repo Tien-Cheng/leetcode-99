@@ -10,6 +10,34 @@ import {
 } from "@leet99/contracts";
 
 const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
+const PARTY_NAME = process.env.NEXT_PUBLIC_PARTYKIT_PARTY || "main";
+
+type PartySocketConfig = {
+    host: string;
+    party: string;
+    room: string;
+};
+
+function normalizePartyHost(host: string): string {
+    return host.replace(/^https?:\/\//, "");
+}
+
+function parsePartySocketConfig(wsUrl: string): PartySocketConfig | null {
+    try {
+        const url = new URL(wsUrl);
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (parts[0] !== "parties" || parts.length < 3) {
+            return null;
+        }
+        return {
+            host: url.host,
+            party: parts[1] ?? PARTY_NAME,
+            room: parts[2] ?? "",
+        };
+    } catch {
+        return null;
+    }
+}
 
 type StoredAuth = {
     roomId: string;
@@ -37,10 +65,11 @@ export function useRoom(roomId: string) {
         }
     }, [roomId]);
 
+    const parsed = auth?.wsUrl ? parsePartySocketConfig(auth.wsUrl) : null;
     const socket = usePartySocket({
-        host: PARTY_HOST,
-        room: roomId,
-        party: "leet99",
+        host: parsed?.host ?? normalizePartyHost(PARTY_HOST),
+        room: parsed?.room || roomId,
+        party: parsed?.party || PARTY_NAME,
         onOpen: () => setConnected(true),
         onClose: () => setConnected(false),
         onMessage: (evt) => {
@@ -52,56 +81,51 @@ export function useRoom(roomId: string) {
                     break;
 
                 case "PLAYER_UPDATE":
-                    if (snapshot) {
-                        const newPlayers = [...snapshot.players];
+                    setSnapshot((prev) => {
+                        if (!prev) return prev;
+                        const newPlayers = [...prev.players];
                         const idx = newPlayers.findIndex(p => p.playerId === msg.payload.player.playerId);
                         if (idx >= 0) {
                             newPlayers[idx] = msg.payload.player;
                         } else {
                             newPlayers.push(msg.payload.player);
                         }
-                        setSnapshot({ ...snapshot, players: newPlayers });
-                    }
+                        return { ...prev, players: newPlayers };
+                    });
                     break;
 
                 case "MATCH_STARTED":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            match: msg.payload.match
-                        });
-                    }
+                    setSnapshot((prev) => {
+                        if (!prev) return prev;
+                        return { ...prev, match: msg.payload.match };
+                    });
                     break;
 
                 case "CHAT_APPEND":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            chat: [...snapshot.chat, msg.payload.message]
-                        });
-                    }
+                    setSnapshot((prev) => {
+                        if (!prev) return prev;
+                        return { ...prev, chat: [...prev.chat, msg.payload.message] };
+                    });
                     break;
 
                 case "EVENT_LOG_APPEND":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
-                            eventLog: [...snapshot.eventLog, msg.payload.entry]
-                        });
-                    }
+                    setSnapshot((prev) => {
+                        if (!prev) return prev;
+                        return { ...prev, eventLog: [...prev.eventLog, msg.payload.entry] };
+                    });
                     break;
 
-                // TODO: Other message types (SETTINGS_UPDATE, etc)
                 case "SETTINGS_UPDATE":
-                    if (snapshot) {
-                        setSnapshot({
-                            ...snapshot,
+                    setSnapshot((prev) => {
+                        if (!prev) return prev;
+                        return {
+                            ...prev,
                             match: {
-                                ...snapshot.match,
-                                settings: msg.payload.settings
-                            }
-                        });
-                    }
+                                ...prev.match,
+                                settings: msg.payload.settings,
+                            },
+                        };
+                    });
                     break;
             }
         },
