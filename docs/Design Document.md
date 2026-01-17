@@ -100,6 +100,7 @@ Each question defines:
 - `isGarbage` (optional boolean; default false)
 
 **MVP rule**
+
 - `RUN_CODE` runs `publicTests` only
 - `SUBMIT_CODE` runs `publicTests + hiddenTests`, awards points, and triggers attacks (non-garbage only)
 
@@ -213,6 +214,7 @@ Attacks should be:
 - Counter-playable (clear debuff with points)
 
 Attack selection (MVP):
+
 - Each correct `SUBMIT_CODE` on a **non-garbage** problem sends exactly one attack.
 - Easy → `Garbage Drop`
 - Medium → random between `Flashbang` and `Vim Lock`
@@ -221,6 +223,7 @@ Attack selection (MVP):
 - Streak attacks replace the difficulty attack for that submit (i.e. you send **only** `Memory Leak`).
 
 Terminology (MVP):
+
 - An **attack** is any effect sent to a target.
 - A **debuff** is a timed status effect (DDOS, Flashbang, Vim Lock, Memory Leak).
 - `Garbage Drop` inserts a problem and does not count toward debuff concurrency/grace.
@@ -232,13 +235,13 @@ Terminology (MVP):
 - Streak resets to 0 when using `Skip Problem`.
 - Garbage problems do not increment streak.
 
-| Attack Name | Effect | Trigger |
-| :---- | :---- | :---- |
-| **DDOS** | Disable “Run” for 12s (baseline; scaled by Attack Intensity; submit still allowed). | Solving a **Hard** problem. |
-| **Flashbang** | Force light mode for 25s (baseline; scaled by Attack Intensity). | Solving a **Medium** problem. |
-| **Vim Lock** | Force Vim mode ON for 12s (baseline; scaled by Attack Intensity). | Solving a **Medium** problem. |
-| **Garbage Drop** | Add 1 “garbage” micro-problem (0 points; no attacks). | Solving an **Easy** problem. |
-| **Memory Leak** | Double incoming problem rate for 30s (baseline; scaled by Attack Intensity). | 3-solve streak. |
+| Attack Name      | Effect                                                                              | Trigger                       |
+| :--------------- | :---------------------------------------------------------------------------------- | :---------------------------- |
+| **DDOS**         | Disable “Run” for 12s (baseline; scaled by Attack Intensity; submit still allowed). | Solving a **Hard** problem.   |
+| **Flashbang**    | Force light mode for 25s (baseline; scaled by Attack Intensity).                    | Solving a **Medium** problem. |
+| **Vim Lock**     | Force Vim mode ON for 12s (baseline; scaled by Attack Intensity).                   | Solving a **Medium** problem. |
+| **Garbage Drop** | Add 1 “garbage” micro-problem (0 points; no attacks).                               | Solving an **Easy** problem.  |
+| **Memory Leak**  | Double incoming problem rate for 30s (baseline; scaled by Attack Intensity).        | 3-solve streak.               |
 
 Note: If `attackIntensity="high"`, multiply timed debuff durations by 1.3 (rounded to nearest second).
 
@@ -314,15 +317,15 @@ If we have time:
 
 ### Known Risks
 
-| Risk | Impact | Mitigation |
-| ---- | ------ | ---------- |
-| RapidAPI Judge0 quota/outage | Can’t run authoritative submits | Strict rate limits + short timeouts + demo mode fallback (Pyodide public tests only) |
-| PartyKit cold start | Slow room joins | Pre-warm a room before demo |
-| Monaco bundle size | Slow initial load | Lazy load editor component |
-| WebSocket disconnects | Desynced state | Auto-reconnect + `ROOM_SNAPSHOT` on rejoin |
-| Question bank too small | Repetitive gameplay | Ensure 17+ questions by Hour 8 |
+| Risk                               | Impact                                 | Mitigation                                                                                                                             |
+| ---------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| RapidAPI Judge0 quota/outage       | Can’t run authoritative submits        | Strict rate limits + short timeouts + demo mode fallback (Pyodide public tests only)                                                   |
+| PartyKit cold start                | Slow room joins                        | Pre-warm a room before demo                                                                                                            |
+| Monaco bundle size                 | Slow initial load                      | Lazy load editor component                                                                                                             |
+| WebSocket disconnects              | Desynced state                         | Auto-reconnect + `ROOM_SNAPSHOT` on rejoin                                                                                             |
+| Question bank too small            | Repetitive gameplay                    | Ensure 17+ questions by Hour 8                                                                                                         |
 | Spectator/code streaming bandwidth | High WS traffic, jank, dropped updates | Throttle `CODE_UPDATE`, only send to authorized spectators, cap spectators per room, and fall back to snapshot-only spectating for MVP |
-| Lobby chat spam | Noisy lobby UX, message flood | Rate limit + message length cap; allow hide/collapse chat |
+| Lobby chat spam                    | Noisy lobby UX, message flood          | Rate limit + message length cap; allow hide/collapse chat                                                                              |
 
 ### Architecture Diagram
 

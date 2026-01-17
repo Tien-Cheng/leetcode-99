@@ -36,6 +36,7 @@ tags: [HackAndRoll2026, LeetCode99, frontend, ui]
 - **Keyboard-first design** — The entire game should be playable without a mouse. Keybinds must adapt when Vim mode is enabled (avoid conflicts with Vim commands).
 
 **Input/Hotkey Policy (MVP):**
+
 - Global game hotkeys use `Alt/Option+…` combos to avoid inserting characters into the editor.
 - When a text input is focused (chat, forms), game hotkeys are disabled (except `Escape`).
 - Modal overlays (Shop, Targeting menu, Tutorial) capture their own hotkeys until closed.
@@ -45,17 +46,17 @@ tags: [HackAndRoll2026, LeetCode99, frontend, ui]
 
 ### Color Palette
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--bg-base` | `#0d0d0d` | Primary background |
-| `--bg-surface` | `#1a1a1a` | Elevated surfaces (panels, cards) |
+| Token              | Hex       | Usage                                              |
+| ------------------ | --------- | -------------------------------------------------- |
+| `--bg-base`        | `#0d0d0d` | Primary background                                 |
+| `--bg-surface`     | `#1a1a1a` | Elevated surfaces (panels, cards)                  |
 | `--accent-primary` | `#00ffd5` | Active states, highlights, player's own indicators |
-| `--accent-muted` | `#4a5568` | Borders, inactive elements, subtle separators |
-| `--danger` | `#ff4444` | Stack overflow, elimination, failed tests |
-| `--success` | `#50fa7b` | Passed tests, solved problems |
-| `--warning` | `#ffb000` | Incoming attacks, debuff warnings |
-| `--text-primary` | `#e0e0e0` | Main readable text |
-| `--text-muted` | `#6b7280` | Secondary info, timestamps, labels |
+| `--accent-muted`   | `#4a5568` | Borders, inactive elements, subtle separators      |
+| `--danger`         | `#ff4444` | Stack overflow, elimination, failed tests          |
+| `--success`        | `#50fa7b` | Passed tests, solved problems                      |
+| `--warning`        | `#ffb000` | Incoming attacks, debuff warnings                  |
+| `--text-primary`   | `#e0e0e0` | Main readable text                                 |
+| `--text-muted`     | `#6b7280` | Secondary info, timestamps, labels                 |
 
 ### Typography
 
@@ -79,22 +80,24 @@ tags: [HackAndRoll2026, LeetCode99, frontend, ui]
 
 ### Debuff Visual Effects
 
-| Debuff | Visual Treatment |
-|--------|------------------|
-| **Flashbang** | Invert to harsh white background, desaturated colors, high contrast — genuinely jarring |
-| **Vim Lock** | Cyan border glow on editor, `[VIM]` indicator in status bar |
-| **DDOS** | "Run" button disabled with pulsing red outline, static/noise overlay on button |
-| **Memory Leak** | Pulsing warning border on stack panel, accelerated incoming problem animation |
+| Debuff          | Visual Treatment                                                                        |
+| --------------- | --------------------------------------------------------------------------------------- |
+| **Flashbang**   | Invert to harsh white background, desaturated colors, high contrast — genuinely jarring |
+| **Vim Lock**    | Cyan border glow on editor, `[VIM]` indicator in status bar                             |
+| **DDOS**        | "Run" button disabled with pulsing red outline, static/noise overlay on button          |
+| **Memory Leak** | Pulsing warning border on stack panel, accelerated incoming problem animation           |
 
 ### Implementation Notes: Tailwind CSS + daisyUI
 
 We can use **daisyUI** as a productivity layer for common UI primitives (buttons, inputs, dropdowns, modals), while keeping the bespoke game surfaces (minimap, stack, terminal log, glitch overlays) as **custom Tailwind**.
 
 **Guiding rule**:
+
 - Use **daisyUI components** for: forms, settings, modals, basic buttons, inputs, loading.
 - Use **custom Tailwind** for: Stack blocks, Minimap tiles, Terminal Log, game-specific overlays/animations.
 
 **Avoiding "template UI"**:
+
 - Prefer `btn-outline`, `btn-ghost`, `btn-dash` styles over chunky filled buttons.
 - Set radiuses to near-zero and disable depth so we don't get soft "card" aesthetics.
 - Avoid default `card` styling unless heavily customized.
@@ -102,12 +105,14 @@ We can use **daisyUI** as a productivity layer for common UI primitives (buttons
 #### daisyUI: What to Use vs Avoid
 
 **Use daisyUI for (good fit):**
+
 - **Forms**: `input`, `textarea`, `select`, `toggle`, `checkbox`, `radio` (Create/Join, Lobby settings)
 - **Overlays**: `modal`, `dropdown`, `tooltip` (Shop, Targeting menu, help)
 - **Basic actions**: `btn` variants (`btn-outline`, `btn-ghost`, `btn-dash`)
 - **Status bits**: `badge` (difficulty tags), `alert` (inline errors), `loading` (spinners)
 
 **Avoid (or heavily customize) because it reads like a web template:**
+
 - `card` defaults (rounded + elevated)
 - `navbar`/`hero` defaults (marketing-page vibe)
 - `mockup-*` components (too "component library")
@@ -120,10 +125,12 @@ We can use **daisyUI** as a productivity layer for common UI primitives (buttons
 Use **Lucide** (`lucide-react`) as the single icon set for the entire app.
 
 **Why Lucide**:
+
 - Sharp, outline-based icons that match the "riced workstation" / ops-console vibe
 - Easy to theme via `currentColor` (works automatically with Flashbang theme swap)
 
 **Usage rules**:
+
 - **Do not mix icon libraries** (keeps stroke weight and visual language consistent).
 - Use icons sparingly; prefer **text + hotkey label first**, icon second.
 - Standardize icon sizing:
@@ -134,6 +141,7 @@ Use **Lucide** (`lucide-react`) as the single icon set for the entire app.
 - Import icons individually to keep bundle size small (avoid importing the entire set).
 
 **Suggested icon mapping** (non-exhaustive):
+
 - Host: `Crown`
 - Bot: `Bot`
 - Target: `Crosshair`
@@ -150,6 +158,7 @@ Use **Lucide** (`lucide-react`) as the single icon set for the entire app.
 - Flashbang theme: `leet99-flashbang` (harsh light theme)
 
 Implementation detail:
+
 - Set `<html data-theme="leet99">` by default.
 - When `activeDebuff.type="flashbang"`, temporarily switch to `<html data-theme="leet99-flashbang">` until the debuff ends.
 
@@ -231,27 +240,27 @@ This provides both the normal theme and the Flashbang theme.
 
 #### Color Mapping (spec → daisyUI semantics)
 
-| Spec token | daisyUI semantic |
-|-----------:|------------------|
+|                   Spec token | daisyUI semantic        |
+| ---------------------------: | ----------------------- |
 | `--bg-base` / `--bg-surface` | `base-100` / `base-200` |
-| `--accent-primary` | `primary` |
-| `--success` | `success` |
-| `--warning` | `warning` |
-| `--danger` | `error` |
-| `--text-primary` | `base-content` |
+|           `--accent-primary` | `primary`               |
+|                  `--success` | `success`               |
+|                  `--warning` | `warning`               |
+|                   `--danger` | `error`                 |
+|             `--text-primary` | `base-content`          |
 
 ## 3. Screen Inventory
 
-| Screen | Purpose | Entry Points |
-|--------|---------|--------------|
-| **Landing / Home** | Entry point with create/join options | Direct URL, post-match exit |
-| **Create Room** | Host configures room settings, gets room code | Landing → "Create Room" |
-| **Join Room** | Enter room code and username | Landing → "Join Room", shared link |
-| **Lobby** | Players gather, host adds bots/adjusts settings, starts match | After create/join |
-| **Tutorial / Onboarding** | First-time user flow explaining mechanics | First visit, or "How to Play" button |
-| **In-Game** | Main gameplay screen (editor, stack, minimap, log, shop) | Lobby → host starts match |
-| **Results / End Screen** | Match standings, winner announcement, stats | Match ends (time or last alive) |
-| **Spectator View** | Read-only In-Game variant | Join mid-match, or after elimination |
+| Screen                    | Purpose                                                       | Entry Points                         |
+| ------------------------- | ------------------------------------------------------------- | ------------------------------------ |
+| **Landing / Home**        | Entry point with create/join options                          | Direct URL, post-match exit          |
+| **Create Room**           | Host configures room settings, gets room code                 | Landing → "Create Room"              |
+| **Join Room**             | Enter room code and username                                  | Landing → "Join Room", shared link   |
+| **Lobby**                 | Players gather, host adds bots/adjusts settings, starts match | After create/join                    |
+| **Tutorial / Onboarding** | First-time user flow explaining mechanics                     | First visit, or "How to Play" button |
+| **In-Game**               | Main gameplay screen (editor, stack, minimap, log, shop)      | Lobby → host starts match            |
+| **Results / End Screen**  | Match standings, winner announcement, stats                   | Match ends (time or last alive)      |
+| **Spectator View**        | Read-only In-Game variant                                     | Join mid-match, or after elimination |
 
 ## 4. User Flows
 
@@ -344,6 +353,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Purpose**: Entry point to the game. Calm but alive — a lobby atmosphere, not a hype screen.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
@@ -365,6 +375,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 ```
 
 **Elements**:
+
 - **Title**: "LEETCODE 99" in large IBM Plex Mono, subtle cyan glow
 - **Tagline**: "Battle Royale for Coders" in muted text below title (optional, can remove if too busy)
 - **Create Room button**: Primary CTA, cyan border, `[C]` hotkey hint
@@ -375,6 +386,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Background**: Dark base (`--bg-base`) with subtle noise grain overlay. Optional: faint slow-moving grid lines or floating particles for atmosphere.
 
 **Behavior**:
+
 - First-visit detection: show prompt "First time? [Learn how to play]" or auto-redirect to Tutorial
 - Keyboard navigation: `C` → Create Room, `J` → Join Room, `?` → Tutorial
 - Subtle ambient animation (slow glow pulse on title, or gentle particle drift)
@@ -386,6 +398,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Purpose**: Host creates a new room, sets username, configures initial settings.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
@@ -416,12 +429,14 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 ```
 
 **Elements**:
+
 - **Username input**: Text field, auto-focused, 1-16 chars
 - **Settings section**: Collapsible or always visible, dropdowns for each setting
 - **Create button**: Primary CTA, `[Enter]` hotkey
 - **Back link**: `[Esc]` returns to Landing
 
 **Validation**:
+
 - Username required, 1-16 chars, trimmed
 - Show inline error if username invalid
 
@@ -433,6 +448,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | `Tab` | Navigate between fields |
 
 **Behavior**:
+
 - On submit: calls `POST /api/rooms`, receives `roomId` (room code like `AB12CD`) + `playerToken` (+ `wsUrl`)
 - Store `wsUrl` + `playerToken` in localStorage keyed by `roomId` for reconnect
 - On success: navigate to Lobby as host
@@ -445,6 +461,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Purpose**: Player joins an existing room by code, sets username.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
@@ -474,12 +491,14 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 ```
 
 **Elements**:
+
 - **Room code input**: Text field, uppercase, auto-focused (or pre-filled if from shared link)
 - **Username input**: Text field, 1-16 chars
 - **Join button**: Primary CTA, `[Enter]` hotkey
 - **Back link**: `[Esc]` returns to Landing
 
 **Validation**:
+
 - Room code required
 - Username required, 1-16 chars, trimmed
 - Show inline errors for invalid inputs
@@ -492,6 +511,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | `Tab` | Navigate between fields |
 
 **Behavior**:
+
 - On submit: calls `POST /api/rooms/:roomId/join` (where `roomId` is the room code like `AB12CD`), receives `playerToken` (+ `wsUrl`)
 - Store `wsUrl` + `playerToken` in localStorage keyed by `roomId` for reconnect
 - Success (lobby phase): navigate to Lobby as player
@@ -502,6 +522,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - Error `MATCH_ALREADY_STARTED`: Prompt to join as spectator
 
 **Shared Link Support**:
+
 - URL like `/join/AB12CD` pre-fills room code
 - Only username field needs input
 
@@ -512,6 +533,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Purpose**: Gathering space before match starts. Host configures, players wait, everyone chats.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Room: AB12CD  [Copy Link]                    [Leave Room]      │
@@ -540,25 +562,29 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 
 **Elements**:
 
-*Header*
+_Header_
+
 - **Room code**: Large, prominent (e.g., "Room: AB12CD")
 - **Copy Link button**: Copies shareable URL to clipboard, shows "Copied!" feedback
 - **Leave Room button**: Returns to Landing (with confirmation if host)
 
-*Player Grid*
+_Player Grid_
+
 - **Player tiles**: Sharp-bordered rectangles displaying username
 - **Host indicator**: Crown icon or `[HOST]` label inside tile
 - **Bot tiles**: Distinct border color (amber `--warning`), difficulty label (e.g., "Easy", "Med", "Hard"), `X` button to remove (host only)
 - **Empty slots**: Dashed border, muted "empty" text, shows available capacity
 
-*Settings Panel (Host Only)*
+_Settings Panel (Host Only)_
+
 - **Match duration**: Dropdown (6-10 min)
 - **Difficulty profile**: Dropdown (Beginner / Moderate / Competitive)
 - **Attack intensity**: Dropdown (Low / High)
 - **Non-hosts**: See settings as read-only text (no dropdowns)
 - **Live sync**: Changes broadcast immediately via `SETTINGS_UPDATE`
 
-*Chat Panel*
+_Chat Panel_
+
 - **Message list**: Terminal-style, monospace, newest at bottom
 - **System messages**: Styled differently (muted color, no username)
 - **Input field**: Bottom of chat panel, `Enter` to send
@@ -566,7 +592,8 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Backend contract**: send `SEND_CHAT`, receive `CHAT_APPEND`; initial backlog comes from `ROOM_SNAPSHOT.payload.chat`
 - **MVP scope**: lobby-only; once match starts, treat chat as read-only (or hide input)
 
-*Host Actions*
+_Host Actions_
+
 - **Add Bot button**: `[B]` hotkey, adds one bot (cycles difficulty or shows selector)
 - **Start Match button**: `[S]` hotkey, prominent cyan, only enabled with >= 2 players/bots
 
@@ -579,12 +606,14 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | `B` | Add bot (host only) |
 
 **Behavior**:
+
 - Player joins: tile appears, system message in chat
 - Host leaves: auto-transfer to next player, system message
 - Settings change: all players see update in real-time
 - Match starts: transition to In-Game screen
 
-**Audio**: 
+**Audio**:
+
 - Player join/leave: subtle notification sound
 - Start match: countdown beep or "match starting" sound
 
@@ -595,6 +624,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Format**: Overlay on a mock game screen, 5-7 interactive steps, ~30-60 seconds total.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────────────────────────────────────────┐    │
@@ -624,17 +654,18 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 
 **Tutorial Steps**:
 
-| Step | Highlight | Text | Interaction |
-|------|-----------|------|-------------|
-| 1 | Problem panel | "Read the problem. Write code to solve it." | `Enter` to continue |
-| 2 | Editor | "Write your solution here." | `Enter` to continue |
-| 3 | Run button | "Press `Alt/Option+R` to test against public test cases." | Wait for `Alt/Option+R` |
-| 4 | Submit button | "Press `Alt/Option+S` to submit for points and attack!" | Wait for `Alt/Option+S` |
-| 5 | Stack panel | "Problems pile up. If your stack overflows, you're eliminated." | `Enter` to continue |
-| 6 | Minimap | "Solve problems to attack others. Last one standing wins." | `Enter` to continue |
-| 7 | — | "You're ready. Good luck." | `Enter` to close |
+| Step | Highlight     | Text                                                            | Interaction             |
+| ---- | ------------- | --------------------------------------------------------------- | ----------------------- |
+| 1    | Problem panel | "Read the problem. Write code to solve it."                     | `Enter` to continue     |
+| 2    | Editor        | "Write your solution here."                                     | `Enter` to continue     |
+| 3    | Run button    | "Press `Alt/Option+R` to test against public test cases."       | Wait for `Alt/Option+R` |
+| 4    | Submit button | "Press `Alt/Option+S` to submit for points and attack!"         | Wait for `Alt/Option+S` |
+| 5    | Stack panel   | "Problems pile up. If your stack overflows, you're eliminated." | `Enter` to continue     |
+| 6    | Minimap       | "Solve problems to attack others. Last one standing wins."      | `Enter` to continue     |
+| 7    | —             | "You're ready. Good luck."                                      | `Enter` to close        |
 
 **Visual Treatment**:
+
 - **Dimmed background**: Mock game screen at 40% opacity
 - **Spotlight**: Highlighted element has bright cyan border glow, rest is dimmed
 - **Callout box**: Sharp-bordered tooltip near highlighted element
@@ -648,12 +679,14 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | Step-specific keys | `R`, `S`, etc. — tutorial waits for correct key |
 
 **Behavior**:
+
 - First visit: auto-trigger tutorial (can skip)
 - "How to Play" from Landing: opens tutorial
 - Completing or skipping: returns to previous screen (Landing or Lobby)
 - Store completion in localStorage to avoid re-triggering
 
 **Audio**:
+
 - Step advance: subtle click/blip
 - Tutorial complete: short success chime
 
@@ -662,6 +695,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Purpose**: The main gameplay screen. Players spend 90% of their time here.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ⏱ 07:32                                           ┌───────────────────┐   │
@@ -700,12 +734,14 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Panel Breakdown**:
 
 #### Editor (Center, 50-60% width)
+
 - **Monaco editor**: Syntax highlighting, IBM Plex Mono, 16px font
 - **Pre-filled**: Starter code with function signature
 - **Vim toggle**: `[Alt+V]` to toggle (when not Vim Locked)
 - **Focus**: Editor has focus by default on screen load
 
 #### Problem Panel (Left)
+
 - **Title + difficulty badge**: Color-coded (`--success` easy, `--warning` medium, `--danger` hard)
 - **Prompt**: Scrollable description
 - **Signature**: Highlighted code block
@@ -713,6 +749,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Test results**: Updated after Run — ✓ pass, ✗ fail, ○ not run
 
 #### Stack Panel (Right)
+
 - **Vertical stack**: Newest problem at top (index 0)
 - **Block contents**: Difficulty bar (colored) + problem title
 - **Garbage indicator**: Striped or dimmed pattern, distinct from normal problems
@@ -721,6 +758,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Warning state**: Panel border pulses red when `stackSize >= STACK_LIMIT - 2`
 
 #### Minimap (Top-right corner)
+
 - **Compact grid**: Small tiles for each player
 - **Tile contents**: First 2 chars of username or icon
 - **Status colors**:
@@ -732,6 +770,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Target indicator**: Small crosshair or dot on current target
 
 #### Terminal Log (Bottom)
+
 - **Scrolling feed**: Newest at bottom, auto-scroll
 - **Message types**:
   - Info (white): general events
@@ -741,6 +780,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Format**: `> [message]` — compact, no timestamps by default
 
 #### Action Bar (Bottom)
+
 - **Run button**: `[Alt+R]` — runs public tests (disabled during DDOS)
 - **Submit button**: `[Alt+S]` — submits for scoring
 - **Shop button**: `[Alt+B]` — opens shop overlay
@@ -750,6 +790,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Timer**: Match time remaining (top of screen, prominent)
 
 #### Shop Overlay (Hidden by default)
+
 ```
 ┌─────────────────────────────────────┐
 │  SHOP                    [Esc] Close│
@@ -764,6 +805,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 │                                     │
 └─────────────────────────────────────┘
 ```
+
 - **Modal overlay**: Dims game behind, doesn't pause
 - **Quick purchase**: Number keys `1-5` to buy
 - **Disabled items**: Grayed out if insufficient score or on cooldown
@@ -771,12 +813,12 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 
 #### Debuff Visual States
 
-| Debuff | Visual Effect |
-|--------|---------------|
-| **DDOS** | Run button disabled, pulsing red border, "BLOCKED" overlay on button |
-| **Flashbang** | Entire UI inverts: white background, dark text, desaturated colors — harsh and jarring |
-| **Vim Lock** | Editor forced to Vim, cyan glow on editor border, `[VIM LOCKED]` in status bar (can't toggle off) |
-| **Memory Leak** | Stack panel pulses amber, incoming problem animation speeds up, `[MEMORY LEAK]` warning |
+| Debuff          | Visual Effect                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------- |
+| **DDOS**        | Run button disabled, pulsing red border, "BLOCKED" overlay on button                              |
+| **Flashbang**   | Entire UI inverts: white background, dark text, desaturated colors — harsh and jarring            |
+| **Vim Lock**    | Editor forced to Vim, cyan glow on editor border, `[VIM LOCKED]` in status bar (can't toggle off) |
+| **Memory Leak** | Stack panel pulses amber, incoming problem animation speeds up, `[MEMORY LEAK]` warning           |
 
 #### Keybinds
 
@@ -794,6 +836,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | `Escape` | Close shop / close menus (or exit Vim insert mode) |
 
 **Vim Mode (Vim ON or Vim Locked)**:
+
 - Use the **same bindings** as above (`Alt/Option+…`). Avoid `Ctrl+R` / `Ctrl+S` because browsers reserve them (refresh/save).
 
 #### Targeting Mode Menu
@@ -817,14 +860,17 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 ```
 
 **Keyboard navigation**:
+
 - `↑/↓` to move selection
 - `Enter` to confirm
 - `Esc` to close without changing
 
 **Current mode visibility**:
+
 - Action bar shows a small label: `Target: Random` (muted) or an icon next to minimap.
 
 **Audio**:
+
 - Run success: short positive blip
 - Run failure: error buzz
 - Submit success: satisfying chime + attack whoosh
@@ -838,6 +884,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Purpose**: Display match results, celebrate winner, show detailed stats, offer next actions.
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
@@ -880,18 +927,21 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Elements**:
 
 #### Winner Announcement
+
 - **"WINNER" header**: Large text with trophy icon
 - **Winner tile**: Largest, gold accent (`#ffd700`), glow effect, crown icon
 - **Animation**: Staggered reveal — 3rd appears, then 2nd, then 1st with fanfare
 
 #### Podium (Top 3)
-| Place | Visual Treatment |
-|-------|------------------|
-| 1st | Gold accent, large tile, glow/pulse animation, crown icon |
-| 2nd | Silver accent (`#c0c0c0`), medium tile, subtle glow |
-| 3rd | Bronze accent (`#cd7f32`), medium tile, subtle glow |
+
+| Place | Visual Treatment                                          |
+| ----- | --------------------------------------------------------- |
+| 1st   | Gold accent, large tile, glow/pulse animation, crown icon |
+| 2nd   | Silver accent (`#c0c0c0`), medium tile, subtle glow       |
+| 3rd   | Bronze accent (`#cd7f32`), medium tile, subtle glow       |
 
 #### Standings Table
+
 - **Columns (MVP minimum)**: Rank, Player, Score, Status
 - **Optional (stretch)**: Problems Solved, Attacks Sent/Received, accuracy, elimination order
 - **Self highlight**: Cyan border/background on your row, `◀` marker
@@ -900,16 +950,19 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Survived players**: "Survived" status
 
 #### Your Stats Panel (optional)
+
 - MVP: OK to omit this panel unless stats are tracked.
 - If implemented: problems by difficulty, accuracy, best streak, time survived.
 
 #### Match Summary Panel
+
 - **Duration**: Actual match length
 - **End reason**: "Time expired" or "Last player standing"
 - **Total solved**: Sum of all problems solved by all players
 - **Player count**: Breakdown of humans vs bots
 
 #### Actions
+
 - **Return to Lobby**: Primary CTA, `[Enter]` hotkey (host-only; non-hosts see disabled/wait state)
 - **Exit**: Secondary, `[Esc]` hotkey, returns to Landing
 
@@ -920,6 +973,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | `Escape` | Exit to Landing |
 
 **Behavior**:
+
 - Results data fetched via `GET /api/matches/:matchId` or from `MATCH_END` payload
 - If `me.isHost=true`, "Return to Lobby" sends `RETURN_TO_LOBBY` over PartyKit and waits for an authoritative `ROOM_SNAPSHOT` with `match.phase="lobby"`
 - If non-host, show a waiting state until host resets, or allow "Exit" to landing
@@ -927,6 +981,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - If you won: extra celebration (screen flash, confetti particles, special sound)
 
 **Audio**:
+
 - Podium reveal: Drum roll or building tension
 - Winner reveal: Triumphant fanfare/synth stinger
 - Your win: Extra celebratory flourish
@@ -959,6 +1014,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 ```
 
 **Differences from In-Game**:
+
 - **Header**: Shows "SPECTATING: [username]" instead of timer alone
 - **Editor**: Read-only, shows spectated player's code (live updates via `CODE_UPDATE`)
 - **Problem panel**: Shows spectated player's current problem
@@ -967,6 +1023,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - **Minimap**: Highlights spectated player with `▶` marker; click tiles to switch
 
 **Spectator Controls**:
+
 - **Switch player**: `[Tab]` cycles through alive players
 - **Click minimap tile**: Switch to that player
 - **Player dropdown**: Alternative way to select who to watch
@@ -980,17 +1037,20 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | `Escape` | Exit to Landing (if spectator) |
 
 **Behavior**:
+
 - Spectators receive `SPECTATE_STATE` with target's full view (problem, code, stack, hints)
 - Code updates stream in real-time
 - When spectated player is eliminated, auto-switch to another alive player
 - Match ends: transition to Results screen
 
 **Entry Points**:
+
 - Join room mid-match → auto-assigned `role=spectator`
 - Eliminated during match → transition to Spectator View
 - On elimination: brief "YOU WERE ELIMINATED" overlay, then fade to Spectator View
 
 **Audio**:
+
 - Same as In-Game, but muted or reduced volume (spectator is passive)
 - Elimination sound when spectated player dies
 
@@ -999,6 +1059,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 ### 6.1 Core Components
 
 #### Button
+
 ```
 ┌─────────────────────┐
 │  [Alt+R] Run Code   │  ← Primary: cyan border, glow on hover
@@ -1013,12 +1074,12 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 └─────────────────────┘
 ```
 
-| Variant | Border | Background | Text | Hover |
-|---------|--------|------------|------|-------|
-| Primary | `--accent-primary` | transparent | `--text-primary` | Glow effect |
-| Secondary | `--accent-muted` | transparent | `--text-muted` | Border brightens |
-| Disabled | `--accent-muted` | `--bg-surface` | `--text-muted` | None |
-| Danger | `--danger` | transparent | `--danger` | Red glow |
+| Variant   | Border             | Background     | Text             | Hover            |
+| --------- | ------------------ | -------------- | ---------------- | ---------------- |
+| Primary   | `--accent-primary` | transparent    | `--text-primary` | Glow effect      |
+| Secondary | `--accent-muted`   | transparent    | `--text-muted`   | Border brightens |
+| Disabled  | `--accent-muted`   | `--bg-surface` | `--text-muted`   | None             |
+| Danger    | `--danger`         | transparent    | `--danger`       | Red glow         |
 
 - Sharp corners (0-2px radius max)
 - Hotkey hint in brackets: `[R]`, `[S]`, etc.
@@ -1026,6 +1087,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - Font: IBM Plex Mono
 
 #### Input
+
 ```
 ┌─────────────────────────────────────┐
 │ Username                            │  ← Label
@@ -1034,18 +1096,19 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 └─────────────────────────────────────┘
 ```
 
-| State | Border | Effect |
-|-------|--------|--------|
-| Default | `--accent-muted` | — |
-| Focus | `--accent-primary` | Subtle glow |
-| Error | `--danger` | Red glow, error text below |
-| Disabled | `--accent-muted` | Dimmed background |
+| State    | Border             | Effect                     |
+| -------- | ------------------ | -------------------------- |
+| Default  | `--accent-muted`   | —                          |
+| Focus    | `--accent-primary` | Subtle glow                |
+| Error    | `--danger`         | Red glow, error text below |
+| Disabled | `--accent-muted`   | Dimmed background          |
 
 - Sharp corners
 - Monospace font for code-like inputs
 - Error message appears below in `--danger` color
 
 #### Dropdown / Select
+
 ```
 ┌─────────────────────────────────────┐
 │ Moderate                          ▼ │
@@ -1057,6 +1120,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - Options panel: same dark surface, hover highlight
 
 #### Panel
+
 ```
 ╔═══════════════════════════════════════╗
 ║ PANEL TITLE                           ║
@@ -1073,6 +1137,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - Gaps: 4-8px between adjacent panels (tiling WM style)
 
 #### Tile (Player)
+
 ```
 ┌────────────┐     ┌────────────┐     ┌────────────┐
 │   alice    │     │  Bot 1   X │     ╎            ╎
@@ -1081,19 +1146,20 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
    Human            Bot                 Empty slot
 ```
 
-| Type | Border | Indicator |
-|------|--------|-----------|
-| Human (self) | `--accent-primary` | Cyan glow |
-| Human (other) | `--accent-muted` | — |
-| Host | `--accent-muted` | Crown icon or `[HOST]` |
-| Bot | `--warning` | Difficulty label, `X` to remove |
-| Empty | Dashed `--accent-muted` | "empty" text |
+| Type          | Border                  | Indicator                       |
+| ------------- | ----------------------- | ------------------------------- |
+| Human (self)  | `--accent-primary`      | Cyan glow                       |
+| Human (other) | `--accent-muted`        | —                               |
+| Host          | `--accent-muted`        | Crown icon or `[HOST]`          |
+| Bot           | `--warning`             | Difficulty label, `X` to remove |
+| Empty         | Dashed `--accent-muted` | "empty" text                    |
 
 ### 6.2 Game Components
 
 #### Monaco Editor Wrapper
 
 **Configuration**:
+
 - Theme: Custom dark theme matching `--bg-surface`, `--text-primary`
 - Font: IBM Plex Mono, 16px
 - Language: Python
@@ -1102,6 +1168,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - Word wrap: Off
 
 **Vim Integration**:
+
 - Uses `monaco-vim` package
 - Toggle via `Alt/Option+V` (when not Vim Locked)
 - Status line shows current Vim mode (NORMAL, INSERT, VISUAL)
@@ -1114,6 +1181,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | Read-only (Spectator) | No cursor, grayed slightly |
 
 #### Problem Display
+
 ```
 ┌─────────────────────────────────────┐
 │ Two Sum                      [EASY] │  ← Title + difficulty badge
@@ -1142,11 +1210,13 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | Garbage | Striped pattern, muted |
 
 **Test Result Icons**:
+
 - ✓ Passed: `--success`
 - ✗ Failed: `--danger`
 - ○ Not run: `--text-muted`
 
 #### Stack Block
+
 ```
 ┌─────────────────────┐
 │ ██ Reverse String   │  ← Normal (difficulty color bar + title)
@@ -1160,6 +1230,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 - Garbage: Striped pattern or lower opacity
 
 #### Stack Panel
+
 ```
 ┌─────────────────────────┐
 │ STACK (7/10)            │  ← Header with count
@@ -1186,10 +1257,12 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | Memory Leak active | Amber pulse, `[MEMORY LEAK]` badge |
 
 **Animations**:
+
 - New problem: Slides in from top with bounce
 - Problem removed (solved/skipped): Fades out or slides away
 
 #### Minimap
+
 ```
 ┌───────────────────┐
 │ MINIMAP           │
@@ -1213,10 +1286,12 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | Current target | — | Crosshair overlay |
 
 **Interactions**:
+
 - Hover: Show full username tooltip
 - Click: Set as target (or switch spectate target)
 
 #### Terminal Log
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │ TERMINAL LOG                                        │
@@ -1238,11 +1313,13 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | System | `--text-muted` | "alice joined the room" |
 
 **Behavior**:
+
 - Auto-scroll to newest (with option to pause scroll on hover)
 - Max ~50 visible messages, older ones removed
 - Prefix: `> ` for consistency
 
 #### Shop Modal
+
 ```
 ┌─────────────────────────────────────┐
 │  SHOP                    [Esc] Close│
@@ -1267,6 +1344,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 | Not applicable | Hidden or grayed (e.g., Clear Debuff with no debuff) |
 
 **Behavior**:
+
 - Opens with `Alt/Option+B`
 - Number keys `1-5` for quick purchase
 - `Escape` to close
@@ -1277,24 +1355,31 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 Shop items MUST match backend `ShopItem` identifiers from the Backend API Spec:
 
 ```ts
-type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' | 'hint'
+type ShopItem =
+  | "clearDebuff"
+  | "memoryDefrag"
+  | "skipProblem"
+  | "rateLimiter"
+  | "hint";
 ```
 
 **Source of truth**:
+
 - Prices and cooldowns are server-defined via `RoomSnapshot.shopCatalog`.
-- UI may show the *recommended defaults* below as placeholders, but MUST render costs from `shopCatalog` when present.
+- UI may show the _recommended defaults_ below as placeholders, but MUST render costs from `shopCatalog` when present.
 
 **Canonical ordering + hotkeys** (stable ordering so muscle memory works):
 
-| Hotkey | Label | `ShopItem` | Default cost | Cooldown (`shopCatalog.cooldownSec`) | Disable when (client-side) |
-|--------|-------|------------|--------------|--------------------------------------|----------------------------|
-| `1` | Clear Debuff | `clearDebuff` | 10 | — | No active debuff |
-| `2` | Memory Defrag | `memoryDefrag` | 10 | — | (Optional) no garbage in stack |
-| `3` | Skip Problem | `skipProblem` | 15 | — | — |
-| `4` | Rate Limiter | `rateLimiter` | 10 | 60 (recommended) | On cooldown |
-| `5` | Hint | `hint` | 5 | — | No more hints available |
+| Hotkey | Label         | `ShopItem`     | Default cost | Cooldown (`shopCatalog.cooldownSec`) | Disable when (client-side)     |
+| ------ | ------------- | -------------- | ------------ | ------------------------------------ | ------------------------------ |
+| `1`    | Clear Debuff  | `clearDebuff`  | 10           | —                                    | No active debuff               |
+| `2`    | Memory Defrag | `memoryDefrag` | 10           | —                                    | (Optional) no garbage in stack |
+| `3`    | Skip Problem  | `skipProblem`  | 15           | —                                    | —                              |
+| `4`    | Rate Limiter  | `rateLimiter`  | 10           | 60 (recommended)                     | On cooldown                    |
+| `5`    | Hint          | `hint`         | 5            | —                                    | No more hints available        |
 
 **Request**:
+
 - Buying an item sends `SPEND_POINTS`:
 
 ```json
@@ -1302,20 +1387,22 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 ```
 
 **Success handling**:
+
 - Close the shop modal.
 - Play purchase success SFX.
 - Append a short system line to Terminal Log (e.g., `> Bought Skip Problem (-15)`).
 
 **Failure handling** (server `ERROR` response to `SPEND_POINTS`):
 
-| Error code | UI treatment |
-|------------|--------------|
-| `INSUFFICIENT_SCORE` | Keep modal open, flash the cost in red + denied SFX |
-| `ITEM_ON_COOLDOWN` | Keep modal open, show "Cooldown" label; if `retryAfterMs` is provided, show countdown |
-| `BAD_REQUEST` | Keep modal open, show inline message (e.g., "No debuff to clear" / "No more hints") |
-| `PLAYER_ELIMINATED` | Close modal and transition to Spectator View |
+| Error code           | UI treatment                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `INSUFFICIENT_SCORE` | Keep modal open, flash the cost in red + denied SFX                                   |
+| `ITEM_ON_COOLDOWN`   | Keep modal open, show "Cooldown" label; if `retryAfterMs` is provided, show countdown |
+| `BAD_REQUEST`        | Keep modal open, show inline message (e.g., "No debuff to clear" / "No more hints")   |
+| `PLAYER_ELIMINATED`  | Close modal and transition to Spectator View                                          |
 
 #### Timer
+
 ```
   ⏱ 07:32
 ```
@@ -1329,6 +1416,7 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 #### Debuff Overlays
 
 **Flashbang**:
+
 - Entire page color scheme inverts
 - Background: harsh white (`#f0f0f0`)
 - Text: dark (`#1a1a1a`)
@@ -1336,6 +1424,7 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 - Duration: 25s (or until cleared)
 
 **DDOS (Run Blocked)**:
+
 ```
 ┌─────────────────────┐
 │  [Alt+R] Run  BLOCKED │  ← Red pulsing border
@@ -1344,11 +1433,13 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 ```
 
 **Vim Lock**:
+
 - Editor border: Cyan glow
 - Status bar: `[VIM LOCKED]` indicator
 - Vim toggle disabled
 
 **Memory Leak**:
+
 - Stack panel: Amber pulsing border
 - Header badge: `[MEMORY LEAK]`
 - Incoming problem animation: Faster
@@ -1356,6 +1447,7 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 ### 6.3 Feedback Components
 
 #### Toast / Notification (Optional)
+
 ```
 ┌─────────────────────────────────────┐
 │ ✓ Copied to clipboard!              │
@@ -1367,6 +1459,7 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 - May not be needed if Terminal Log handles most feedback
 
 #### Loading Spinner
+
 ```
   ◐ Loading...
 ```
@@ -1376,6 +1469,7 @@ type ShopItem = 'clearDebuff' | 'memoryDefrag' | 'skipProblem' | 'rateLimiter' |
 - Can be inline or overlay
 
 #### Error Message (Inline)
+
 ```
 ┌─────────────────────────────────────┐
 │ Username                            │
@@ -1395,44 +1489,45 @@ This section defines how backend state (from WebSocket events) maps to UI render
 
 ### 7.1 Player Status → UI
 
-| `PlayerStatus` | Minimap Tile | Screen | Additional Effects |
-|----------------|--------------|--------|-------------------|
-| `lobby` | — | Lobby screen | — |
-| `coding` | Green (`--success`) | In-Game | Normal UI |
-| `error` | Red (`--danger`) | In-Game | Last run/submit failed indicator |
-| `underAttack` | Amber (`--warning`) | In-Game | Debuff overlay active, glitch effect on tile |
-| `eliminated` | Gray, strikethrough | Spectator View | "ELIMINATED" overlay, then fade to spectator |
+| `PlayerStatus` | Minimap Tile        | Screen         | Additional Effects                           |
+| -------------- | ------------------- | -------------- | -------------------------------------------- |
+| `lobby`        | —                   | Lobby screen   | —                                            |
+| `coding`       | Green (`--success`) | In-Game        | Normal UI                                    |
+| `error`        | Red (`--danger`)    | In-Game        | Last run/submit failed indicator             |
+| `underAttack`  | Amber (`--warning`) | In-Game        | Debuff overlay active, glitch effect on tile |
+| `eliminated`   | Gray, strikethrough | Spectator View | "ELIMINATED" overlay, then fade to spectator |
 
 ### 7.2 Debuff State → UI
 
-| `activeDebuff.type` | UI Effect | Duration Display |
-|---------------------|-----------|------------------|
-| `ddos` | Run button disabled, pulsing red border, "BLOCKED" overlay | Timer on button |
-| `flashbang` | Entire UI inverts to light mode (white bg, dark text) | None (just endure) |
-| `vimLock` | Editor forced to Vim, cyan glow, `[VIM LOCKED]` in status bar | Timer in status bar |
-| `memoryLeak` | Stack panel pulses amber, `[MEMORY LEAK]` badge, faster animations | Timer in stack header |
-| `null` (no debuff) | Normal UI | — |
+| `activeDebuff.type` | UI Effect                                                          | Duration Display      |
+| ------------------- | ------------------------------------------------------------------ | --------------------- |
+| `ddos`              | Run button disabled, pulsing red border, "BLOCKED" overlay         | Timer on button       |
+| `flashbang`         | Entire UI inverts to light mode (white bg, dark text)              | None (just endure)    |
+| `vimLock`           | Editor forced to Vim, cyan glow, `[VIM LOCKED]` in status bar      | Timer in status bar   |
+| `memoryLeak`        | Stack panel pulses amber, `[MEMORY LEAK]` badge, faster animations | Timer in stack header |
+| `null` (no debuff)  | Normal UI                                                          | —                     |
 
 **Debuff Timer Calculation**:
+
 ```
 remainingMs = new Date(activeDebuff.endsAt) - new Date(serverTime)
 ```
 
 ### 7.3 Buff State → UI
 
-| `activeBuff.type` | UI Effect |
-|-------------------|-----------|
-| `rateLimiter` | `[RATE LIMITER]` badge in status bar, timer showing remaining duration |
-| `null` (no buff) | Normal UI |
+| `activeBuff.type` | UI Effect                                                              |
+| ----------------- | ---------------------------------------------------------------------- |
+| `rateLimiter`     | `[RATE LIMITER]` badge in status bar, timer showing remaining duration |
+| `null` (no buff)  | Normal UI                                                              |
 
 ### 7.4 Stack State → UI
 
-| Condition | UI Effect |
-|-----------|-----------|
-| `stackSize < STACK_LIMIT - 2` | Normal stack rendering |
-| `stackSize >= STACK_LIMIT - 2` | Panel border pulses red, warning sound |
-| `stackSize >= STACK_LIMIT - 1` | Faster pulse, urgent warning sound |
-| `stackSize > STACK_LIMIT` | Player eliminated (should not render — transition to Spectator) |
+| Condition                      | UI Effect                                                       |
+| ------------------------------ | --------------------------------------------------------------- |
+| `stackSize < STACK_LIMIT - 2`  | Normal stack rendering                                          |
+| `stackSize >= STACK_LIMIT - 2` | Panel border pulses red, warning sound                          |
+| `stackSize >= STACK_LIMIT - 1` | Faster pulse, urgent warning sound                              |
+| `stackSize > STACK_LIMIT`      | Player eliminated (should not render — transition to Spectator) |
 
 **Problem Block Rendering**:
 | `problem.isGarbage` | Appearance |
@@ -1449,34 +1544,35 @@ remainingMs = new Date(activeDebuff.endsAt) - new Date(serverTime)
 
 ### 7.5 Match Phase → Screen
 
-| `match.phase` | Screen | Notes |
-|---------------|--------|-------|
-| `lobby` | Lobby | Waiting for host to start |
-| `warmup` | In-Game | Match running (slower problem cadence) |
-| `main` | In-Game | Match running (normal cadence) |
-| `boss` | In-Game | Match running (harder problems) |
-| `ended` | Results | Match complete |
+| `match.phase` | Screen  | Notes                                  |
+| ------------- | ------- | -------------------------------------- |
+| `lobby`       | Lobby   | Waiting for host to start              |
+| `warmup`      | In-Game | Match running (slower problem cadence) |
+| `main`        | In-Game | Match running (normal cadence)         |
+| `boss`        | In-Game | Match running (harder problems)        |
+| `ended`       | Results | Match complete                         |
 
 ### 7.6 Targeting Mode → UI
 
-| `targetingMode` | Minimap Indicator | Description |
-|-----------------|-------------------|-------------|
-| `random` | No specific target shown | Random selection on attack |
-| `attackers` | Highlight recent attackers | Targets those who attacked you |
-| `topScore` | Highlight #1 score | Targets leader |
-| `nearDeath` | Highlight highest stack | Targets most vulnerable |
+| `targetingMode` | Minimap Indicator          | Description                    |
+| --------------- | -------------------------- | ------------------------------ |
+| `random`        | No specific target shown   | Random selection on attack     |
+| `attackers`     | Highlight recent attackers | Targets those who attacked you |
+| `topScore`      | Highlight #1 score         | Targets leader                 |
+| `nearDeath`     | Highlight highest stack    | Targets most vulnerable        |
 
 **Current Target Display**:
+
 - Crosshair or dot overlay on target's minimap tile
 - Target may change between attacks (computed at submit time)
 
 ### 7.7 Test Results → UI
 
-| `PublicTestResult.passed` | Icon | Color |
-|---------------------------|------|-------|
-| `true` | ✓ | `--success` |
-| `false` | ✗ | `--danger` |
-| Not yet run | ○ | `--text-muted` |
+| `PublicTestResult.passed` | Icon | Color          |
+| ------------------------- | ---- | -------------- |
+| `true`                    | ✓    | `--success`    |
+| `false`                   | ✗    | `--danger`     |
+| Not yet run               | ○    | `--text-muted` |
 
 **Judge Result → Feedback**:
 | `JudgeResult.passed` | `kind` | UI Response |
@@ -1488,23 +1584,24 @@ remainingMs = new Date(activeDebuff.endsAt) - new Date(serverTime)
 
 ### 7.8 Role → UI Permissions
 
-| `role` | Can Edit Code | Can Run/Submit | Can Shop | Can Chat (Lobby) | Can Spectate |
-|--------|---------------|----------------|----------|------------------|--------------|
-| `player` (alive) | ✓ | ✓ | ✓ | ✓ | ✗ |
-| `player` (eliminated) | ✗ | ✗ | ✗ | ✓ | ✓ |
-| `spectator` | ✗ | ✗ | ✗ | ✓ | ✓ |
-| `bot` | — | — | — | — | — |
+| `role`                | Can Edit Code | Can Run/Submit | Can Shop | Can Chat (Lobby) | Can Spectate |
+| --------------------- | ------------- | -------------- | -------- | ---------------- | ------------ |
+| `player` (alive)      | ✓             | ✓              | ✓        | ✓                | ✗            |
+| `player` (eliminated) | ✗             | ✗              | ✗        | ✓                | ✓            |
+| `spectator`           | ✗             | ✗              | ✗        | ✓                | ✓            |
+| `bot`                 | —             | —              | —        | —                | —            |
 
 **MVP decision**: chat exists in the Lobby only (no in-match chat to reduce distraction and complexity).
 
 ### 7.9 Host Status → UI
 
-| `isHost` | UI Elements |
-|----------|-------------|
-| `true` | Settings dropdowns editable, "Add Bot" button, "Start Match" button, crown icon on tile |
-| `false` | Settings read-only, no host controls, no crown |
+| `isHost` | UI Elements                                                                             |
+| -------- | --------------------------------------------------------------------------------------- |
+| `true`   | Settings dropdowns editable, "Add Bot" button, "Start Match" button, crown icon on tile |
+| `false`  | Settings read-only, no host controls, no crown                                          |
 
 **Host Transfer**:
+
 - When host disconnects, server auto-transfers
 - UI updates via `ROOM_SNAPSHOT` — new host sees controls, old host (if reconnected) loses them
 
@@ -1514,105 +1611,110 @@ remainingMs = new Date(activeDebuff.endsAt) - new Date(serverTime)
 
 **Recommended sources for hackathon:**
 
-| Type | Source | Why |
-|------|--------|-----|
-| **SFX (UI)** | BFXR / ChipTone | Instant retro blips, clicks, errors — generate in seconds |
-| **SFX (Game)** | Freesound.org | Specific sounds (whoosh, impact, explosion) — CC0/CC-BY |
-| **Music** | Suno AI | Custom "synthwave hacker game" tracks in minutes |
-| **Music (backup)** | Incompetech | Ready-made electronic/game music, CC-BY |
+| Type               | Source          | Why                                                       |
+| ------------------ | --------------- | --------------------------------------------------------- |
+| **SFX (UI)**       | BFXR / ChipTone | Instant retro blips, clicks, errors — generate in seconds |
+| **SFX (Game)**     | Freesound.org   | Specific sounds (whoosh, impact, explosion) — CC0/CC-BY   |
+| **Music**          | Suno AI         | Custom "synthwave hacker game" tracks in minutes          |
+| **Music (backup)** | Incompetech     | Ready-made electronic/game music, CC-BY                   |
 
 **Free Libraries:**
+
 - **Freesound.org** — Large community library, search by keyword
 - **Pixabay** — Free SFX + music, no attribution required
 - **OpenGameArt.org** — Game-specific assets
 - **Incompetech** — Kevin MacLeod's library, CC-BY
 
 **AI Generation (fast):**
+
 - **Suno AI / Udio** — Generate custom music from text prompts
 - **ElevenLabs Sound Effects** — AI-generated SFX
 
 **DIY Tools:**
+
 - **BFXR** (bfxr.net) — Retro 8-bit SFX generator
 - **ChipTone** — More options than BFXR
 - **LMMS** — Free DAW for quick music
 
 ### 8.2 Ambient / Music
 
-| Context | Audio | Notes |
-|---------|-------|-------|
-| **Landing** | Subtle ambient synth pad, low hum | Calm lobby atmosphere |
-| **Lobby** | Same ambient, slightly more presence | Waiting, anticipation |
-| **In-Game (normal)** | Uptempo electronic/synthwave | Energetic but not distracting |
-| **In-Game (danger)** | Music intensifies | Trigger: stack >= STACK_LIMIT - 2, or time < 2 min |
-| **In-Game (final minute)** | Peak intensity | Faster tempo, more urgency |
-| **Results (win)** | Triumphant synth fanfare | Celebratory |
-| **Results (loss)** | Softer, neutral resolution | Not punishing, just closure |
+| Context                    | Audio                                | Notes                                              |
+| -------------------------- | ------------------------------------ | -------------------------------------------------- |
+| **Landing**                | Subtle ambient synth pad, low hum    | Calm lobby atmosphere                              |
+| **Lobby**                  | Same ambient, slightly more presence | Waiting, anticipation                              |
+| **In-Game (normal)**       | Uptempo electronic/synthwave         | Energetic but not distracting                      |
+| **In-Game (danger)**       | Music intensifies                    | Trigger: stack >= STACK_LIMIT - 2, or time < 2 min |
+| **In-Game (final minute)** | Peak intensity                       | Faster tempo, more urgency                         |
+| **Results (win)**          | Triumphant synth fanfare             | Celebratory                                        |
+| **Results (loss)**         | Softer, neutral resolution           | Not punishing, just closure                        |
 
 **Dynamic Music System (stretch goal):**
+
 - Layer tracks that can be mixed based on game state
 - Base layer always playing, add intensity layers dynamically
 
 ### 8.3 Sound Effects — Player Actions
 
-| Action | Sound | Notes |
-|--------|-------|-------|
-| **Run (success)** | Short positive blip | Quick, satisfying |
-| **Run (failure)** | Error buzz/beep | Distinct from submit failure |
-| **Submit (success)** | Chime + attack whoosh | Two-part: personal reward + outgoing attack |
-| **Submit (failure)** | Heavier error sound | More impactful than run failure |
-| **Shop open** | Mechanical click / drawer open | |
-| **Shop close** | Softer click | |
-| **Purchase success** | Confirmation ding / cash register | |
-| **Purchase fail** | Denied buzzer | Insufficient score or cooldown |
-| **Vim toggle** | Mechanical switch click | |
+| Action               | Sound                             | Notes                                       |
+| -------------------- | --------------------------------- | ------------------------------------------- |
+| **Run (success)**    | Short positive blip               | Quick, satisfying                           |
+| **Run (failure)**    | Error buzz/beep                   | Distinct from submit failure                |
+| **Submit (success)** | Chime + attack whoosh             | Two-part: personal reward + outgoing attack |
+| **Submit (failure)** | Heavier error sound               | More impactful than run failure             |
+| **Shop open**        | Mechanical click / drawer open    |                                             |
+| **Shop close**       | Softer click                      |                                             |
+| **Purchase success** | Confirmation ding / cash register |                                             |
+| **Purchase fail**    | Denied buzzer                     | Insufficient score or cooldown              |
+| **Vim toggle**       | Mechanical switch click           |                                             |
 
 ### 8.4 Sound Effects — Game Events
 
-| Event | Sound | Notes |
-|-------|-------|-------|
-| **Attack sent** | Whoosh outward | Directional feel |
-| **Attack received** | Impact thud | Base sound for all attacks |
-| **DDOS applied** | Static/interference | Layered with impact |
-| **Flashbang applied** | Bright flash/zap | Jarring, matches visual |
-| **Vim Lock applied** | Lock click / clunk | Mechanical |
-| **Memory Leak applied** | Alarm / warning siren | Urgent |
-| **Garbage Drop received** | Splat / thunk | Something landing |
-| **Debuff cleared** | Relief chime | Positive resolution |
-| **Debuff expired** | Softer chime | Natural end |
-| **Problem incoming** | Subtle notification ping | Not too alarming |
-| **Stack warning (mild)** | Tension drone | When stack >= STACK_LIMIT - 2 |
-| **Stack warning (critical)** | Escalating pitch | When stack >= STACK_LIMIT - 1 |
-| **Elimination (others)** | Distant explosion / crash | Background event |
-| **Elimination (self)** | Heavy impact + dramatic sting | Personal, dramatic |
+| Event                        | Sound                         | Notes                         |
+| ---------------------------- | ----------------------------- | ----------------------------- |
+| **Attack sent**              | Whoosh outward                | Directional feel              |
+| **Attack received**          | Impact thud                   | Base sound for all attacks    |
+| **DDOS applied**             | Static/interference           | Layered with impact           |
+| **Flashbang applied**        | Bright flash/zap              | Jarring, matches visual       |
+| **Vim Lock applied**         | Lock click / clunk            | Mechanical                    |
+| **Memory Leak applied**      | Alarm / warning siren         | Urgent                        |
+| **Garbage Drop received**    | Splat / thunk                 | Something landing             |
+| **Debuff cleared**           | Relief chime                  | Positive resolution           |
+| **Debuff expired**           | Softer chime                  | Natural end                   |
+| **Problem incoming**         | Subtle notification ping      | Not too alarming              |
+| **Stack warning (mild)**     | Tension drone                 | When stack >= STACK_LIMIT - 2 |
+| **Stack warning (critical)** | Escalating pitch              | When stack >= STACK_LIMIT - 1 |
+| **Elimination (others)**     | Distant explosion / crash     | Background event              |
+| **Elimination (self)**       | Heavy impact + dramatic sting | Personal, dramatic            |
 
 ### 8.5 Sound Effects — Match Flow
 
-| Event | Sound | Notes |
-|-------|-------|-------|
-| **Match start countdown** | Beeps (3, 2, 1) | Building anticipation |
-| **Match start** | Horn / starting gun | Clear signal |
-| **Phase change** | Subtle transition tone | warmup → main → boss |
-| **Final minute warning** | Alert tone | "One minute remaining" |
-| **Match end** | Final horn / gong | Definitive ending |
-| **Winner reveal** | Fanfare / triumphant stinger | Podium moment |
+| Event                     | Sound                        | Notes                  |
+| ------------------------- | ---------------------------- | ---------------------- |
+| **Match start countdown** | Beeps (3, 2, 1)              | Building anticipation  |
+| **Match start**           | Horn / starting gun          | Clear signal           |
+| **Phase change**          | Subtle transition tone       | warmup → main → boss   |
+| **Final minute warning**  | Alert tone                   | "One minute remaining" |
+| **Match end**             | Final horn / gong            | Definitive ending      |
+| **Winner reveal**         | Fanfare / triumphant stinger | Podium moment          |
 
 ### 8.6 Sound Effects — UI
 
-| Interaction | Sound | Notes |
-|-------------|-------|-------|
-| **Button hover** | Subtle tick | Optional, can be silent |
-| **Button click** | Mechanical click | Consistent across all buttons |
-| **Chat message sent** | Soft blip | |
-| **Chat message received** | Softer blip | Distinct from sent |
-| **Player joined (lobby)** | Notification chime | |
-| **Player left (lobby)** | Softer notification | |
-| **Error toast** | Error ping | |
-| **Success toast** | Success ping | |
-| **Copy to clipboard** | Click / confirmation | |
+| Interaction               | Sound                | Notes                         |
+| ------------------------- | -------------------- | ----------------------------- |
+| **Button hover**          | Subtle tick          | Optional, can be silent       |
+| **Button click**          | Mechanical click     | Consistent across all buttons |
+| **Chat message sent**     | Soft blip            |                               |
+| **Chat message received** | Softer blip          | Distinct from sent            |
+| **Player joined (lobby)** | Notification chime   |                               |
+| **Player left (lobby)**   | Softer notification  |                               |
+| **Error toast**           | Error ping           |                               |
+| **Success toast**         | Success ping         |                               |
+| **Copy to clipboard**     | Click / confirmation |                               |
 
 ### 8.7 Audio Settings
 
 Players should be able to control:
+
 - **Master volume**: 0-100%
 - **Music volume**: 0-100%
 - **SFX volume**: 0-100%
@@ -1690,19 +1792,19 @@ This checklist is ordered to get a playable end-to-end slice fast, then deepen f
 
 ### A.1 Milestones (recommended build order)
 
-| Milestone | Goal | Acceptance |
-|----------|------|------------|
-| **M0: Theme + primitives** | Establish the riced workstation look as reusable tokens | Palette + typography applied; `Button`, `Input`, `Panel`, `Tile` look correct |
-| **M1: Routing + screen shells** | All screens exist as navigable routes with placeholder content | Landing → Create → Lobby; Landing → Join → Lobby; Results/Spectator routes render |
-| **M2: API wiring (create/join)** | Can create/join rooms via HTTP and connect to WS | `POST /api/rooms` + `POST /api/rooms/:roomId/join` work; token stored; connects to `wsUrl` |
-| **M3: Lobby realtime** | Lobby roster + settings + bots + lobby chat | Player tiles update; host controls gated; chat works; copy link works |
-| **M4: In-Game UI (mock state)** | Core in-game layout works without backend game engine | Editor + problem panel + stack + minimap + terminal log render from mocked state |
-| **M5: Realtime snapshot rendering** | In-Game drives from `ROOM_SNAPSHOT` + deltas | UI updates on snapshot; stack/minimap/log update without refresh |
-| **M6: Run/Submit feedback loop** | One problem can be run/submitted and shows results | Run updates public tests; Submit updates score/streak + terminal log; advance problem on pass |
-| **M7: Shop + debuffs** | Shop purchases and debuff visuals are coherent | `SPEND_POINTS` works; DDOS disables run; Flashbang inverts; VimLock forces vim; MemoryLeak warning |
-| **M8: End-to-end match** | Full match flow including results + return to lobby | `MATCH_END` → Results renders; Return to Lobby works |
-| **M9: Spectator** | Eliminated/spectators can watch others | Spectator view read-only; `Tab` cycles; minimap click switches |
-| **M10: Tutorial + audio polish** | First-time flow and game feel upgrades | Tutorial runs; audio unlock works; key SFX present; music swaps by state |
+| Milestone                           | Goal                                                           | Acceptance                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **M0: Theme + primitives**          | Establish the riced workstation look as reusable tokens        | Palette + typography applied; `Button`, `Input`, `Panel`, `Tile` look correct                      |
+| **M1: Routing + screen shells**     | All screens exist as navigable routes with placeholder content | Landing → Create → Lobby; Landing → Join → Lobby; Results/Spectator routes render                  |
+| **M2: API wiring (create/join)**    | Can create/join rooms via HTTP and connect to WS               | `POST /api/rooms` + `POST /api/rooms/:roomId/join` work; token stored; connects to `wsUrl`         |
+| **M3: Lobby realtime**              | Lobby roster + settings + bots + lobby chat                    | Player tiles update; host controls gated; chat works; copy link works                              |
+| **M4: In-Game UI (mock state)**     | Core in-game layout works without backend game engine          | Editor + problem panel + stack + minimap + terminal log render from mocked state                   |
+| **M5: Realtime snapshot rendering** | In-Game drives from `ROOM_SNAPSHOT` + deltas                   | UI updates on snapshot; stack/minimap/log update without refresh                                   |
+| **M6: Run/Submit feedback loop**    | One problem can be run/submitted and shows results             | Run updates public tests; Submit updates score/streak + terminal log; advance problem on pass      |
+| **M7: Shop + debuffs**              | Shop purchases and debuff visuals are coherent                 | `SPEND_POINTS` works; DDOS disables run; Flashbang inverts; VimLock forces vim; MemoryLeak warning |
+| **M8: End-to-end match**            | Full match flow including results + return to lobby            | `MATCH_END` → Results renders; Return to Lobby works                                               |
+| **M9: Spectator**                   | Eliminated/spectators can watch others                         | Spectator view read-only; `Tab` cycles; minimap click switches                                     |
+| **M10: Tutorial + audio polish**    | First-time flow and game feel upgrades                         | Tutorial runs; audio unlock works; key SFX present; music swaps by state                           |
 
 ### A.2 "Must Build First" Component Stack
 
