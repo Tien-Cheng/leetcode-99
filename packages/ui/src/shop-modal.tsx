@@ -41,6 +41,7 @@ export function ShopModal({
       // Number keys 1-5 for quick purchase
       const num = parseInt(e.key);
       if (num >= 1 && num <= items.length) {
+        e.preventDefault();
         const item = items[num - 1];
         if (item && !item.isDisabled && score >= item.cost && !item.cooldownRemaining) {
           onPurchase(item.id);
