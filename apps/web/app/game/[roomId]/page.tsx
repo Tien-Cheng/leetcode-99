@@ -17,6 +17,7 @@ import {
   EffectsOverlay,
   ScoreDisplay,
   useGameEffects,
+  MatchResultsModal,
 } from "@leet99/ui";
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
@@ -58,6 +59,8 @@ function GamePageContent() {
 
   // Effects system
   const { triggerEffect } = useGameEffects();
+
+  const router = useRouter();
 
   // Hotkey state
   const { vimMode, setVimMode } = useHotkeys();
