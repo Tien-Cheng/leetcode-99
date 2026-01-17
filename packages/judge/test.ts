@@ -244,7 +244,7 @@ async function main() {
       console.log(`\n📝 Using Python language ID: ${python313Id}\n`);
       config.pythonLanguageId = python313Id;
     } else {
-      console.log("\n⚠️  Python 3.13.2 not found. Using default (Python 3.8.1, ID: 71)");
+      console.log("\n⚠️  Python 3.13.2 not found. Using default (Python 3.10.0, ID: 92)");
       console.log("   For Python 3.13.2, you'll need a self-hosted Judge0 instance.\n");
     }
     

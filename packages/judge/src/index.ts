@@ -49,14 +49,14 @@ function log(level: "info" | "warn" | "error", message: string, context?: LogCon
 
 /**
  * Judge0 language IDs for Python
- * - Python 3.8.1: 71 (Judge0 CE default)
- * - Python 3.10.0: 92 (if available in some instances)
+ * - Python 3.8.1: 71
+ * - Python 3.10.0: 92 (default)
  * - Python 3.13.2: Not available in Judge0 CE/Extra CE (requires self-hosted instance)
  *
- * We default to 71 (Python 3.8.1) for maximum compatibility with Judge0 CE via RapidAPI.
- * For newer Python versions, use a self-hosted Judge0 instance and set pythonLanguageId in config.
+ * We default to 92 (Python 3.10.0) for better language features and type hint support.
+ * For Python 3.8.1 compatibility, set pythonLanguageId to 71 in config.
  */
-const PYTHON3_LANGUAGE_ID = 71; // Python 3.8.1 (default for Judge0 CE compatibility)
+const PYTHON3_LANGUAGE_ID = 92; // Python 3.10.0 (default)
 
 /**
  * Judge0 status IDs
@@ -83,8 +83,8 @@ export interface JudgeConfig {
   /** RapidAPI host header (e.g., judge0-ce.p.rapidapi.com) - only needed for RapidAPI */
   rapidApiHost?: string;
   /**
-   * Python language ID (default: 71 for Python 3.8.1)
-   * For Python 3.13.2 or other versions, use a self-hosted Judge0 instance
+   * Python language ID (default: 92 for Python 3.10.0)
+   * For Python 3.8.1, set to 71. For Python 3.13.2 or other versions, use a self-hosted Judge0 instance
    * and set this to the appropriate language ID
    */
   pythonLanguageId?: number;
@@ -160,7 +160,7 @@ export async function getAvailableLanguages(
 interface Judge0Submission {
   /** Source code to execute */
   source_code: string;
-  /** Language ID (e.g., 71 for Python 3.8.1) */
+  /** Language ID (e.g., 92 for Python 3.10.0) */
   language_id: number;
   /** Standard input (optional) */
   stdin?: string;
@@ -635,7 +635,7 @@ async function executeTests(
 
 /**
  * Convert Python 3.9+ type hints to Python 3.8 compatible syntax if needed.
- * Only converts if using Python 3.8 (language ID 71).
+ * Only converts if using Python 3.8.1 (language ID 71).
  *
  * Converts:
  * - list[int] -> List[int]
@@ -688,7 +688,7 @@ function convertTypeHintsIfNeeded(code: string, languageId: number): string {
  * Build the test harness code that wraps user code and runs tests.
  *
  * The harness:
- * 1. Includes the user's code (with Python 3.8 compatibility conversions if needed)
+ * 1. Includes the user's code (with Python 3.8.1 compatibility conversions if needed)
  * 2. Runs each test case by calling the function with the inputs
  * 3. Compares the result with the expected output
  * 4. Prints structured output: "PASS <index>", "FAIL <index> expected=<x> got=<y>", or "ERROR <index> <msg>"
@@ -696,7 +696,7 @@ function convertTypeHintsIfNeeded(code: string, languageId: number): string {
  * @param userCode - The user's solution code
  * @param functionName - Name of the function to test
  * @param testCases - Array of test cases with input and output
- * @param languageId - Judge0 language ID (defaults to Python 3.8.1)
+ * @param languageId - Judge0 language ID (defaults to Python 3.10.0)
  * @returns Complete Python code ready for Judge0 execution
  */
 export function buildTestHarness(
@@ -705,7 +705,7 @@ export function buildTestHarness(
   testCases: TestCase[],
   languageId: number = PYTHON3_LANGUAGE_ID,
 ): string {
-  // Convert type hints if using Python 3.8 (only needed for language ID 71)
+  // Convert type hints if using Python 3.8.1 (only needed for language ID 71)
   const compatibleCode = convertTypeHintsIfNeeded(userCode, languageId);
 
   const testCode = testCases
