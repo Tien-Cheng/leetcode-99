@@ -18,7 +18,7 @@ export type MatchPublic = {
 };
 
 const DEFAULT_SETTINGS: RoomSettings = {
-  matchDurationSec: 600,
+  matchDurationSec: 120,
   playerCap: 8,
   stackLimit: 10,
   startingQueued: 2,

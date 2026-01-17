@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Panel,
   EditorWrapper,
@@ -14,6 +15,9 @@ import {
   Timer,
   Button,
   MatchResultsModal,
+  EffectsOverlay,
+  ScoreDisplay,
+  useGameEffects,
 } from "@leet99/ui";
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
@@ -62,6 +66,12 @@ function GamePageContent() {
   const [codeVersion, setCodeVersion] = useState(1);
   const [shopOpen, setShopOpen] = useState(false);
   const [targetingOpen, setTargetingOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // Track previous values for effect triggers
+  const prevScoreRef = useRef(score);
+  const prevDebuffRef = useRef(activeDebuff);
 
   // Update code when problem changes
   useEffect(() => {
@@ -70,6 +80,25 @@ function GamePageContent() {
       setCodeVersion(1);
     }
   }, [currentProblem?.problemId]);
+
+  // Trigger effects on score change
+  useEffect(() => {
+    if (score > prevScoreRef.current) {
+      triggerEffect("success");
+      if (score - prevScoreRef.current >= 10) {
+        triggerEffect("confetti");
+      }
+    }
+    prevScoreRef.current = score;
+  }, [score, triggerEffect]);
+
+  // Trigger effects on attack received
+  useEffect(() => {
+    if (activeDebuff && !prevDebuffRef.current) {
+      triggerEffect("attack");
+    }
+    prevDebuffRef.current = activeDebuff;
+  }, [activeDebuff, triggerEffect]);
 
   // Debounced code update for spectators
   useEffect(() => {
@@ -88,18 +117,28 @@ function GamePageContent() {
   };
 
   // Handle Run code
-  const handleRun = async () => {
-    if (activeDebuff?.type === "ddos") {
-      // Cannot run while DDOS active
+  const handleRun = useCallback(async () => {
+    if (activeDebuff?.type === "ddos" || isRunning) {
       return;
     }
-    await runCode(code);
-  };
+    setIsRunning(true);
+    try {
+      await runCode(code);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activeDebuff, code, isRunning, runCode]);
 
   // Handle Submit code
-  const handleSubmit = async () => {
-    await submitCode(code);
-  };
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await submitCode(code);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [code, isSubmitting, submitCode]);
 
   // Handle shop toggle
   const handleShopToggle = () => {
@@ -117,9 +156,24 @@ function GamePageContent() {
   useKeyboardShortcuts({
     shortcuts: [
       { key: "r", altKey: true, action: handleRun, description: "Run Code" },
-      { key: "s", altKey: true, action: handleSubmit, description: "Submit Code" },
-      { key: "b", altKey: true, action: handleShopToggle, description: "Toggle Shop" },
-      { key: "t", altKey: true, action: handleTargetingToggle, description: "Targeting Mode" },
+      {
+        key: "s",
+        altKey: true,
+        action: handleSubmit,
+        description: "Submit Code",
+      },
+      {
+        key: "b",
+        altKey: true,
+        action: handleShopToggle,
+        description: "Toggle Shop",
+      },
+      {
+        key: "t",
+        altKey: true,
+        action: handleTargetingToggle,
+        description: "Targeting Mode",
+      },
     ],
     enabled: true,
   });
@@ -129,6 +183,19 @@ function GamePageContent() {
     const theme =
       activeDebuff?.type === "flashbang" ? "leet99-flashbang" : "leet99";
     document.documentElement.setAttribute("data-theme", theme);
+
+    // Add/remove flashbang transition class
+    if (activeDebuff?.type === "flashbang") {
+      document.documentElement.classList.add(
+        "transition-colors",
+        "duration-1000",
+      );
+    } else {
+      document.documentElement.classList.remove(
+        "transition-colors",
+        "duration-1000",
+      );
+    }
   }, [activeDebuff]);
 
   // Resizable state
@@ -146,7 +213,10 @@ function GamePageContent() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - startRef.current.x;
-      const newWidth = Math.min(Math.max(startRef.current.w + deltaX, 240), 600);
+      const newWidth = Math.min(
+        Math.max(startRef.current.w + deltaX, 240),
+        600,
+      );
       setProblemWidth(newWidth);
     };
 
@@ -172,7 +242,10 @@ function GamePageContent() {
     const handleMouseMove = (e: MouseEvent) => {
       // Delta is positive when dragging UP (terminal gets taller)
       const deltaY = startRef.current.y - e.clientY;
-      const newHeight = Math.min(Math.max(startRef.current.h + deltaY, 64), 600);
+      const newHeight = Math.min(
+        Math.max(startRef.current.h + deltaY, 64),
+        600,
+      );
       setTerminalHeight(newHeight);
     };
 
@@ -192,12 +265,22 @@ function GamePageContent() {
   }, [isResizingHeight]);
 
   const startWidthResize = (e: React.MouseEvent) => {
-    startRef.current = { x: e.clientX, y: e.clientY, w: problemWidth, h: terminalHeight };
+    startRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      w: problemWidth,
+      h: terminalHeight,
+    };
     setIsResizingWidth(true);
   };
 
   const startHeightResize = (e: React.MouseEvent) => {
-    startRef.current = { x: e.clientX, y: e.clientY, w: problemWidth, h: terminalHeight };
+    startRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      w: problemWidth,
+      h: terminalHeight,
+    };
     setIsResizingHeight(true);
   };
 
@@ -214,9 +297,11 @@ function GamePageContent() {
       username: p.username,
       status: p.status as "coding" | "error" | "underAttack" | "eliminated",
       isBot: p.role === "bot",
+      score: p.score,
+      activeDebuff: p.activeDebuff,
     }));
 
-  // Terminal messages
+  // Terminal messages with enhanced types
   const terminalMessages = eventLog.map((entry: EventLogEntry) => ({
     type: (entry.level === "error"
       ? "danger"
@@ -247,28 +332,49 @@ function GamePageContent() {
 
   return (
     <main className="flex h-screen flex-col p-2 overflow-hidden relative">
+      {/* Effects Overlay */}
+      <EffectsOverlay
+        ddosActive={ddosActive}
+        memoryLeakActive={memoryLeakActive}
+      />
+
       {/* Resizing Overlay to prevent Monaco interference */}
       {(isResizingWidth || isResizingHeight) && (
         <div className="fixed inset-0 z-[100] cursor-move" />
       )}
+
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
         <Timer
           endsAt={matchEndAt || new Date().toISOString()}
           serverTime={serverTime || new Date().toISOString()}
         />
-        <div className="font-mono text-sm text-muted">
-          Room: {roomId} {!isConnected && <span className="text-error">(Disconnected)</span>}
+        <div className="font-mono text-sm text-muted flex items-center gap-2">
+          Room: <span className="text-primary">{roomId}</span>
+          {!isConnected && (
+            <span className="text-error animate-pulse">(Disconnected)</span>
+          )}
+          {activeDebuff && (
+            <span
+              className={`
+              px-2 py-0.5 text-xs font-bold border
+              ${activeDebuff.type === "ddos" ? "border-error text-error animate-pulse" : ""}
+              ${activeDebuff.type === "flashbang" ? "border-warning text-warning" : ""}
+              ${activeDebuff.type === "vimLock" ? "border-success text-success vim-cursor-blink" : ""}
+              ${activeDebuff.type === "memoryLeak" ? "border-warning text-warning glitch-text" : ""}
+            `}
+              data-text={`[${activeDebuff.type.toUpperCase()}]`}
+            >
+              [{activeDebuff.type.toUpperCase()}]
+            </span>
+          )}
         </div>
       </div>
 
       {/* Main Game Layout */}
       <div className="flex flex-1 gap-1 min-h-0">
         {/* Left: Problem Panel */}
-        <div
-          className="flex-shrink-0"
-          style={{ width: `${problemWidth}px` }}
-        >
+        <div className="flex-shrink-0" style={{ width: `${problemWidth}px` }}>
           {currentProblem ? (
             <ProblemDisplay
               problem={{
@@ -291,8 +397,8 @@ function GamePageContent() {
             />
           ) : (
             <Panel title="PROBLEM" className="h-full">
-              <div className="flex items-center justify-center h-full text-muted font-mono text-sm">
-                No active problem
+              <div className="flex items-center justify-center h-full text-muted font-mono text-sm animate-pulse">
+                Loading problem...
               </div>
             </Panel>
           )}
@@ -306,7 +412,11 @@ function GamePageContent() {
 
         {/* Center: Editor */}
         <div className="flex-1 flex flex-col gap-1 min-w-0">
-          <Panel title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`} className="flex-1 min-h-0" noPadding>
+          <Panel
+            title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`}
+            className={`flex-1 min-h-0 ${vimLocked ? "vim-cursor-blink" : ""}`}
+            noPadding
+          >
             <EditorWrapper
               code={code}
               onChange={handleCodeChange}
@@ -329,50 +439,66 @@ function GamePageContent() {
             className="flex-shrink-0"
             style={{ height: `${terminalHeight}px` }}
           >
-            <Panel
-              title="TERMINAL LOG"
-              className="h-full"
-              noPadding
-            >
+            <Panel title="TERMINAL LOG" className="h-full" noPadding>
               <TerminalLog messages={terminalMessages} />
             </Panel>
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0">
+          <div
+            className={`
+            flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0
+            transition-all duration-300
+            ${ddosActive ? "border-error animate-pulse-red" : ""}
+          `}
+          >
             <Button
               variant="primary"
               hotkey="Alt+R"
               onClick={handleRun}
-              disabled={ddosActive}
-              className={ddosActive ? "animate-pulse border-error text-error" : ""}
+              disabled={ddosActive || isRunning}
+              className={`
+                transition-all duration-200
+                ${ddosActive ? "opacity-50 cursor-not-allowed" : ""}
+                ${isRunning ? "animate-pulse" : ""}
+              `}
             >
-              Run
+              {isRunning ? "Running..." : "Run"}
             </Button>
-            <Button variant="primary" hotkey="Alt+S" onClick={handleSubmit}>
-              Submit
+            <Button
+              variant="primary"
+              hotkey="Alt+S"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className={isSubmitting ? "animate-pulse" : ""}
+            >
+              {isSubmitting ? "Submitting..." : "Submit"}
             </Button>
-            <Button variant="secondary" hotkey="Alt+B" onClick={handleShopToggle}>
+            <Button
+              variant="secondary"
+              hotkey="Alt+B"
+              onClick={handleShopToggle}
+            >
               Shop
             </Button>
-            <Button variant="secondary" hotkey="Alt+T" onClick={handleTargetingToggle}>
+            <Button
+              variant="secondary"
+              hotkey="Alt+T"
+              onClick={handleTargetingToggle}
+            >
               Target
             </Button>
             <div className="flex-1"></div>
-            <div className="font-mono text-sm">
-              Score: <span className="text-accent">{score}</span>
+
+            {/* Score Display with animations */}
+            <ScoreDisplay score={score} streak={solveStreak} />
+
+            <div className="font-mono text-xs text-muted max-w-[120px] truncate text-right">
+              T:{" "}
+              <span className="text-primary">
+                {targetingMode.toUpperCase()}
+              </span>
             </div>
-            <div className="font-mono text-sm">
-              Streak: <span className="text-warning">{solveStreak}</span>
-            </div>
-            <div className="font-mono text-xs text-muted">
-              Target: <span className="text-primary">{targetingMode.toUpperCase()}</span>
-            </div>
-            {activeDebuff && (
-              <div className="font-mono text-xs text-error">
-                [{activeDebuff.type.toUpperCase()}]
-              </div>
-            )}
           </div>
         </div>
 
@@ -382,28 +508,24 @@ function GamePageContent() {
           <Panel title="MINIMAP" className="flex-shrink-0">
             <Minimap
               players={minimapPlayers}
-              selfId={playersPublic.find((p) => p.username === "You")?.playerId || ""}
+              selfId={playerId || ""}
               targetId={undefined}
               onPlayerClick={(id) => console.log("Target player:", id)}
             />
           </Panel>
 
           {/* Stack */}
-          <Panel
-            title={`STACK (${problemStack.length}/${roomSettings?.stackLimit || 10})`}
-            className="flex-1 min-h-0 overflow-hidden"
-          >
-            <StackPanel
-              stack={problemStack.map((p, index) => ({
-                id: `${p.problemId}-${index}`,
-                title: p.title,
-                difficulty: p.difficulty,
-                isGarbage: p.isGarbage,
-              }))}
-              stackLimit={roomSettings?.stackLimit || 10}
-              memoryLeakActive={memoryLeakActive}
-            />
-          </Panel>
+          <StackPanel
+            stack={problemStack.map((p, index) => ({
+              id: `${p.problemId}-${index}`,
+              title: p.title,
+              difficulty: p.difficulty,
+              isGarbage: p.isGarbage,
+            }))}
+            stackLimit={roomSettings?.stackLimit || 10}
+            memoryLeakActive={memoryLeakActive}
+            className="flex-1 min-h-0"
+          />
         </div>
       </div>
 

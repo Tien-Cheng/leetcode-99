@@ -1,6 +1,5 @@
 import usePartySocket from "partysocket/react";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import {
     type WSMessage,
     type RoomSnapshotPayload,
@@ -10,7 +9,10 @@ import {
 } from "@leet99/contracts";
 
 const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
-const PARTY_NAME = process.env.NEXT_PUBLIC_PARTYKIT_PARTY || "main";
+const PARTY_NAME =
+    process.env.NEXT_PUBLIC_PARTYKIT_PARTY ||
+    process.env.NEXT_PUBLIC_PARTYKIT_PROJECT ||
+    "leet99";
 
 type PartySocketConfig = {
     host: string;
@@ -39,38 +41,27 @@ function parsePartySocketConfig(wsUrl: string): PartySocketConfig | null {
     }
 }
 
-type StoredAuth = {
+export type StoredAuth = {
     roomId: string;
     playerId: string;
     playerToken: string;
     wsUrl: string;
 };
 
-export function useRoom(roomId: string) {
-    const router = useRouter();
+export function useRoom(roomId: string, auth: StoredAuth) {
     const [snapshot, setSnapshot] = useState<RoomSnapshotPayload | null>(null);
     const [connected, setConnected] = useState(false);
-
-    // Get auth from local storage
-    const [auth, setAuth] = useState<StoredAuth | null>(null);
-
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const item = localStorage.getItem(`room_${roomId}`);
-            if (item) {
-                setAuth(JSON.parse(item));
-            } else {
-                // No auth token, router logic handled in page or middleware
-            }
-        }
-    }, [roomId]);
+    const [connectionNonce, setConnectionNonce] = useState(0);
 
     const parsed = auth?.wsUrl ? parsePartySocketConfig(auth.wsUrl) : null;
     const socket = usePartySocket({
         host: parsed?.host ?? normalizePartyHost(PARTY_HOST),
         room: parsed?.room || roomId,
         party: parsed?.party || PARTY_NAME,
-        onOpen: () => setConnected(true),
+        onOpen: () => {
+            setConnected(true);
+            setConnectionNonce((count) => count + 1);
+        },
         onClose: () => setConnected(false),
         onMessage: (evt) => {
             const msg = JSON.parse(evt.data);
@@ -133,14 +124,16 @@ export function useRoom(roomId: string) {
 
     // Handle joining
     useEffect(() => {
-        if (socket && connected && auth) {
-            const msg: WSMessage<"JOIN_ROOM", JoinRoomPayload> = {
-                type: "JOIN_ROOM",
-                payload: { playerToken: auth.playerToken },
-            };
-            socket.send(JSON.stringify(msg));
+        if (!socket || !auth) return;
+        if (typeof WebSocket !== "undefined" && socket.readyState !== WebSocket.OPEN) {
+            return;
         }
-    }, [socket, connected, auth]);
+        const msg: WSMessage<"JOIN_ROOM", JoinRoomPayload> = {
+            type: "JOIN_ROOM",
+            payload: { playerToken: auth.playerToken },
+        };
+        socket.send(JSON.stringify(msg));
+    }, [socket, auth, connectionNonce]);
 
     const startMatch = useCallback(() => {
         console.log("[useRoom] startMatch called", { socketReady: !!socket });

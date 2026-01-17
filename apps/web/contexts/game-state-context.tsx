@@ -7,6 +7,7 @@ import type {
   MatchEndPayload,
   StandingEntry,
   RoomSnapshotPayload,
+  MatchStartedPayload,
   PlayerPublic,
   RoomSettings,
   MatchPhase,
