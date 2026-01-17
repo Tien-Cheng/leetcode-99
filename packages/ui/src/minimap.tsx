@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 export interface MinimapPlayer {
   id: string;
   username: string;
   status: "coding" | "error" | "underAttack" | "eliminated";
   isBot?: boolean;
+  isTyping?: boolean;
+  lastScoreChange?: { value: number; at: number };
 }
 
 export interface MinimapProps {
@@ -18,7 +20,7 @@ export interface MinimapProps {
 
 /**
  * Minimap component - compact grid showing player statuses
- * Color-coded tiles with 2-char abbreviations
+ * Enhanced with typing indicators, score changes, and elimination effects
  */
 export function Minimap({
   players,
@@ -28,18 +30,56 @@ export function Minimap({
   onPlayerClick,
   className = "",
 }: MinimapProps) {
-  const getStatusColor = (status: MinimapPlayer["status"]) => {
-    switch (status) {
+  const [recentEliminations, setRecentEliminations] = useState<Set<string>>(new Set());
+
+  // Track eliminations for explosion effect
+  useEffect(() => {
+    const eliminated = players.filter(p => p.status === "eliminated").map(p => p.id);
+    const newEliminations = eliminated.filter(id => !recentEliminations.has(id));
+
+    if (newEliminations.length > 0) {
+      setRecentEliminations(prev => new Set([...prev, ...newEliminations]));
+
+      // Clear explosion effect after animation
+      setTimeout(() => {
+        setRecentEliminations(prev => {
+          const next = new Set(prev);
+          newEliminations.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 500);
+    }
+  }, [players, recentEliminations]);
+
+  const getStatusStyles = (player: MinimapPlayer) => {
+    const isExploding = recentEliminations.has(player.id);
+
+    switch (player.status) {
       case "coding":
-        return "border-success bg-success/10";
+        return `border-success bg-success/10 ${player.isTyping ? "animate-typing" : ""}`;
       case "error":
-        return "border-error bg-error/10";
+        return "border-error bg-error/10 animate-pulse";
       case "underAttack":
-        return "border-warning bg-warning/10 animate-pulse-amber";
+        return "border-warning bg-warning/20 animate-shake";
       case "eliminated":
-        return "border-secondary/50 bg-base-300 opacity-50";
+        return `border-secondary/50 bg-base-300 opacity-50 ${isExploding ? "animate-explosion" : ""}`;
       default:
         return "border-secondary";
+    }
+  };
+
+  const getStatusIcon = (status: MinimapPlayer["status"]) => {
+    switch (status) {
+      case "coding":
+        return null;
+      case "error":
+        return <span className="absolute -top-1 -right-1 text-[8px]">⚠</span>;
+      case "underAttack":
+        return <span className="absolute -top-1 -right-1 text-[8px] animate-pulse">⚔</span>;
+      case "eliminated":
+        return <span className="absolute -top-1 -right-1 text-[8px]">☠</span>;
+      default:
+        return null;
     }
   };
 
@@ -54,6 +94,8 @@ export function Minimap({
         const isTarget = player.id === targetId;
         const isSpectating = player.id === spectatingId;
         const isEliminated = player.status === "eliminated";
+        const hasScoreChange = player.lastScoreChange &&
+          Date.now() - player.lastScoreChange.at < 2000;
 
         return (
           <button
@@ -61,19 +103,44 @@ export function Minimap({
             onClick={() => !isEliminated && onPlayerClick?.(player.id)}
             disabled={isEliminated}
             className={`
-              aspect-square flex items-center justify-center
+              aspect-square flex items-center justify-center relative
               border text-xs font-mono
-              ${getStatusColor(player.status)}
-              ${isSelf ? "border-primary glow-primary" : ""}
-              ${!isEliminated && onPlayerClick ? "hover:border-primary/50 cursor-pointer" : "cursor-default"}
+              ${getStatusStyles(player)}
+              ${isSelf ? "border-primary glow-primary border-2" : ""}
+              ${isTarget ? "ring-2 ring-accent ring-offset-1 ring-offset-base-100" : ""}
+              ${!isEliminated && onPlayerClick ? "hover:border-primary/50 cursor-pointer hover:scale-105" : "cursor-default"}
               ${isEliminated ? "line-through" : ""}
-              transition-all duration-100
+              transition-all duration-150
             `}
-            title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""}`}
+            title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""}${isEliminated ? " [ELIMINATED]" : ""}`}
           >
-            {isSpectating && <span className="mr-1">▶</span>}
-            {isTarget && !isSpectating && <span className="absolute top-0 right-0 text-[8px]">⊕</span>}
-            {getAbbreviation(player.username)}
+            {/* Status icon */}
+            {getStatusIcon(player.status)}
+
+            {/* Spectating indicator */}
+            {isSpectating && <span className="absolute -top-1 -left-1 text-[10px] text-primary">👁</span>}
+
+            {/* Score change indicator */}
+            {hasScoreChange && player.lastScoreChange && (
+              <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[8px] text-success animate-fly-up font-bold">
+                +{player.lastScoreChange.value}
+              </span>
+            )}
+
+            {/* Target indicator */}
+            {isTarget && !isSpectating && (
+              <span className="absolute -top-1 -right-1 text-[10px] text-accent animate-pulse">⊕</span>
+            )}
+
+            {/* Bot indicator */}
+            {player.isBot && (
+              <span className="absolute -bottom-1 -right-1 text-[6px] text-warning">🤖</span>
+            )}
+
+            {/* Username abbreviation */}
+            <span className={isSelf ? "font-bold" : ""}>
+              {getAbbreviation(player.username)}
+            </span>
           </button>
         );
       })}

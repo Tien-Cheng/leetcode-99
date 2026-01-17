@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Panel,
   EditorWrapper,
@@ -13,6 +13,9 @@ import {
   TargetingModal,
   Timer,
   Button,
+  EffectsOverlay,
+  ScoreDisplay,
+  useGameEffects,
 } from "@leet99/ui";
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
@@ -44,7 +47,11 @@ function GamePageContent() {
     purchaseItem,
     setTargetMode,
     updateCode,
+    playerId,
   } = useGameState();
+
+  // Effects system
+  const { triggerEffect } = useGameEffects();
 
   // Hotkey state
   const { vimMode, setVimMode } = useHotkeys();
@@ -54,6 +61,12 @@ function GamePageContent() {
   const [codeVersion, setCodeVersion] = useState(1);
   const [shopOpen, setShopOpen] = useState(false);
   const [targetingOpen, setTargetingOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // Track previous values for effect triggers
+  const prevScoreRef = useRef(score);
+  const prevDebuffRef = useRef(activeDebuff);
 
   // Update code when problem changes
   useEffect(() => {
@@ -62,6 +75,25 @@ function GamePageContent() {
       setCodeVersion(1);
     }
   }, [currentProblem?.problemId]);
+
+  // Trigger effects on score change
+  useEffect(() => {
+    if (score > prevScoreRef.current) {
+      triggerEffect("success");
+      if (score - prevScoreRef.current >= 10) {
+        triggerEffect("confetti");
+      }
+    }
+    prevScoreRef.current = score;
+  }, [score, triggerEffect]);
+
+  // Trigger effects on attack received
+  useEffect(() => {
+    if (activeDebuff && !prevDebuffRef.current) {
+      triggerEffect("attack");
+    }
+    prevDebuffRef.current = activeDebuff;
+  }, [activeDebuff, triggerEffect]);
 
   // Debounced code update for spectators
   useEffect(() => {
@@ -80,18 +112,28 @@ function GamePageContent() {
   };
 
   // Handle Run code
-  const handleRun = async () => {
-    if (activeDebuff?.type === "ddos") {
-      // Cannot run while DDOS active
+  const handleRun = useCallback(async () => {
+    if (activeDebuff?.type === "ddos" || isRunning) {
       return;
     }
-    await runCode(code);
-  };
+    setIsRunning(true);
+    try {
+      await runCode(code);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activeDebuff, code, isRunning, runCode]);
 
   // Handle Submit code
-  const handleSubmit = async () => {
-    await submitCode(code);
-  };
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await submitCode(code);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [code, isSubmitting, submitCode]);
 
   // Handle shop toggle
   const handleShopToggle = () => {
@@ -121,6 +163,13 @@ function GamePageContent() {
     const theme =
       activeDebuff?.type === "flashbang" ? "leet99-flashbang" : "leet99";
     document.documentElement.setAttribute("data-theme", theme);
+
+    // Add/remove flashbang transition class
+    if (activeDebuff?.type === "flashbang") {
+      document.documentElement.classList.add("transition-colors", "duration-1000");
+    } else {
+      document.documentElement.classList.remove("transition-colors", "duration-1000");
+    }
   }, [activeDebuff]);
 
   // Resizable state
@@ -208,31 +257,54 @@ function GamePageContent() {
       isBot: p.role === "bot",
     }));
 
-  // Terminal messages
+  // Terminal messages with enhanced types
   const terminalMessages = eventLog.map((entry: EventLogEntry) => ({
     type: (entry.level === "error"
       ? "danger"
       : entry.level === "warning"
         ? "warning"
-        : "info") as "info" | "success" | "warning" | "danger" | "system",
+        : entry.level === "success"
+          ? "success"
+          : "info") as "info" | "success" | "warning" | "danger" | "system",
     content: entry.message,
     timestamp: new Date(entry.at).toLocaleTimeString(),
   }));
 
   return (
     <main className="flex h-screen flex-col p-2 overflow-hidden relative">
+      {/* Effects Overlay */}
+      <EffectsOverlay
+        ddosActive={ddosActive}
+        memoryLeakActive={memoryLeakActive}
+      />
+
       {/* Resizing Overlay to prevent Monaco interference */}
       {(isResizingWidth || isResizingHeight) && (
         <div className="fixed inset-0 z-[100] cursor-move" />
       )}
+
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
         <Timer
           endsAt={matchEndAt || new Date().toISOString()}
           serverTime={serverTime || new Date().toISOString()}
         />
-        <div className="font-mono text-sm text-muted">
-          Room: {roomId} {!isConnected && <span className="text-error">(Disconnected)</span>}
+        <div className="font-mono text-sm text-muted flex items-center gap-2">
+          Room: <span className="text-primary">{roomId}</span>
+          {!isConnected && (
+            <span className="text-error animate-pulse">(Disconnected)</span>
+          )}
+          {activeDebuff && (
+            <span className={`
+              px-2 py-0.5 text-xs font-bold border
+              ${activeDebuff.type === "ddos" ? "border-error text-error animate-pulse" : ""}
+              ${activeDebuff.type === "flashbang" ? "border-warning text-warning" : ""}
+              ${activeDebuff.type === "vimLock" ? "border-success text-success vim-cursor-blink" : ""}
+              ${activeDebuff.type === "memoryLeak" ? "border-warning text-warning glitch-text" : ""}
+            `} data-text={`[${activeDebuff.type.toUpperCase()}]`}>
+              [{activeDebuff.type.toUpperCase()}]
+            </span>
+          )}
         </div>
       </div>
 
@@ -265,8 +337,8 @@ function GamePageContent() {
             />
           ) : (
             <Panel title="PROBLEM" className="h-full">
-              <div className="flex items-center justify-center h-full text-muted font-mono text-sm">
-                No active problem
+              <div className="flex items-center justify-center h-full text-muted font-mono text-sm animate-pulse">
+                Loading problem...
               </div>
             </Panel>
           )}
@@ -280,7 +352,11 @@ function GamePageContent() {
 
         {/* Center: Editor */}
         <div className="flex-1 flex flex-col gap-1 min-w-0">
-          <Panel title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`} className="flex-1 min-h-0" noPadding>
+          <Panel
+            title={`EDITOR${vimLocked ? " [VIM LOCKED]" : vimMode ? " [VIM]" : ""}`}
+            className={`flex-1 min-h-0 ${vimLocked ? "vim-cursor-blink" : ""}`}
+            noPadding
+          >
             <EditorWrapper
               code={code}
               onChange={handleCodeChange}
@@ -313,18 +389,32 @@ function GamePageContent() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0">
+          <div className={`
+            flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0
+            transition-all duration-300
+            ${ddosActive ? "border-error animate-pulse-red" : ""}
+          `}>
             <Button
               variant="primary"
               hotkey="Alt+R"
               onClick={handleRun}
-              disabled={ddosActive}
-              className={ddosActive ? "animate-pulse border-error text-error" : ""}
+              disabled={ddosActive || isRunning}
+              className={`
+                transition-all duration-200
+                ${ddosActive ? "opacity-50 cursor-not-allowed" : ""}
+                ${isRunning ? "animate-pulse" : ""}
+              `}
             >
-              Run
+              {isRunning ? "Running..." : "Run"}
             </Button>
-            <Button variant="primary" hotkey="Alt+S" onClick={handleSubmit}>
-              Submit
+            <Button
+              variant="primary"
+              hotkey="Alt+S"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className={isSubmitting ? "animate-pulse" : ""}
+            >
+              {isSubmitting ? "Submitting..." : "Submit"}
             </Button>
             <Button variant="secondary" hotkey="Alt+B" onClick={handleShopToggle}>
               Shop
@@ -333,20 +423,13 @@ function GamePageContent() {
               Target
             </Button>
             <div className="flex-1"></div>
-            <div className="font-mono text-sm">
-              Score: <span className="text-accent">{score}</span>
-            </div>
-            <div className="font-mono text-sm">
-              Streak: <span className="text-warning">{solveStreak}</span>
-            </div>
+
+            {/* Score Display with animations */}
+            <ScoreDisplay score={score} streak={solveStreak} />
+
             <div className="font-mono text-xs text-muted">
               Target: <span className="text-primary">{targetingMode.toUpperCase()}</span>
             </div>
-            {activeDebuff && (
-              <div className="font-mono text-xs text-error">
-                [{activeDebuff.type.toUpperCase()}]
-              </div>
-            )}
           </div>
         </div>
 
@@ -356,28 +439,24 @@ function GamePageContent() {
           <Panel title="MINIMAP" className="flex-shrink-0">
             <Minimap
               players={minimapPlayers}
-              selfId={playersPublic.find((p) => p.username === "You")?.playerId || ""}
+              selfId={playerId || ""}
               targetId={undefined}
               onPlayerClick={(id) => console.log("Target player:", id)}
             />
           </Panel>
 
           {/* Stack */}
-          <Panel
-            title={`STACK (${problemStack.length}/${roomSettings?.stackLimit || 10})`}
-            className="flex-1 min-h-0 overflow-hidden"
-          >
-            <StackPanel
-              stack={problemStack.map((p, index) => ({
-                id: `${p.problemId}-${index}`,
-                title: p.title,
-                difficulty: p.difficulty,
-                isGarbage: p.isGarbage,
-              }))}
-              stackLimit={roomSettings?.stackLimit || 10}
-              memoryLeakActive={memoryLeakActive}
-            />
-          </Panel>
+          <StackPanel
+            stack={problemStack.map((p, index) => ({
+              id: `${p.problemId}-${index}`,
+              title: p.title,
+              difficulty: p.difficulty,
+              isGarbage: p.isGarbage,
+            }))}
+            stackLimit={roomSettings?.stackLimit || 10}
+            memoryLeakActive={memoryLeakActive}
+            className="flex-1 min-h-0"
+          />
         </div>
       </div>
 
