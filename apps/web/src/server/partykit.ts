@@ -143,7 +143,12 @@ export type FetchRoomStateOk = {
   data: {
     roomId: string;
     phase: string;
-    playerCount: number;
+    playerCount: number; // Total for backwards compatibility
+    playerCounts: {
+      players: number;
+      spectators: number;
+      bots: number;
+    };
     settings: Record<string, unknown>;
   };
 };
@@ -217,6 +222,11 @@ export async function fetchRoomState(
       roomId: z.string(),
       phase: z.string(),
       playerCount: z.number(),
+      playerCounts: z.object({
+        players: z.number(),
+        spectators: z.number(),
+        bots: z.number(),
+      }),
       settings: z.record(z.unknown()),
     })
     .safeParse(body);

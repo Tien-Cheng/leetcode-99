@@ -35,8 +35,8 @@ export async function GET(_req: Request, { params }: RouteParams) {
       ? settingsParsed.data
       : ({} as RoomSummaryResponse["settings"]),
     counts: {
-      players: result.data.playerCount,
-      spectators: 0,
+      players: result.data.playerCounts.players,
+      spectators: result.data.playerCounts.spectators,
     },
   };
 
