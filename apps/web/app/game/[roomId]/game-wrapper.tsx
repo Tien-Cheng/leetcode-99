@@ -26,14 +26,24 @@ export function GameWrapper({ children, roomId }: GameWrapperProps) {
         const auth = JSON.parse(stored);
         setPlayerId(auth.playerId);
         setPlayerToken(auth.playerToken);
-        // Use stored wsUrl or fallback
-        const url = auth.wsUrl || process.env.NEXT_PUBLIC_PARTYKIT_HOST
-          ? `ws://${process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999"}/parties/leet99/${roomId}`
-          : `ws://127.0.0.1:1999/parties/leet99/${roomId}`;
+        const partyHost =
+          process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
+        const partyName = process.env.NEXT_PUBLIC_PARTYKIT_PARTY || "main";
+        const hostUrl = partyHost.startsWith("http")
+          ? new URL(partyHost)
+          : null;
+        const wsProtocol = hostUrl
+          ? hostUrl.protocol === "https:"
+            ? "wss"
+            : "ws"
+          : window.location.protocol === "https:"
+            ? "wss"
+            : "ws";
+        const wsHost = hostUrl ? hostUrl.host : partyHost;
+        const fallbackUrl = `${wsProtocol}://${wsHost}/parties/${partyName}/${roomId}`;
 
-        // If the stored URL is from server, it might be fully qualified. 
-        // CreateRoom returns full wsUrl.
-        let finalUrl = auth.wsUrl || url;
+        // CreateRoom returns full wsUrl. Use it when present, otherwise fallback.
+        let finalUrl = auth.wsUrl || fallbackUrl;
         // Fix for potential IPv6 localhost issues
         if (finalUrl.includes("localhost")) {
           finalUrl = finalUrl.replace("localhost", "127.0.0.1");
