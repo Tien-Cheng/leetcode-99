@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Trophy, Crown, Home, LogOut, ArrowLeftRight, User, Bot } from "lucide-react";
+import { Trophy, Crown, LogOut, ArrowLeftRight, User, Bot } from "lucide-react";
 import { Button } from "./button";
 
 export interface StandingEntry {

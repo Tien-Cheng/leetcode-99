@@ -34,7 +34,7 @@ export function EditorWrapper({
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const vimAdapterRef = useRef<any>(null);
-  const [isVimActive, setIsVimActive] = useState(vimMode || vimLocked);
+  const [, setIsVimActive] = useState(vimMode || vimLocked);
 
   // Define custom themes before editor mounts
   const handleEditorWillMount = (monaco: typeof Monaco): void => {

@@ -1,5 +1,5 @@
 import { createServerClient } from "@leet99/supabase";
-import type { Database } from "@leet99/supabase";
+
 import type {
   MatchResultsResponse,
   LeaderboardResponse,
