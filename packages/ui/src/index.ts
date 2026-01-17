@@ -21,7 +21,12 @@ export * from "./shop-modal";
 export * from "./timer";
 export * from "./targeting-modal";
 
+// Dynamic effects components
+export * from "./effects-overlay";
+export * from "./score-display";
+
 // Editor wrapper
 export * from "./editor-wrapper";
 
 export const UI_VERSION = "0.1.0";
+
