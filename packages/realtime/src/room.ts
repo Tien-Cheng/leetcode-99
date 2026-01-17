@@ -40,6 +40,7 @@ import { randomUUID } from "node:crypto";
 
 import { applyPartyRegister } from "./register.ts";
 import PROBLEMS_DATA from "./problems.json" with { type: "json" };
+import { saveMatch, type MatchPlayerEntry } from "@leet99/supabase";
 
 // ============================================================================
 // Rate Limiting Constants (per spec section 6)
@@ -121,6 +122,8 @@ interface PlayerInternal {
   spectatingPlayerId?: string | null;
   // Bot simulation
   nextBotActionAt?: number;
+  // Elimination tracking
+  eliminatedAt?: string | null;
 }
 
 interface RoomState {
@@ -721,6 +724,7 @@ export default class Room implements Party.Server {
       p.stackSize = 0;
       p.activeDebuff = null;
       p.activeBuff = null;
+      p.eliminatedAt = null;
       p.recentAttackers = new Map();
       p.debuffGraceEndsAt = undefined;
       p.shopCooldowns = new Map();
@@ -1794,9 +1798,13 @@ export default class Room implements Party.Server {
       score: p.score,
     }));
 
+    // Set actual end time
+    const actualEndAt = new Date().toISOString();
+
     // Update match state
     this.state.match.phase = "ended";
     this.state.match.endReason = endReason;
+    this.state.match.endAt = actualEndAt;
 
     // Clear scheduled arrivals
     this.state.nextProblemArrivalAt = null;
@@ -1813,8 +1821,42 @@ export default class Room implements Party.Server {
       },
     });
 
-    // Persist
+    // Persist to PartyKit storage
     await this.persistState();
+
+    // Persist to Supabase (Section 9.2)
+    const matchPlayers: MatchPlayerEntry[] = sorted
+      .filter((p) => p.role === "player" || p.role === "bot")
+      .map((p, i) => ({
+        playerId: p.playerId,
+        username: p.username,
+        role: p.role as "player" | "bot",
+        score: p.score,
+        rank: i + 1,
+        eliminatedAt: p.eliminatedAt ?? null,
+      }));
+
+    const saveResult = await saveMatch(
+      this.state.match.matchId!,
+      this.state.roomId,
+      this.state.match.startAt!,
+      actualEndAt,
+      endReason,
+      this.state.match.settings,
+      matchPlayers,
+    );
+
+    if (!saveResult.ok) {
+      console.error(
+        `[${this.state.roomId}] Failed to persist match to Supabase:`,
+        saveResult.error,
+      );
+      // Continue anyway - match end is already broadcast
+    } else {
+      console.log(
+        `[${this.state.roomId}] Match persisted to Supabase: ${this.state.match.matchId}`,
+      );
+    }
 
     this.addEventLog(
       "info",
@@ -2080,6 +2122,7 @@ export default class Room implements Party.Server {
     if (player.stackSize >= this.state.match.settings.stackLimit) {
       // Eliminate player
       player.status = "eliminated";
+      player.eliminatedAt = new Date().toISOString();
       player.stackSize = player.stackSize + 1; // Show overflow
       this.addEventLog(
         "warning",

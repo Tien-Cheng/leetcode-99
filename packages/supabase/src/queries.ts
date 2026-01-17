@@ -4,6 +4,8 @@ import type {
   MatchResultsResponse,
   LeaderboardResponse,
   RoomMatchHistoryResponse,
+  RoomSettings,
+  MatchEndReason,
 } from "@leet99/contracts";
 
 export async function getMatchResults(
@@ -124,4 +126,73 @@ export async function getRoomMatches(
   };
 
   return { ok: true, data: response };
+}
+
+/**
+ * Match player entry for persistence
+ */
+export interface MatchPlayerEntry {
+  playerId: string;
+  username: string;
+  role: "player" | "bot";
+  score: number;
+  rank: number;
+  eliminatedAt: string | null;
+}
+
+/**
+ * Persist match results to Supabase (Section 9.2)
+ * Called at the end of each match to save match data and player standings.
+ */
+export async function saveMatch(
+  matchId: string,
+  roomId: string,
+  startAt: string,
+  endAt: string,
+  endReason: MatchEndReason,
+  settings: RoomSettings,
+  players: MatchPlayerEntry[],
+): Promise<{ ok: true } | { ok: false; error: Error }> {
+  const supabase = createServerClient();
+
+  // Insert match record
+  const { error: matchError } = await supabase.from("matches").insert({
+    id: matchId,
+    room_id: roomId,
+    started_at: startAt,
+    ended_at: endAt,
+    end_reason: endReason,
+    settings: settings as unknown as Record<string, unknown>,
+  });
+
+  if (matchError) {
+    return { ok: false, error: new Error(matchError.message) };
+  }
+
+  // Insert player records (filter out spectators)
+  const playerRecords = players
+    .filter((p) => p.role === "player" || p.role === "bot")
+    .map((p) => ({
+      match_id: matchId,
+      player_id: p.playerId,
+      username: p.username,
+      role: p.role,
+      score: p.score,
+      rank: p.rank,
+      eliminated_at: p.eliminatedAt,
+    }));
+
+  if (playerRecords.length > 0) {
+    const { error: playersError } = await supabase
+      .from("match_players")
+      .insert(playerRecords);
+
+    if (playersError) {
+      // Attempt to clean up the match record if players failed
+      await supabase.from("matches").delete().eq("id", matchId);
+      return { ok: false, error: new Error(playersError.message) };
+    }
+  }
+
+  return { ok: true };
 }
