@@ -20,19 +20,21 @@ export function GameWrapper({ children, roomId }: GameWrapperProps) {
   const [playerToken, setPlayerToken] = useState("");
 
   useEffect(() => {
+    console.log(`[GameWrapper] roomId changed: ${roomId}`);
     const stored = localStorage.getItem(`room_${roomId}`);
     if (stored) {
       try {
         const auth = JSON.parse(stored);
+        console.log(`[GameWrapper] Restoring auth for player: ${auth.playerId}`);
         setPlayerId(auth.playerId);
         setPlayerToken(auth.playerToken);
         // Use stored wsUrl or fallback
-        const url = auth.wsUrl || (process.env.NEXT_PUBLIC_PARTYKIT_HOST
-          ? `ws://${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/leet99/${roomId}`
-          : `ws://127.0.0.1:1999/parties/leet99/${roomId}`);
         const partyHost =
           process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
-        const partyName = process.env.NEXT_PUBLIC_PARTYKIT_PARTY || "main";
+        const partyName =
+          process.env.NEXT_PUBLIC_PARTYKIT_PARTY ||
+          process.env.NEXT_PUBLIC_PARTYKIT_PROJECT ||
+          "leet99";
         const hostUrl = partyHost.startsWith("http")
           ? new URL(partyHost)
           : null;

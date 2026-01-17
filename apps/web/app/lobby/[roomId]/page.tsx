@@ -3,12 +3,59 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button, Panel, Tile } from "@leet99/ui";
-import { useRoom } from "@/hooks/use-room";
+import { useRoom, type StoredAuth } from "@/hooks/use-room";
 
 export default function LobbyPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.roomId as string;
+  const [auth, setAuth] = useState<StoredAuth | null>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const item = localStorage.getItem(`room_${roomId}`);
+    if (item) {
+      try {
+        setAuth(JSON.parse(item) as StoredAuth);
+      } catch {
+        setAuth(null);
+      }
+    } else {
+      setAuth(null);
+    }
+    setAuthLoaded(true);
+  }, [roomId]);
+
+  if (!authLoaded) {
+    return (
+      <main className="flex min-h-screen items-center justify-center p-4">
+        <div className="font-mono text-muted">Connecting...</div>
+      </main>
+    );
+  }
+
+  if (!auth) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+        <div className="font-mono text-muted">Missing room auth. Please rejoin.</div>
+        <Button variant="secondary" onClick={() => router.push(`/join/${roomId}`)}>
+          Go to Join
+        </Button>
+      </main>
+    );
+  }
+
+  return <LobbyContent roomId={roomId} auth={auth} />;
+}
+
+type LobbyContentProps = {
+  roomId: string;
+  auth: StoredAuth;
+};
+
+function LobbyContent({ roomId, auth }: LobbyContentProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
 
   // Integrate PartyKit
@@ -21,7 +68,7 @@ export default function LobbyPage() {
     startMatch,
     addBots,
     sendMessage
-  } = useRoom(roomId);
+  } = useRoom(roomId, auth);
 
   // Redirect if match started
   useEffect(() => {
@@ -170,7 +217,11 @@ export default function LobbyPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex flex-col">
                     <span className="text-xs text-muted">Duration</span>
-                    <span className="font-mono">{snapshot.match.settings.matchDurationSec / 60} min</span>
+                    <span className="font-mono">
+                      {snapshot.match.settings.matchDurationSec < 60
+                        ? `${snapshot.match.settings.matchDurationSec} sec`
+                        : `${Math.floor(snapshot.match.settings.matchDurationSec / 60)} min`}
+                    </span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs text-muted">Difficulty</span>

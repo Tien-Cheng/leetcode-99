@@ -47,7 +47,7 @@ function createMockState(roomId: string = "test_room"): RoomState {
     roomId,
     isCreated: true,
     settings: {
-      matchDurationSec: 600,
+      matchDurationSec: 120,
       playerCap: 8,
       stackLimit: 10,
       startingQueued: 2,
@@ -59,7 +59,7 @@ function createMockState(roomId: string = "test_room"): RoomState {
       matchId: null,
       phase: "lobby",
       settings: {
-        matchDurationSec: 600,
+        matchDurationSec: 120,
         playerCap: 8,
         stackLimit: 10,
         startingQueued: 2,
@@ -115,7 +115,7 @@ test("UPDATE_SETTINGS: should merge partial settings", () => {
 
   assert.equal(state.settings.difficultyProfile, "competitive");
   assert.equal(state.settings.playerCap, 12);
-  assert.equal(state.settings.matchDurationSec, 600); // unchanged
+  assert.equal(state.settings.matchDurationSec, 120); // unchanged
 });
 
 test("UPDATE_SETTINGS: should reject if not in lobby", () => {
@@ -273,7 +273,7 @@ test("START_MATCH: should initialize all players with problems", () => {
 
 test("START_MATCH: warmup duration should be 10% of match duration", () => {
   const state = createMockState();
-  state.settings.matchDurationSec = 600;
+  state.settings.matchDurationSec = 120;
 
   const warmupDurationMs = state.settings.matchDurationSec * 1000 * 0.1;
   assert.equal(warmupDurationMs, 60000); // 60 seconds
