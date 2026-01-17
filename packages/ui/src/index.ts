@@ -12,13 +12,15 @@ export * from "./panel";
 export * from "./tile";
 export * from "./dropdown";
 
-// Game-specific components (to be added)
-// export * from './minimap'
-// export * from './stack-panel'
-// export * from './terminal-log'
+// Game-specific components
+export * from "./minimap";
+export * from "./stack-panel";
+export * from "./terminal-log";
+export * from "./problem-display";
+export * from "./shop-modal";
+export * from "./timer";
+
+// Editor wrapper (to be added - requires Monaco integration)
 // export * from './editor-wrapper'
-// export * from './problem-display'
-// export * from './shop-modal'
-// export * from './timer'
 
 export const UI_VERSION = "0.1.0";
