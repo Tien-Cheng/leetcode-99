@@ -61,6 +61,7 @@ interface UseWebSocketReturn {
   startMatch: () => void;
   addBots: (count: number) => void;
   returnToLobby: () => void;
+  debugAddScore: (amount: number) => void;
 }
 
 /**
@@ -550,6 +551,16 @@ export function useWebSocket(
     });
   }, [sendMessage]);
 
+  const debugAddScore = useCallback(
+    (amount: number) => {
+      sendMessage({
+        type: "DEBUG_ADD_SCORE",
+        payload: { amount },
+      });
+    },
+    [sendMessage]
+  );
+
   const updateCode = useCallback(
     (problemId: string, code: string, codeVersion: number) => {
       sendMessage({
@@ -598,5 +609,6 @@ export function useWebSocket(
     startMatch,
     addBots,
     returnToLobby,
+    debugAddScore,
   };
 }

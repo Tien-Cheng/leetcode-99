@@ -70,10 +70,12 @@ const BASE_DEBUFF_DURATIONS: Record<DebuffType, number> = {
 
 const DEBUFF_GRACE_PERIOD_MS = 5000; // 5s immunity after debuff ends
 
+const DEBUG_TIMERS = true;
+
 // ============================================================================
 // Scoring Constants (per spec section 8.2)
 // ============================================================================
-
+ 
 const DIFFICULTY_SCORES: Record<"easy" | "medium" | "hard", number> = {
   easy: 5,
   medium: 10,
@@ -282,24 +284,6 @@ export default class Room implements Party.Server {
           await this.scheduleNextProblemArrival();
         }
 
-        // Reschedule phase transition if in warmup
-        if (this.state.match.phase === "warmup" && this.state.match.startAt) {
-          const warmupEndAt =
-            new Date(this.state.match.startAt).getTime() +
-            this.state.settings.matchDurationSec * 1000 * 0.1;
-          if (warmupEndAt > now) {
-            await this.room.storage.setAlarm(warmupEndAt);
-          }
-        }
-
-        // Reschedule match end check
-        if (this.state.match.endAt) {
-          const matchEndAt = new Date(this.state.match.endAt).getTime();
-          if (matchEndAt > now) {
-            await this.room.storage.setAlarm(matchEndAt);
-          }
-        }
-
         // Reschedule bot actions
         await this.scheduleBotActions();
       }
@@ -431,6 +415,14 @@ export default class Room implements Party.Server {
 
         case "STOP_SPECTATE":
           await this.handleStopSpectate(sender, parsed.requestId);
+          break;
+
+        case "DEBUG_ADD_SCORE":
+          await this.handleDebugAddScore(
+            sender,
+            parsed.payload as { amount: number },
+            parsed.requestId,
+          );
           break;
 
         default:
@@ -785,7 +777,7 @@ export default class Room implements Party.Server {
 
       p.currentProblem = this.toClientView(current);
       p.queued = queued;
-      p.code = current.starterCode;
+      p.code = current.problemType === "code" ? current.starterCode : "";
       p.codeVersion = 1;
       p.revealedHints = [];
       p.stackSize = queued.length;
@@ -800,11 +792,7 @@ export default class Room implements Party.Server {
     // Persist
     await this.persistState();
 
-    // Schedule warmup -> main transition
-    const warmupDurationMs = this.state.settings.matchDurationSec * 1000 * 0.1;
-    await this.room.storage.setAlarm(Date.now() + warmupDurationMs);
-
-    // Schedule bot actions (sets state only, doesn't set alarm)
+    // Schedule bot actions (sets state only, doesn't set alarm directly)
     await this.scheduleBotActions();
 
     // Schedule first problem arrival (coordinates all alarms)
@@ -1160,6 +1148,12 @@ export default class Room implements Party.Server {
       return;
     }
 
+    // Run code is only for code problems, not MCQs
+    if (problem.problemType === "mcq") {
+      this.sendError(conn, "INVALID_PROBLEM_TYPE", "Run code is not available for MCQ problems", requestId);
+      return;
+    }
+
     // Get judge config
     const judgeConfig = getJudgeConfig();
     if (!judgeConfig) {
@@ -1226,22 +1220,36 @@ export default class Room implements Party.Server {
       return;
     }
 
-    // Get judge config
-    const judgeConfig = getJudgeConfig();
     let result: JudgeResult;
 
-    if (!judgeConfig) {
-      // No judge configured - simulate result for development
-      result = this.simulateJudgeResult("submit", problem, payload.code);
+    // Handle MCQ problems separately (no judge service needed)
+    if (problem.problemType === "mcq") {
+      // For MCQ, payload.code is the selected option ID
+      const passed = payload.code === problem.correctAnswer;
+      result = {
+        kind: "submit",
+        problemId: problem.problemId,
+        passed,
+        publicTests: [], // MCQs don't have test results
+        hiddenTestsPassed: passed,
+        hiddenFailureMessage: passed ? undefined : "Incorrect answer",
+      };
     } else {
-      // Run all tests via judge
-      try {
-        const { runAllTests } = await import("@leet99/judge");
-        result = await runAllTests(problem, payload.code, judgeConfig);
-      } catch (error) {
-        console.error(`[${this.state.roomId}] Judge error:`, error);
-        this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
-        return;
+      // Code problem - use judge service
+      const judgeConfig = getJudgeConfig();
+      if (!judgeConfig) {
+        // No judge configured - simulate result for development
+        result = this.simulateJudgeResult("submit", problem, payload.code);
+      } else {
+        // Run all tests via judge
+        try {
+          const { runAllTests } = await import("@leet99/judge");
+          result = await runAllTests(problem, payload.code, judgeConfig);
+        } catch (error) {
+          console.error(`[${this.state.roomId}] Judge error:`, error);
+          this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+          return;
+        }
       }
     }
 
@@ -1532,6 +1540,35 @@ export default class Room implements Party.Server {
   }
 
   // ============================================================================
+  // Debug Commands
+  // ============================================================================
+
+  private async handleDebugAddScore(
+    conn: Party.Connection,
+    payload: { amount: number },
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    // Add score
+    player.score += payload.amount;
+
+    // Log the cheat
+    this.addEventLog("info", `[DEBUG] ${player.username} added ${payload.amount} points (total: ${player.score})`);
+
+    // Broadcast player update
+    this.broadcastPlayerUpdate(player);
+
+    // Send updated snapshot
+    const snapshot = this.buildRoomSnapshot(player);
+    conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+  }
+
+  // ============================================================================
   // Attack System
   // ============================================================================
 
@@ -1738,7 +1775,10 @@ export default class Room implements Party.Server {
     // For simplicity, we'll handle debuff expiry in onAlarm
     // The alarm system will check for expired debuffs
     const expiryAt = Date.now() + durationMs;
-    await this.room.storage.setAlarm(expiryAt);
+    if (player.activeDebuff) {
+      player.activeDebuff.endsAt = new Date(expiryAt).toISOString();
+    }
+    await this.scheduleNextAlarm();
   }
 
   private handleExpiredDebuffs() {
@@ -2009,7 +2049,7 @@ export default class Room implements Party.Server {
     }
 
     this.state.nextBotActionAt = earliestActionAt;
-    // Don't set alarm directly - let scheduleNextProblemArrival() coordinate all alarms
+    await this.scheduleNextAlarm();
   }
 
   private async handleBotActions() {
@@ -2045,10 +2085,13 @@ export default class Room implements Party.Server {
       kind: "submit",
       problemId: problem.problemId,
       passed,
-      publicTests: problem.publicTests.map((_, index) => ({
-        index,
-        passed,
-      })),
+      publicTests:
+        problem.problemType === "code"
+          ? problem.publicTests.map((_, index) => ({
+              index,
+              passed,
+            }))
+          : [],
       hiddenTestsPassed: passed,
     };
 
@@ -2122,6 +2165,9 @@ export default class Room implements Party.Server {
         code: forPlayer.code ?? "",
         codeVersion: forPlayer.codeVersion ?? 1,
         revealedHints: forPlayer.revealedHints ?? [],
+        shopCooldowns: forPlayer.shopCooldowns
+          ? Object.fromEntries(forPlayer.shopCooldowns)
+          : undefined,
       };
     }
 
@@ -2270,7 +2316,7 @@ export default class Room implements Party.Server {
 
     if (nextProblem) {
       player.currentProblem = this.toClientView(nextProblem);
-      player.code = nextProblem.starterCode;
+      player.code = nextProblem.problemType === "code" ? nextProblem.starterCode : "";
       player.codeVersion = 1;
       player.revealedHints = [];
     }
@@ -2532,15 +2578,25 @@ export default class Room implements Party.Server {
     problem: ProblemFull,
     code: string,
   ): JudgeResult {
-    // Simple simulation: pass if code contains the function name
-    const passed = code.includes(problem.functionName) && code.length > 50;
+    let passed = false;
 
-    const publicTests = problem.publicTests.map((_, index) => ({
-      index,
-      passed,
-      expected: passed ? undefined : "expected",
-      received: passed ? undefined : "received",
-    }));
+    if (problem.problemType === "mcq") {
+      // For MCQ, 'code' is the selected option ID
+      passed = code === problem.correctAnswer;
+    } else {
+      // Simple simulation: pass if code contains the function name
+      passed = code.includes(problem.functionName) && code.length > 50;
+    }
+
+    const publicTests =
+      problem.problemType === "code"
+        ? (problem.publicTests || []).map((_, index) => ({
+            index,
+            passed,
+            expected: passed ? undefined : "expected",
+            received: passed ? undefined : "received",
+          }))
+        : [];
 
     return {
       kind,
@@ -2640,6 +2696,12 @@ export default class Room implements Party.Server {
       // Check if enough time has passed for this player
       const timeSinceLastArrival = now - player.lastProblemArrivalAt;
       if (timeSinceLastArrival >= effectiveIntervalMs) {
+        if (DEBUG_TIMERS) {
+          console.log(
+            `[${this.state.roomId}] Problem due for ${player.username}: ` +
+              `since=${timeSinceLastArrival}ms interval=${effectiveIntervalMs}ms`,
+          );
+        }
         try {
           const problem = this.sampleProblem(player.playerId, false); // Allow garbage
           const eliminated = this.addProblemToQueue(player, problem);
@@ -2654,10 +2716,23 @@ export default class Room implements Party.Server {
               `[${this.state.roomId}] Player ${player.username} eliminated by stack overflow`,
             );
           } else {
+            if (DEBUG_TIMERS) {
+              console.log(
+                `[${this.state.roomId}] Added problem to ${player.username} queue: ` +
+                  `${problem.problemId}`,
+              );
+            }
             // Broadcast stack update for this player
             this.broadcastPlayerUpdate(player);
             this.broadcastStackUpdate(player);
             this.updateSpectators(player);
+
+            // Send updated private snapshot so the client queue reflects timed arrivals
+            const conn = this.getPlayerConnection(player);
+            if (conn) {
+              const snapshot = this.buildRoomSnapshot(player);
+              conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+            }
           }
         } catch (error) {
           console.error(
@@ -2756,7 +2831,17 @@ export default class Room implements Party.Server {
       this.state.nextProblemArrivalAt = nextArrivalAt;
     }
 
-    // Schedule alarm (use the earlier of phase transition, problem arrival, bot action, or match end)
+    await this.scheduleNextAlarm();
+  }
+
+  /**
+   * Schedule the next alarm based on the earliest pending event.
+   */
+  private async scheduleNextAlarm(): Promise<void> {
+    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+      return;
+    }
+
     const warmupEndAt =
       this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
@@ -2767,15 +2852,52 @@ export default class Room implements Party.Server {
       ? new Date(this.state.match.endAt).getTime()
       : Infinity;
 
+    const nextArrivalAt = this.state.nextProblemArrivalAt ?? Infinity;
     const botActionAt = this.state.nextBotActionAt ?? Infinity;
 
-    const alarmAt = Math.min(nextArrivalAt, warmupEndAt, matchEndAt, botActionAt);
-    if (alarmAt !== Infinity && !isNaN(alarmAt)) {
-      await this.room.storage.setAlarm(alarmAt);
-      console.log(`[${this.state.roomId}] Scheduled next alarm at ${new Date(alarmAt).toISOString()} (in ${Math.round(alarmAt - now)}ms)`);
-    } else {
-      console.log(`[${this.state.roomId}] No further alarms scheduled`);
+    let effectExpiryAt = Infinity;
+    for (const player of this.state.players.values()) {
+      if (player.activeDebuff) {
+        effectExpiryAt = Math.min(
+          effectExpiryAt,
+          new Date(player.activeDebuff.endsAt).getTime(),
+        );
+      }
+      if (player.activeBuff) {
+        effectExpiryAt = Math.min(
+          effectExpiryAt,
+          new Date(player.activeBuff.endsAt).getTime(),
+        );
+      }
     }
+
+    const alarmAt = Math.min(
+      nextArrivalAt,
+      warmupEndAt,
+      matchEndAt,
+      botActionAt,
+      effectExpiryAt,
+    );
+    if (!Number.isFinite(alarmAt)) {
+      return;
+    }
+
+    const now = Date.now();
+    const scheduledAt = alarmAt <= now ? now + 100 : alarmAt;
+    if (DEBUG_TIMERS) {
+      console.log(
+        `[${this.state.roomId}] scheduleNextAlarm ` +
+          `arrival=${nextArrivalAt === Infinity ? "∞" : new Date(nextArrivalAt).toISOString()} ` +
+          `warmupEnd=${warmupEndAt === Infinity ? "∞" : new Date(warmupEndAt).toISOString()} ` +
+          `matchEnd=${matchEndAt === Infinity ? "∞" : new Date(matchEndAt).toISOString()} ` +
+          `bot=${botActionAt === Infinity ? "∞" : new Date(botActionAt).toISOString()} ` +
+          `effect=${effectExpiryAt === Infinity ? "∞" : new Date(effectExpiryAt).toISOString()}`,
+      );
+    }
+    await this.room.storage.setAlarm(scheduledAt);
+    console.log(
+      `[${this.state.roomId}] Scheduled next alarm at ${new Date(scheduledAt).toISOString()} (in ${Math.round(scheduledAt - now)}ms)`,
+    );
   }
 
   // ============================================================================
@@ -2875,16 +2997,35 @@ export default class Room implements Party.Server {
 
   private toClientView(problem: ProblemFull): ProblemClientView {
     // Strip hidden tests and server-only fields
-    const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
-    return {
-      ...clientView,
-      hintCount: hints?.length,
-    };
+    if (problem.problemType === "code") {
+      const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
+      return {
+        ...clientView,
+        hintCount: hints?.length,
+      };
+    } else {
+      const { hiddenTests: _hiddenTests, hints, correctAnswer: _correctAnswer, ...clientView } = problem;
+      return {
+        ...clientView,
+        hintCount: hints?.length,
+      };
+    }
   }
 
   async onAlarm() {
     const now = Date.now();
     this.addEventLog("info", `Server: onAlarm (phase: ${this.state.match.phase})`);
+
+    if (DEBUG_TIMERS) {
+      console.log(
+        `[${this.state.roomId}] onAlarm now=${new Date(now).toISOString()} ` +
+          `phase=${this.state.match.phase} ` +
+          `nextArrival=${this.state.nextProblemArrivalAt ? new Date(this.state.nextProblemArrivalAt).toISOString() : "null"} ` +
+          `nextBot=${this.state.nextBotActionAt ? new Date(this.state.nextBotActionAt).toISOString() : "null"}`,
+      );
+    }
+
+    let didWork = false;
 
     // Handle expired debuffs and buffs
     this.handleExpiredDebuffs();
@@ -2905,8 +3046,7 @@ export default class Room implements Party.Server {
       now >= this.state.nextBotActionAt
     ) {
       await this.handleBotActions();
-      // Reschedule to coordinate all alarms after bot actions
-      await this.scheduleNextProblemArrival();
+      didWork = true;
     }
 
     // Check if it's time for problem arrivals
@@ -2915,6 +3055,7 @@ export default class Room implements Party.Server {
       now >= this.state.nextProblemArrivalAt - 100 // Tolerance
     ) {
       await this.handleProblemArrivals();
+      didWork = true;
     }
 
     // Handle warmup -> main transition
@@ -2935,6 +3076,11 @@ export default class Room implements Party.Server {
 
       // Reschedule problem arrivals with new phase interval
       await this.scheduleNextProblemArrival();
+      didWork = true;
+    }
+
+    if (!didWork) {
+      await this.scheduleNextAlarm();
     }
   }
 

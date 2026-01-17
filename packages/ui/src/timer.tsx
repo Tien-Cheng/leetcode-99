@@ -19,7 +19,6 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
     const serverTimestamp = serverTime ? new Date(serverTime).getTime() : null;
     const clientTimestamp = Date.now();
     const offset = serverTimestamp ? serverTimestamp - clientTimestamp : 0;
-
     const calculateRemaining = () => {
       const now = Date.now() + offset;
       const end = new Date(endsAt).getTime();

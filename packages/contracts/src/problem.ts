@@ -7,6 +7,15 @@ import { z } from "zod";
 export const DifficultySchema = z.enum(["easy", "medium", "hard"]);
 export type Difficulty = z.infer<typeof DifficultySchema>;
 
+export const ProblemTypeSchema = z.enum(["code", "mcq"]).default("code");
+export type ProblemType = z.infer<typeof ProblemTypeSchema>;
+
+export const MCQOptionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+});
+export type MCQOption = z.infer<typeof MCQOptionSchema>;
+
 export const TestCaseSchema = z.object({
   input: z.unknown(),
   output: z.unknown(),
@@ -14,31 +23,63 @@ export const TestCaseSchema = z.object({
 export type TestCase = z.infer<typeof TestCaseSchema>;
 
 /**
- * Problem as seen by the client (no hidden tests)
+ * Base fields common to all problem types
  */
-export const ProblemClientViewSchema = z.object({
+const ProblemBaseSchema = z.object({
   problemId: z.string(),
   title: z.string(),
   prompt: z.string(),
-  functionName: z.string(),
-  signature: z.string(),
-  starterCode: z.string(),
-  publicTests: z.array(TestCaseSchema),
   difficulty: DifficultySchema,
   timeLimitMs: z.number().int().min(100).max(30000),
   hintCount: z.number().int().min(0).optional(),
   isGarbage: z.boolean().optional(),
 });
+
+/**
+ * Code problem specific fields
+ */
+const CodeProblemFields = z.object({
+  problemType: z.literal("code").default("code"),
+  functionName: z.string(),
+  signature: z.string(),
+  starterCode: z.string(),
+  publicTests: z.array(TestCaseSchema),
+});
+
+/**
+ * MCQ problem specific fields
+ */
+const MCQProblemFields = z.object({
+  problemType: z.literal("mcq"),
+  options: z.array(MCQOptionSchema),
+});
+
+/**
+ * Problem as seen by the client
+ */
+export const ProblemClientViewSchema = z.discriminatedUnion("problemType", [
+  ProblemBaseSchema.merge(CodeProblemFields),
+  ProblemBaseSchema.merge(MCQProblemFields),
+]);
 export type ProblemClientView = z.infer<typeof ProblemClientViewSchema>;
 
 /**
- * Full problem definition (server-side, includes hidden tests)
+ * Full problem definition (server-side)
  */
-export const ProblemFullSchema = ProblemClientViewSchema.extend({
-  hiddenTests: z.array(TestCaseSchema),
-  hints: z.array(z.string()).optional(),
-  solutionSketch: z.string().optional(),
-});
+export const ProblemFullSchema = z.discriminatedUnion("problemType", [
+  ProblemBaseSchema.merge(CodeProblemFields).extend({
+    hiddenTests: z.array(TestCaseSchema),
+    hints: z.array(z.string()).optional(),
+    solutionSketch: z.string().optional(),
+  }),
+  ProblemBaseSchema.merge(MCQProblemFields).extend({
+    // MCQs might not have hidden tests in the same way, or might have just correct answer
+    // For now keeping structure similar but optional/specific
+    hiddenTests: z.array(TestCaseSchema).optional(), 
+    hints: z.array(z.string()).optional(),
+    correctAnswer: z.string(),
+  }),
+]);
 export type ProblemFull = z.infer<typeof ProblemFullSchema>;
 
 /**
@@ -91,6 +132,7 @@ export const PlayerPrivateStateSchema = z.object({
   code: z.string(),
   codeVersion: z.number().int().min(1),
   revealedHints: z.array(z.string()),
+  shopCooldowns: z.record(z.string(), z.number()).optional(),
 });
 export type PlayerPrivateState = z.infer<typeof PlayerPrivateStateSchema>;
 

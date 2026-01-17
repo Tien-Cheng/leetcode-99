@@ -1,12 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { useWebSocket } from "../hooks/use-websocket";
 import type {
-  MatchStartedPayload,
   MatchEndPayload,
   StandingEntry,
   RoomSnapshotPayload,
+  MatchStartedPayload,
   PlayerPublic,
   RoomSettings,
   MatchPhase,
@@ -14,6 +14,7 @@ import type {
   ProblemClientView,
   ProblemSummary,
   ActiveDebuff,
+  ActiveBuff,
   ShopCatalogItem,
   EventLogEntry,
   JudgeResult,
@@ -44,6 +45,7 @@ interface GameStateContextValue {
   currentProblem: ProblemClientView | null;
   problemStack: ProblemSummary[];
   activeDebuff: ActiveDebuff | null;
+  activeBuff: ActiveBuff | null;
   score: number;
   solveStreak: number;
   targetingMode: TargetingMode;
@@ -59,6 +61,7 @@ interface GameStateContextValue {
 
   // Shop
   shopCatalog: ShopCatalogItem[];
+  shopCooldowns: Record<string, number>;
 
   // Actions
   sendChat: (message: string) => void;
@@ -76,6 +79,7 @@ interface GameStateContextValue {
 
   // Debug actions (for testing)
   __debugSetDebuff: (debuff: ActiveDebuff | null) => void;
+  debugAddScore: (amount: number) => void;
 }
 
 const GameStateContext = createContext<GameStateContextValue | undefined>(
@@ -102,7 +106,8 @@ export function GameStateProvider({
   const [roomSettings, setRoomSettings] = useState<RoomSettings | null>(null);
   const [matchPhase, setMatchPhase] = useState<MatchPhase>("lobby");
   const [matchEndAt, setMatchEndAt] = useState<string | null>(null);
-  const [matchEndResult, setMatchEndResult] = useState<MatchEndPayload | null>(null);
+  const [matchEndResult, setMatchEndResult] =
+    useState<MatchEndPayload | null>(null);
 
   // Player state
   const [username, setUsername] = useState<string | null>(null);
@@ -110,6 +115,7 @@ export function GameStateProvider({
   const [playerPrivateState, setPlayerPrivateState] =
     useState<PlayerPrivateState | null>(null);
   const [activeDebuff, setActiveDebuff] = useState<ActiveDebuff | null>(null);
+  const [activeBuff, setActiveBuff] = useState<ActiveBuff | null>(null);
   const [score, setScore] = useState(0);
   const [solveStreak, setSolveStreak] = useState(0);
   const [targetingMode, setTargetingModeState] =
@@ -127,10 +133,16 @@ export function GameStateProvider({
 
   // Shop
   const [shopCatalog, setShopCatalog] = useState<ShopCatalogItem[]>([]);
+  const [shopCooldowns, setShopCooldowns] = useState<Record<string, number>>({});
 
   // Derived state
   const currentProblem = playerPrivateState?.currentProblem ?? null;
   const problemStack = playerPrivateState?.queued ?? [];
+
+  // Clear judge result when problem changes
+  useEffect(() => {
+    setLastJudgeResult(null);
+  }, [currentProblem?.problemId]);
 
   // WebSocket handlers
   const handleRoomSnapshot = useCallback((payload: RoomSnapshotPayload) => {
@@ -140,9 +152,7 @@ export function GameStateProvider({
     setPlayersPublic(payload.players);
     setRoomSettings(payload.match.settings);
     setMatchPhase(payload.match.phase);
-    setMatchEndAt(payload.match.endAt || null);
-
-    // HEAD logic: Snapshot has standings
+    setMatchEndAt(payload.match.endAt ?? null);
     if (payload.match.standings) {
       console.log("[WS] Snapshot has standings, setting results");
       setMatchEndResult({
@@ -151,11 +161,8 @@ export function GameStateProvider({
         winnerPlayerId: payload.match.standings.find((s: StandingEntry) => s.rank === 1)?.playerId || "",
         standings: payload.match.standings
       });
-    } else {
-      // Just in case we need to clear it or if we are not in ended state
-      if (payload.match.phase !== "ended") {
-        setMatchEndResult(null);
-      }
+    } else if (payload.match.phase !== "ended") {
+      setMatchEndResult(null);
     }
     setUsername(payload.me.username);
     setIsHost(payload.me.isHost);
@@ -170,6 +177,7 @@ export function GameStateProvider({
     const myPublicData = payload.players.find(p => p.playerId === payload.me.playerId);
     if (myPublicData) {
       setActiveDebuff(myPublicData.activeDebuff ?? null);
+      setActiveBuff(myPublicData.activeBuff ?? null);
       setScore(myPublicData.score);
       setSolveStreak(myPublicData.streak);
       setTargetingModeState(myPublicData.targetingMode);
@@ -181,6 +189,10 @@ export function GameStateProvider({
 
     if (payload.shopCatalog) {
       setShopCatalog(payload.shopCatalog);
+    }
+
+    if (payload.self?.shopCooldowns) {
+      setShopCooldowns(payload.self.shopCooldowns);
     }
   }, []);
 
@@ -194,8 +206,8 @@ export function GameStateProvider({
   const handleMatchStarted = useCallback(
     (payload: MatchStartedPayload) => {
       setMatchPhase(payload.match.phase);
-      setMatchEndAt(payload.match.endAt || null);
-      setMatchEndResult(null); // Clear results when match starts
+      setMatchEndAt(payload.match.endAt ?? null);
+      setMatchEndResult(null);
     },
     []
   );
@@ -412,6 +424,7 @@ export function GameStateProvider({
     currentProblem,
     problemStack,
     activeDebuff,
+    activeBuff,
     score,
     solveStreak,
     targetingMode,
@@ -427,6 +440,7 @@ export function GameStateProvider({
 
     // Shop
     shopCatalog,
+    shopCooldowns,
 
     // Actions
     sendChat: ws.sendChat,
@@ -444,6 +458,7 @@ export function GameStateProvider({
 
     // Debug actions
     __debugSetDebuff: setActiveDebuff,
+    debugAddScore: ws.debugAddScore,
   };
 
   return (
