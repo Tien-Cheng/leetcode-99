@@ -81,8 +81,11 @@ function GamePageContent() {
       }
       setCodeVersion(1);
       setSelectedOptionId(null);
+      // Clear judge result when problem changes
+      // The judge result will be set when we get a new JUDGE_RESULT message
     }
-  }, [currentProblem]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProblem?.problemId]);
 
   // Trigger effects on score change
   useEffect(() => {
@@ -367,12 +370,17 @@ function GamePageContent() {
                 selectedOptionId: selectedOptionId || undefined,
                 onOptionSelect: (id) => setSelectedOptionId(id),
               }}
-              testResults={lastJudgeResult?.publicTests.map((t) => ({
-                index: t.index,
-                passed: t.passed,
-                expected: t.expected ? String(t.expected) : undefined,
-                received: t.received ? String(t.received) : undefined,
-              }))}
+              testResults={
+                lastJudgeResult &&
+                lastJudgeResult.problemId === currentProblem.problemId
+                  ? lastJudgeResult.publicTests.map((t) => ({
+                      index: t.index,
+                      passed: t.passed,
+                      expected: t.expected ? String(t.expected) : undefined,
+                      received: t.received ? String(t.received) : undefined,
+                    }))
+                  : []
+              }
             />
           ) : (
             <Panel title="PROBLEM" className="h-full">

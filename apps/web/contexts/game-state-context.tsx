@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { useWebSocket } from "../hooks/use-websocket";
 import type {
   RoomSnapshotPayload,
@@ -123,6 +123,11 @@ export function GameStateProvider({
   // Derived state
   const currentProblem = playerPrivateState?.currentProblem ?? null;
   const problemStack = playerPrivateState?.queued ?? [];
+
+  // Clear judge result when problem changes
+  useEffect(() => {
+    setLastJudgeResult(null);
+  }, [currentProblem?.problemId]);
 
   // WebSocket handlers
   const handleRoomSnapshot = useCallback((payload: RoomSnapshotPayload) => {

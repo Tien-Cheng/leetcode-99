@@ -5,7 +5,7 @@
         "prompt": "Return indices of two numbers that add up to target.",
         "functionName": "two_sum",
         "signature": "two_sum(nums, target)",
-        "starterCode": "def two_sum(nums: list[int], target: int) -> list[int]:\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return []",
+        "starterCode": "def two_sum(nums: list[int], target: int) -> list[int]:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -76,7 +76,7 @@
         "prompt": "Return the largest number in the list.",
         "functionName": "find_max",
         "signature": "find_max(nums)",
-        "starterCode": "def find_max(nums: list[int]) -> int:\n    return max(nums)",
+        "starterCode": "def find_max(nums: list[int]) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -138,7 +138,7 @@
         "prompt": "Return True if n is even, else False.",
         "functionName": "is_even",
         "signature": "is_even(n)",
-        "starterCode": "def is_even(n: int) -> bool:\n    return n % 2 == 0",
+        "starterCode": "def is_even(n: int) -> bool:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -192,7 +192,7 @@
         "prompt": "Return the length of the string s.",
         "functionName": "get_length",
         "signature": "get_length(s)",
-        "starterCode": "def get_length(s: str) -> int:\n    return len(s)",
+        "starterCode": "def get_length(s: str) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -246,7 +246,7 @@
         "prompt": "Return the sum of all numbers in the list.",
         "functionName": "sum_list",
         "signature": "sum_list(nums)",
-        "starterCode": "def sum_list(nums: list[int]) -> int:\n    return sum(nums)",
+        "starterCode": "def sum_list(nums: list[int]) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -304,7 +304,7 @@
         "prompt": "Return the string s reversed.",
         "functionName": "reverse_string",
         "signature": "reverse_string(s)",
-        "starterCode": "def reverse_string(s: str) -> str:\n    return s[::-1]",
+        "starterCode": "def reverse_string(s: str) -> str:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -358,7 +358,7 @@
         "prompt": "Count vowels (a, e, i, o, u) in string.",
         "functionName": "count_vowels",
         "signature": "count_vowels(s)",
-        "starterCode": "def count_vowels(s: str) -> int:\n    return sum(1 for c in s.lower() if c in 'aeiou')",
+        "starterCode": "def count_vowels(s: str) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -412,7 +412,7 @@
         "prompt": "Check if string reads same backwards.",
         "functionName": "is_palindrome",
         "signature": "is_palindrome(s)",
-        "starterCode": "def is_palindrome(s: str) -> bool:\n    s = s.lower()\n    return s == s[::-1]",
+        "starterCode": "def is_palindrome(s: str) -> bool:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -466,7 +466,7 @@
         "prompt": "Return absolute value of n.",
         "functionName": "get_abs",
         "signature": "get_abs(n)",
-        "starterCode": "def get_abs(n: int) -> int:\n    return abs(n)",
+        "starterCode": "def get_abs(n: int) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -520,7 +520,7 @@
         "prompt": "Check if any value appears twice.",
         "functionName": "has_duplicate",
         "signature": "has_duplicate(nums)",
-        "starterCode": "def has_duplicate(nums: list[int]) -> bool:\n    return len(nums) != len(set(nums))",
+        "starterCode": "def has_duplicate(nums: list[int]) -> bool:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -582,7 +582,7 @@
         "prompt": "Return n squared.",
         "functionName": "square",
         "signature": "square(n)",
-        "starterCode": "def square(n: int) -> int:\n    return n * n",
+        "starterCode": "def square(n: int) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -636,7 +636,7 @@
         "prompt": "Return first character of s.",
         "functionName": "get_first",
         "signature": "get_first(s)",
-        "starterCode": "def get_first(s: str) -> str:\n    return s[0] if s else ''",
+        "starterCode": "def get_first(s: str) -> str:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -690,7 +690,7 @@
         "prompt": "Return [x*2 for x in nums].",
         "functionName": "double_list",
         "signature": "double_list(nums)",
-        "starterCode": "def double_list(nums: list[int]) -> list[int]:\n    return [x * 2 for x in nums]",
+        "starterCode": "def double_list(nums: list[int]) -> list[int]:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -750,7 +750,7 @@
         "prompt": "Return s in uppercase.",
         "functionName": "to_upper",
         "signature": "to_upper(s)",
-        "starterCode": "def to_upper(s: str) -> str:\n    return s.upper()",
+        "starterCode": "def to_upper(s: str) -> str:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -804,7 +804,7 @@
         "prompt": "Return last element of list.",
         "functionName": "get_last",
         "signature": "get_last(nums)",
-        "starterCode": "def get_last(nums: list[int]) -> int:\n    return nums[-1] if nums else None",
+        "starterCode": "def get_last(nums: list[int]) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -864,7 +864,7 @@
         "prompt": "Return True if n > 0.",
         "functionName": "is_positive",
         "signature": "is_positive(n)",
-        "starterCode": "def is_positive(n: int) -> bool:\n    return n > 0",
+        "starterCode": "def is_positive(n: int) -> bool:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -924,7 +924,7 @@
         "prompt": "Return string s repeated n times.",
         "functionName": "repeat",
         "signature": "repeat(s, n)",
-        "starterCode": "def repeat(s: str, n: int) -> str:\n    return s * n",
+        "starterCode": "def repeat(s: str, n: int) -> str:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -980,7 +980,7 @@
         "prompt": "Return smallest number in list.",
         "functionName": "get_min",
         "signature": "get_min(nums)",
-        "starterCode": "def get_min(nums: list[int]) -> int:\n    return min(nums)",
+        "starterCode": "def get_min(nums: list[int]) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1041,7 +1041,7 @@
         "prompt": "Return a + b.",
         "functionName": "add",
         "signature": "add(a, b)",
-        "starterCode": "def add(a: int, b: int) -> int:\n    return a + b",
+        "starterCode": "def add(a: int, b: int) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1097,7 +1097,7 @@
         "prompt": "Return True if all elements in list are True.",
         "functionName": "all_true",
         "signature": "all_true(items)",
-        "starterCode": "def all_true(items: list[bool]) -> bool:\n    return all(items)",
+        "starterCode": "def all_true(items: list[bool]) -> bool:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1157,7 +1157,7 @@
         "prompt": "Return True if list is empty.",
         "functionName": "is_empty",
         "signature": "is_empty(nums)",
-        "starterCode": "def is_empty(nums: list) -> bool:\n    return not nums",
+        "starterCode": "def is_empty(nums: list) -> bool:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1213,7 +1213,7 @@
         "prompt": "Return product of all numbers in list.",
         "functionName": "product",
         "signature": "product(nums)",
-        "starterCode": "def product(nums: list[int]) -> int:\n    res = 1\n    for n in nums: res *= n\n    return res",
+        "starterCode": "def product(nums: list[int]) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1276,7 +1276,7 @@
         "prompt": "Return how many times x appears in nums.",
         "functionName": "count_occ",
         "signature": "count_occ(nums, x)",
-        "starterCode": "def count_occ(nums: list[int], x: int) -> int:\n    return nums.count(x)",
+        "starterCode": "def count_occ(nums: list[int], x: int) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1337,7 +1337,7 @@
         "prompt": "Return only even numbers from list.",
         "functionName": "get_evens",
         "signature": "get_evens(nums)",
-        "starterCode": "def get_evens(nums: list[int]) -> list[int]:\n    return [x for x in nums if x % 2 == 0]",
+        "starterCode": "def get_evens(nums: list[int]) -> list[int]:\n    pass",
         "publicTests": [
             {
                 "input": [
@@ -1403,7 +1403,7 @@
         "prompt": "Return first index of x in nums, or -1.",
         "functionName": "find_idx",
         "signature": "find_idx(nums, x)",
-        "starterCode": "def find_idx(nums: list[int], x: int) -> int:\n    try: return nums.index(x)\n    except: return -1",
+        "starterCode": "def find_idx(nums: list[int], x: int) -> int:\n    pass",
         "publicTests": [
             {
                 "input": [
