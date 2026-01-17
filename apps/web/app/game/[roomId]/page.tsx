@@ -263,9 +263,7 @@ function GamePageContent() {
       ? "danger"
       : entry.level === "warning"
         ? "warning"
-        : entry.level === "success"
-          ? "success"
-          : "info") as "info" | "success" | "warning" | "danger" | "system",
+        : "info") as "info" | "success" | "warning" | "danger" | "system",
     content: entry.message,
     timestamp: new Date(entry.at).toLocaleTimeString(),
   }));
