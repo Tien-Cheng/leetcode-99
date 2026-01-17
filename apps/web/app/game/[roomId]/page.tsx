@@ -354,8 +354,8 @@ function GamePageContent() {
             className="flex-1 min-h-0 overflow-hidden"
           >
             <StackPanel
-              stack={problemStack.map((p) => ({
-                id: p.problemId,
+              stack={problemStack.map((p, index) => ({
+                id: `${p.problemId}-${index}`,
                 title: p.title,
                 difficulty: p.difficulty,
                 isGarbage: p.isGarbage,

@@ -150,10 +150,29 @@ export function useWebSocket(
   // Send message helper
   const sendMessage = useCallback(
     <T extends ClientMessage>(message: T) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify(message));
+      const attemptSend = () => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify(message));
+          return true;
+        }
+        return false;
+      };
+
+      // Try to send immediately
+      if (attemptSend()) {
+        return;
+      }
+
+      // If WebSocket is connecting, wait a bit and try again
+      if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+        setTimeout(() => {
+          if (!attemptSend()) {
+            console.warn("WebSocket not connected after wait, cannot send message:", message.type);
+          }
+        }, 100);
       } else {
-        console.warn("WebSocket not connected, cannot send message:", message);
+        // WebSocket is closed or not initialized
+        console.warn("WebSocket not connected, cannot send message:", message.type);
       }
     },
     []
@@ -303,11 +322,62 @@ export function useWebSocket(
       ws.onmessage = handleMessage;
 
       ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        const state = ws.readyState;
+        const stateName = state === WebSocket.CONNECTING ? "CONNECTING" :
+                         state === WebSocket.OPEN ? "OPEN" :
+                         state === WebSocket.CLOSING ? "CLOSING" :
+                         state === WebSocket.CLOSED ? "CLOSED" : "UNKNOWN";
+        
+        // Extract host from URL for better error messages
+        let hostInfo = "";
+        try {
+          const url = new URL(wsUrl);
+          hostInfo = `${url.hostname}:${url.port || (url.protocol === "wss:" ? 443 : 80)}`;
+        } catch {
+          hostInfo = wsUrl;
+        }
+        
+        console.error("WebSocket error:", {
+          type: error.type,
+          readyState: stateName,
+          url: wsUrl,
+          host: hostInfo,
+          timestamp: new Date().toISOString(),
+          hint: stateName === "CLOSED" ? "Connection failed. Ensure the PartyKit server is running." : undefined,
+        });
       };
 
-      ws.onclose = () => {
-        console.log("WebSocket disconnected");
+      ws.onclose = (event) => {
+        const closeInfo = {
+          code: event.code,
+          reason: event.reason || "No reason provided",
+          wasClean: event.wasClean,
+        };
+        
+        // Provide helpful error messages for common close codes
+        let errorMessage = "";
+        if (event.code === 1006) {
+          errorMessage = "Connection failed. Is the PartyKit server running?";
+        } else if (event.code === 1000) {
+          errorMessage = "Connection closed normally";
+        } else if (event.code === 1001) {
+          errorMessage = "Server is going away";
+        } else if (event.code === 1002) {
+          errorMessage = "Protocol error";
+        } else if (event.code === 1003) {
+          errorMessage = "Unsupported data type";
+        } else if (event.code === 1008) {
+          errorMessage = "Policy violation";
+        } else if (event.code === 1011) {
+          errorMessage = "Server error";
+        }
+        
+        if (errorMessage && !event.wasClean) {
+          console.error("WebSocket disconnected:", errorMessage, closeInfo);
+        } else {
+          console.log("WebSocket disconnected", closeInfo);
+        }
+        
         setIsConnected(false);
         wsRef.current = null;
         handlersRef.current.onDisconnect?.();
