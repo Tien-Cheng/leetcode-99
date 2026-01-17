@@ -11,6 +11,7 @@ export interface EditorWrapperProps {
   readOnly?: boolean;
   vimMode?: boolean;
   vimLocked?: boolean;
+  flashbangActive?: boolean;
   onVimModeChange?: (enabled: boolean) => void;
   className?: string;
 }
@@ -26,15 +27,18 @@ export function EditorWrapper({
   readOnly = false,
   vimMode = false,
   vimLocked = false,
+  flashbangActive = false,
   onVimModeChange,
   className = "",
 }: EditorWrapperProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
   const vimAdapterRef = useRef<any>(null);
   const [isVimActive, setIsVimActive] = useState(vimMode || vimLocked);
 
-  // Define custom theme before editor mounts
+  // Define custom themes before editor mounts
   const handleEditorWillMount = (monaco: typeof Monaco): void => {
+    // Dark theme (default)
     monaco.editor.defineTheme("leet99-dark", {
       base: "vs-dark",
       inherit: true,
@@ -58,11 +62,37 @@ export function EditorWrapper({
         "editorWhitespace.foreground": "#404040",
       },
     });
+
+    // Flashbang theme (harsh light)
+    monaco.editor.defineTheme("leet99-flashbang", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "", foreground: "1a1a1a", background: "f0f0f0" },
+        { token: "comment", foreground: "6b7280", fontStyle: "italic" },
+        { token: "keyword", foreground: "00bfa6" },
+        { token: "string", foreground: "12a150" },
+        { token: "number", foreground: "c27a00" },
+        { token: "function", foreground: "00bfa6" },
+      ],
+      colors: {
+        "editor.background": "#f0f0f0",
+        "editor.foreground": "#1a1a1a",
+        "editorCursor.foreground": "#00bfa6",
+        "editor.lineHighlightBackground": "#e6e6e6",
+        "editorLineNumber.foreground": "#9ca3af",
+        "editorLineNumber.activeForeground": "#00bfa6",
+        "editor.selectionBackground": "#00bfa633",
+        "editor.inactiveSelectionBackground": "#00bfa620",
+        "editorWhitespace.foreground": "#d1d5db",
+      },
+    });
   };
 
   // Handle editor mount
   const handleEditorDidMount: OnMount = async (editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
 
     // Enable Vim mode if requested
     if (vimMode || vimLocked) {
@@ -74,6 +104,14 @@ export function EditorWrapper({
       editor.focus();
     }
   };
+
+  // Update editor theme when flashbang state changes
+  useEffect(() => {
+    if (monacoRef.current) {
+      const theme = flashbangActive ? "leet99-flashbang" : "leet99-dark";
+      monacoRef.current.editor.setTheme(theme);
+    }
+  }, [flashbangActive]);
 
   // Enable Vim mode
   const enableVimMode = async (editor: Monaco.editor.IStandaloneCodeEditor): Promise<void> => {
@@ -146,7 +184,7 @@ export function EditorWrapper({
         language={language}
         value={code}
         onChange={(value: string | undefined) => onChange(value || "")}
-        theme="leet99-dark"
+        theme={flashbangActive ? "leet99-flashbang" : "leet99-dark"}
         beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
         options={{

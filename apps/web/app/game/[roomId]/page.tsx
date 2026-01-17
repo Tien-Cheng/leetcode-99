@@ -56,6 +56,8 @@ function GamePageContent() {
     updateCode,
     playerId,
     isHost,
+    lastAttackerInfo,
+    __debugSetDebuff,
     shopCatalog,
     shopCooldowns,
     playerPrivateState,
@@ -80,6 +82,14 @@ function GamePageContent() {
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  // Sync currentTime with serverTime when serverTime updates
+  useEffect(() => {
+    if (serverTime) {
+      setCurrentTime(new Date(serverTime).getTime());
+    }
+  }, [serverTime]);
 
   // Track previous values for effect triggers
   const prevScoreRef = useRef(score);
@@ -130,6 +140,21 @@ function GamePageContent() {
     return () => clearTimeout(timer);
   }, [code, codeVersion, currentProblem, updateCode]);
 
+  // Show error toast for wrong MCQ answer
+  useEffect(() => {
+    if (
+      lastJudgeResult &&
+      currentProblem?.problemType === "mcq" &&
+      lastJudgeResult.problemId === currentProblem.problemId &&
+      !lastJudgeResult.passed
+    ) {
+      setToast({
+        message: "Incorrect answer. Try again!",
+        type: "error",
+      });
+    }
+  }, [lastJudgeResult, currentProblem]);
+
   // Handle code change
   const handleCodeChange = (newCode: string) => {
     setCode(newCode);
@@ -175,6 +200,70 @@ function GamePageContent() {
     if (!targetingOpen) setShopOpen(false);
   };
 
+  // Secret debug handlers to trigger debuffs (for testing)
+  // Using actual game durations
+  const triggerDebuffDDOS = useCallback(() => {
+    const endsAt = new Date(Date.now() + 8000).toISOString();
+    __debugSetDebuff({ type: "ddos", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered DDOS debuff (8s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const triggerDebuffFlashbang = useCallback(() => {
+    const endsAt = new Date(Date.now() + 24000).toISOString();
+    __debugSetDebuff({ type: "flashbang", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered Flashbang debuff (24s)");
+    console.log("[DEBUG] Setting activeDebuff to:", { type: "flashbang", endsAt });
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const triggerDebuffVimLock = useCallback(() => {
+    const endsAt = new Date(Date.now() + 12000).toISOString();
+    __debugSetDebuff({ type: "vimLock", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered Vim Lock debuff (12s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const triggerDebuffMemoryLeak = useCallback(() => {
+    const endsAt = new Date(Date.now() + 30000).toISOString();
+    __debugSetDebuff({ type: "memoryLeak", endsAt });
+    triggerEffect("attack");
+    console.log("[DEBUG] Triggered Memory Leak debuff (30s)");
+  }, [__debugSetDebuff, triggerEffect]);
+
+  const clearDebuffManual = useCallback(() => {
+    __debugSetDebuff(null);
+    console.log("[DEBUG] Cleared all debuffs");
+  }, [__debugSetDebuff]);
+
+  // Log debug shortcuts on mount
+  useEffect(() => {
+    console.log(
+      "%c🎮 DEBUG SHORTCUTS ENABLED",
+      "color: #00ffd5; font-weight: bold; font-size: 14px;",
+    );
+    console.log(
+      "%cCtrl+Shift+1: Trigger DDOS (blocks Run button for 8s)",
+      "color: #ff6b6b;",
+    );
+    console.log(
+      "%cCtrl+Shift+2: Trigger Flashbang (inverts theme for 24s)",
+      "color: #ffd93d;",
+    );
+    console.log(
+      "%cCtrl+Shift+3: Trigger Vim Lock (forces Vim mode for 12s)",
+      "color: #00ffd5;",
+    );
+    console.log(
+      "%cCtrl+Shift+4: Trigger Memory Leak (glitch effects for 30s)",
+      "color: #ffd93d;",
+    );
+    console.log(
+      "%cCtrl+Shift+0: Clear all debuffs",
+      "color: #6bcf7f;",
+    );
+  }, []);
+
   // Handle debug add score (testing only)
   const handleDebugAddScore = () => {
     debugAddScore(500);
@@ -204,6 +293,42 @@ function GamePageContent() {
         action: handleTargetingToggle,
         description: "Targeting Mode",
       },
+      // SECRET DEBUG SHORTCUTS (Ctrl+Shift+[key])
+      {
+        key: "1",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffDDOS,
+        description: "[DEBUG] Trigger DDOS",
+      },
+      {
+        key: "2",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffFlashbang,
+        description: "[DEBUG] Trigger Flashbang",
+      },
+      {
+        key: "3",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffVimLock,
+        description: "[DEBUG] Trigger Vim Lock",
+      },
+      {
+        key: "4",
+        shiftKey: true,
+        ctrlKey: true,
+        action: triggerDebuffMemoryLeak,
+        description: "[DEBUG] Trigger Memory Leak",
+      },
+      {
+        key: "0",
+        shiftKey: true,
+        ctrlKey: true,
+        action: clearDebuffManual,
+        description: "[DEBUG] Clear All Debuffs",
+      },
       {
         key: "$",
         shiftKey: true,
@@ -212,25 +337,76 @@ function GamePageContent() {
       },
     ],
     enabled: true,
+    disableWhenInputFocused: false, // Allow debug shortcuts even when editor is focused
   });
+
+  // Update current time every second for debuff duration display and check expiry
+  useEffect(() => {
+    if (activeDebuff) {
+      // Update immediately
+      setCurrentTime(Date.now());
+
+      const interval = setInterval(() => {
+        const now = Date.now();
+        setCurrentTime(now);
+
+        // Check if debuff has expired and clear it (client-side fallback)
+        try {
+          const endsAt = new Date(activeDebuff.endsAt).getTime();
+          if (isNaN(endsAt)) {
+            console.warn("[Debuff] Invalid endsAt timestamp:", activeDebuff.endsAt);
+            return;
+          }
+          if (now >= endsAt) {
+            console.log("[Debuff] Expired, clearing client-side");
+            __debugSetDebuff(null);
+          }
+        } catch (e) {
+          console.error("[Debuff] Error checking expiry:", e);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      // Reset currentTime when debuff is cleared
+      setCurrentTime(Date.now());
+    }
+  }, [activeDebuff, __debugSetDebuff]);
 
   // Apply Flashbang debuff theme switching
   useEffect(() => {
-    const theme =
-      activeDebuff?.type === "flashbang" ? "leet99-flashbang" : "leet99";
-    document.documentElement.setAttribute("data-theme", theme);
+    const isFlashbang = activeDebuff?.type === "flashbang";
+    const theme = isFlashbang ? "leet99-flashbang" : "leet99";
+    const html = document.documentElement;
 
-    // Add/remove flashbang transition class
-    if (activeDebuff?.type === "flashbang") {
-      document.documentElement.classList.add(
-        "transition-colors",
-        "duration-1000",
-      );
+    console.log("[Theme] Applying theme:", theme, "for debuff:", activeDebuff?.type);
+    console.log("[Theme] Current html data-theme:", html.getAttribute("data-theme"));
+
+    // Remove old theme class if any
+    html.classList.remove("leet99", "leet99-flashbang");
+
+    // Set the data-theme attribute (daisyUI uses this)
+    html.setAttribute("data-theme", theme);
+
+    // Force a reflow to ensure theme is applied
+    void html.offsetHeight;
+
+    // Verify it was set
+    const actualTheme = html.getAttribute("data-theme");
+    console.log("[Theme] Theme after setting:", actualTheme);
+
+    if (actualTheme !== theme) {
+      console.error("[Theme] Theme mismatch! Expected:", theme, "Got:", actualTheme);
+    }
+
+    // Add smooth transition when flashbang is active
+    if (isFlashbang) {
+      html.style.transition = "background-color 1s ease, color 1s ease, border-color 1s ease";
+      // Small delay to ensure theme is applied before transition
+      setTimeout(() => {
+        html.style.transition = "background-color 1s ease, color 1s ease, border-color 1s ease";
+      }, 10);
     } else {
-      document.documentElement.classList.remove(
-        "transition-colors",
-        "duration-1000",
-      );
+      html.style.transition = "";
     }
   }, [activeDebuff]);
 
@@ -324,6 +500,7 @@ function GamePageContent() {
   const vimLocked = activeDebuff?.type === "vimLock";
   const memoryLeakActive = activeDebuff?.type === "memoryLeak";
   const ddosActive = activeDebuff?.type === "ddos";
+  const flashbangActive = activeDebuff?.type === "flashbang";
 
   // Map players for minimap (filter out lobby players)
   const minimapPlayers = playersPublic
@@ -441,6 +618,15 @@ function GamePageContent() {
         <div className="fixed inset-0 z-[100] cursor-move" />
       )}
 
+      {/* Attacker Notification - Top Center */}
+      {lastAttackerInfo && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] animate-slide-in-top">
+          <div className="px-4 py-2 bg-error/90 text-error-content font-mono text-sm font-bold border border-error rounded shadow-lg">
+            ⚠️ ATTACKED BY: {lastAttackerInfo.username.toUpperCase()} ({lastAttackerInfo.attackType.toUpperCase()})
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
         <Timer
@@ -452,20 +638,40 @@ function GamePageContent() {
           {!isConnected && (
             <span className="text-error animate-pulse">(Disconnected)</span>
           )}
-          {activeDebuff && (
-            <span
-              className={`
-              px-2 py-0.5 text-xs font-bold border
-              ${activeDebuff.type === "ddos" ? "border-error text-error animate-pulse" : ""}
-              ${activeDebuff.type === "flashbang" ? "border-warning text-warning" : ""}
-              ${activeDebuff.type === "vimLock" ? "border-success text-success vim-cursor-blink" : ""}
-              ${activeDebuff.type === "memoryLeak" ? "border-warning text-warning glitch-text" : ""}
-            `}
-              data-text={`[${activeDebuff.type.toUpperCase()}]`}
-            >
-              [{activeDebuff.type.toUpperCase()}]
-            </span>
-          )}
+          {activeDebuff && (() => {
+            // Calculate remaining time - use currentTime which updates every second
+            const now = currentTime;
+            const endsAt = new Date(activeDebuff.endsAt).getTime();
+            const remainingMs = Math.max(0, endsAt - now);
+
+            // If expired, don't show the debuff (should be cleared by useEffect)
+            if (remainingMs === 0) {
+              return null;
+            }
+
+            const remainingSec = Math.ceil(remainingMs / 1000);
+            const minutes = Math.floor(remainingSec / 60);
+            const seconds = remainingSec % 60;
+            const timeDisplay = minutes > 0
+              ? `${minutes}:${seconds.toString().padStart(2, '0')}`
+              : `${seconds}s`;
+
+            return (
+              <span
+                className={`
+                px-2 py-0.5 text-xs font-bold border flex items-center gap-1
+                ${activeDebuff.type === "ddos" ? "border-error text-error animate-pulse" : ""}
+                ${activeDebuff.type === "flashbang" ? "border-warning text-warning" : ""}
+                ${activeDebuff.type === "vimLock" ? "border-success text-success vim-cursor-blink" : ""}
+                ${activeDebuff.type === "memoryLeak" ? "border-warning text-warning glitch-text" : ""}
+              `}
+                data-text={`[${activeDebuff.type.toUpperCase()}]`}
+              >
+                <span>[{activeDebuff.type.toUpperCase()}]</span>
+                <span className="opacity-75">({timeDisplay})</span>
+              </span>
+            );
+          })()}
         </div>
       </div>
 
@@ -557,6 +763,7 @@ function GamePageContent() {
                 language="python"
                 vimMode={vimMode}
                 vimLocked={vimLocked}
+                flashbangActive={flashbangActive}
                 onVimModeChange={setVimMode}
                 className="h-full"
               />
