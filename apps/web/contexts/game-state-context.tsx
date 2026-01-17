@@ -14,6 +14,7 @@ import type {
   ProblemClientView,
   ProblemSummary,
   ActiveDebuff,
+  ActiveBuff,
   ShopCatalogItem,
   EventLogEntry,
   JudgeResult,
@@ -44,6 +45,7 @@ interface GameStateContextValue {
   currentProblem: ProblemClientView | null;
   problemStack: ProblemSummary[];
   activeDebuff: ActiveDebuff | null;
+  activeBuff: ActiveBuff | null;
   score: number;
   solveStreak: number;
   targetingMode: TargetingMode;
@@ -58,6 +60,7 @@ interface GameStateContextValue {
 
   // Shop
   shopCatalog: ShopCatalogItem[];
+  shopCooldowns: Record<string, number>;
 
   // Actions
   sendChat: (message: string) => void;
@@ -72,6 +75,7 @@ interface GameStateContextValue {
   startMatch: () => void;
   addBots: (count: number) => void;
   returnToLobby: () => void;
+  debugAddScore: (amount: number) => void;
 }
 
 const GameStateContext = createContext<GameStateContextValue | undefined>(
@@ -106,6 +110,7 @@ export function GameStateProvider({
   const [playerPrivateState, setPlayerPrivateState] =
     useState<PlayerPrivateState | null>(null);
   const [activeDebuff, setActiveDebuff] = useState<ActiveDebuff | null>(null);
+  const [activeBuff, setActiveBuff] = useState<ActiveBuff | null>(null);
   const [score, setScore] = useState(0);
   const [solveStreak, setSolveStreak] = useState(0);
   const [targetingMode, setTargetingModeState] =
@@ -123,6 +128,7 @@ export function GameStateProvider({
 
   // Shop
   const [shopCatalog, setShopCatalog] = useState<ShopCatalogItem[]>([]);
+  const [shopCooldowns, setShopCooldowns] = useState<Record<string, number>>({});
 
   // Derived state
   const currentProblem = playerPrivateState?.currentProblem ?? null;
@@ -166,6 +172,7 @@ export function GameStateProvider({
     const myPublicData = payload.players.find(p => p.playerId === payload.me.playerId);
     if (myPublicData) {
       setActiveDebuff(myPublicData.activeDebuff ?? null);
+      setActiveBuff(myPublicData.activeBuff ?? null);
       setScore(myPublicData.score);
       setSolveStreak(myPublicData.streak);
       setTargetingModeState(myPublicData.targetingMode);
@@ -177,6 +184,10 @@ export function GameStateProvider({
 
     if (payload.shopCatalog) {
       setShopCatalog(payload.shopCatalog);
+    }
+
+    if (payload.self?.shopCooldowns) {
+      setShopCooldowns(payload.self.shopCooldowns);
     }
   }, []);
 
@@ -387,6 +398,7 @@ export function GameStateProvider({
     currentProblem,
     problemStack,
     activeDebuff,
+    activeBuff,
     score,
     solveStreak,
     targetingMode,
@@ -401,6 +413,7 @@ export function GameStateProvider({
 
     // Shop
     shopCatalog,
+    shopCooldowns,
 
     // Actions
     sendChat: ws.sendChat,
@@ -415,6 +428,7 @@ export function GameStateProvider({
     startMatch: ws.startMatch,
     addBots: ws.addBots,
     returnToLobby: ws.returnToLobby,
+    debugAddScore: ws.debugAddScore,
   };
 
   return (

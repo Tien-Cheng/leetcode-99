@@ -147,6 +147,16 @@ export type CodeUpdateClientMessage = WSMessage<
   CodeUpdateClientPayload
 >;
 
+// DEBUG_ADD_SCORE (dev/testing only)
+export const DebugAddScorePayloadSchema = z.object({
+  amount: z.number().int(),
+});
+export type DebugAddScorePayload = z.infer<typeof DebugAddScorePayloadSchema>;
+export type DebugAddScoreMessage = WSMessage<
+  "DEBUG_ADD_SCORE",
+  DebugAddScorePayload
+>;
+
 // Union of all client messages
 export type ClientMessage =
   | JoinRoomMessage
@@ -161,7 +171,8 @@ export type ClientMessage =
   | SpendPointsMessage
   | SpectatePlayerMessage
   | StopSpectateMessage
-  | CodeUpdateClientMessage;
+  | CodeUpdateClientMessage
+  | DebugAddScoreMessage;
 
 export const ClientMessageTypeSchema = z.enum([
   "JOIN_ROOM",
@@ -177,6 +188,7 @@ export const ClientMessageTypeSchema = z.enum([
   "SPECTATE_PLAYER",
   "STOP_SPECTATE",
   "CODE_UPDATE",
+  "DEBUG_ADD_SCORE",
 ]);
 export type ClientMessageType = z.infer<typeof ClientMessageTypeSchema>;
 
