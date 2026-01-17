@@ -14,15 +14,20 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   useEffect(() => {
+    // Calculate drift between server time and local time
+    const serverTimeMs = serverTime ? new Date(serverTime).getTime() : Date.now();
+    const drift = Date.now() - serverTimeMs;
+
     const calculateRemaining = () => {
-      const now = serverTime ? new Date(serverTime).getTime() : Date.now();
+      // Current estimated server time
+      const now = Date.now() - drift;
       const end = new Date(endsAt).getTime();
       const remaining = Math.max(0, end - now);
       setTimeRemaining(remaining);
     };
 
     calculateRemaining();
-    const interval = setInterval(calculateRemaining, 1000);
+    const interval = setInterval(calculateRemaining, 100); // 100ms for smoother updates
 
     return () => clearInterval(interval);
   }, [endsAt, serverTime]);

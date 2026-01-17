@@ -11,6 +11,7 @@ import type {
   JoinRoomPayload,
   JudgeResult,
   MatchEndReason,
+  MatchPhase,
   MatchPublic,
   PlayerPrivateState,
   PlayerPublic,
@@ -744,10 +745,13 @@ export default class Room implements Party.Server {
       now.getTime() + this.state.settings.matchDurationSec * 1000,
     ).toISOString();
 
+    // Determine initial phase (skip warmup for very short matches)
+    const phase: MatchPhase = this.state.settings.matchDurationSec < 10 ? "main" : "warmup";
+
     // Update match state
     this.state.match = {
       matchId,
-      phase: "warmup",
+      phase,
       startAt,
       endAt,
       settings: this.state.settings,
@@ -1810,8 +1814,9 @@ export default class Room implements Party.Server {
       endReason = "lastAlive";
     }
 
-    // Check if time expired
-    if (this.state.match.endAt && new Date(this.state.match.endAt) <= new Date()) {
+    // Check if time expired (with 100ms tolerance for server timing)
+    const now = Date.now();
+    if (this.state.match.endAt && new Date(this.state.match.endAt).getTime() <= now + 100) {
       endReason = "timeExpired";
     }
 
@@ -1819,6 +1824,7 @@ export default class Room implements Party.Server {
       return;
     }
 
+    console.log(`[${this.state.roomId}] Ending match, reason: ${endReason}`);
     await this.endMatch(endReason);
   }
 
@@ -1858,6 +1864,7 @@ export default class Room implements Party.Server {
       username: p.username,
       role: p.role,
       score: p.score,
+      status: p.status === "eliminated" ? "Eliminated" : "Survived",
     }));
 
     // Set actual end time
@@ -1867,6 +1874,7 @@ export default class Room implements Party.Server {
     this.state.match.phase = "ended";
     this.state.match.endReason = endReason;
     this.state.match.endAt = actualEndAt;
+    this.state.match.standings = standings;
 
     // Clear scheduled arrivals
     this.state.nextProblemArrivalAt = null;
@@ -1880,6 +1888,15 @@ export default class Room implements Party.Server {
         endReason,
         winnerPlayerId: winner?.playerId ?? sorted[0]?.playerId ?? "",
         standings,
+      },
+    });
+
+    // Also broadcast phase update
+    this.broadcast({
+      type: "MATCH_PHASE_UPDATE",
+      payload: {
+        matchId: this.state.match.matchId!,
+        phase: "ended",
       },
     });
 
@@ -2725,18 +2742,18 @@ export default class Room implements Party.Server {
       minTimeUntilNextArrival = 1000; // 1 second
     }
 
-    const nextArrivalAt = now + minTimeUntilNextArrival;
+    let nextArrivalAt = now + minTimeUntilNextArrival;
 
-    // Don't schedule beyond match end time
+    // Don't schedule arrivals beyond match end time
     if (
       this.state.match.endAt &&
       nextArrivalAt > new Date(this.state.match.endAt).getTime()
     ) {
       this.state.nextProblemArrivalAt = null;
-      return;
+      nextArrivalAt = Infinity; // Still continue to schedule other alarms
+    } else {
+      this.state.nextProblemArrivalAt = nextArrivalAt;
     }
-
-    this.state.nextProblemArrivalAt = nextArrivalAt;
 
     // Schedule alarm (use the earlier of phase transition, problem arrival, bot action, or match end)
     const warmupEndAt =
@@ -2752,11 +2769,12 @@ export default class Room implements Party.Server {
     const botActionAt = this.state.nextBotActionAt ?? Infinity;
 
     const alarmAt = Math.min(nextArrivalAt, warmupEndAt, matchEndAt, botActionAt);
-    await this.room.storage.setAlarm(alarmAt);
-
-    console.log(
-      `[${this.state.roomId}] Scheduled next alarm at ${new Date(alarmAt).toISOString()}`,
-    );
+    if (alarmAt !== Infinity && !isNaN(alarmAt)) {
+      await this.room.storage.setAlarm(alarmAt);
+      console.log(`[${this.state.roomId}] Scheduled next alarm at ${new Date(alarmAt).toISOString()} (in ${Math.round(alarmAt - now)}ms)`);
+    } else {
+      console.log(`[${this.state.roomId}] No further alarms scheduled`);
+    }
   }
 
   // ============================================================================
@@ -2865,15 +2883,17 @@ export default class Room implements Party.Server {
 
   async onAlarm() {
     const now = Date.now();
+    this.addEventLog("info", `Server: onAlarm (phase: ${this.state.match.phase})`);
 
     // Handle expired debuffs and buffs
     this.handleExpiredDebuffs();
 
-    // Check if match has ended due to time expiration
+    // Check if match has ended due to time expiration (with 100ms tolerance)
     if (
       this.state.match.endAt &&
-      new Date(this.state.match.endAt) <= new Date()
+      new Date(this.state.match.endAt).getTime() <= now + 100
     ) {
+      console.log(`[${this.state.roomId}] Match end time reached, checking end...`);
       await this.checkMatchEnd();
       return;
     }
@@ -2889,10 +2909,9 @@ export default class Room implements Party.Server {
     // Check if it's time for problem arrivals
     if (
       this.state.nextProblemArrivalAt !== null &&
-      now >= this.state.nextProblemArrivalAt
+      now >= this.state.nextProblemArrivalAt - 100 // Tolerance
     ) {
       await this.handleProblemArrivals();
-      return;
     }
 
     // Handle warmup -> main transition

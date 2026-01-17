@@ -20,6 +20,7 @@ export * from "./problem-display";
 export * from "./shop-modal";
 export * from "./timer";
 export * from "./targeting-modal";
+export * from "./match-results-modal";
 
 // Editor wrapper
 export * from "./editor-wrapper";

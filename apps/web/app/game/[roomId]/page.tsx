@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import {
   Panel,
@@ -13,6 +13,7 @@ import {
   TargetingModal,
   Timer,
   Button,
+  MatchResultsModal,
 } from "@leet99/ui";
 import { useGameState } from "../../../contexts/game-state-context";
 import { useHotkeys } from "../../../components/hotkey-provider";
@@ -38,12 +39,20 @@ function GamePageContent() {
     lastJudgeResult,
     serverTime,
     targetingMode,
+    matchPhase,
+    matchEndAt,
+    matchEndResult,
     runCode,
     submitCode,
     purchaseItem,
     setTargetMode,
+    returnToLobby,
     updateCode,
+    playerId,
+    isHost,
   } = useGameState();
+
+  const router = useRouter();
 
   // Hotkey state
   const { vimMode, setVimMode } = useHotkeys();
@@ -227,7 +236,7 @@ function GamePageContent() {
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-2 px-2">
         <Timer
-          endsAt={roomSettings?.matchDurationSec ? new Date(Date.now() + roomSettings.matchDurationSec * 1000).toISOString() : new Date().toISOString()}
+          endsAt={matchEndAt || new Date().toISOString()}
           serverTime={serverTime || new Date().toISOString()}
         />
         <div className="font-mono text-sm text-muted">
@@ -406,6 +415,17 @@ function GamePageContent() {
           setTargetMode(modeId as any);
         }}
         onClose={() => setTargetingOpen(false)}
+      />
+
+      {/* Match Results Modal */}
+      <MatchResultsModal
+        isOpen={matchPhase === "ended"}
+        endReason={matchEndResult?.endReason || "timeExpired"}
+        standings={matchEndResult?.standings || []}
+        selfPlayerId={playerId || ""}
+        isHost={isHost}
+        onReturnToLobby={returnToLobby}
+        onExit={() => router.push("/")}
       />
     </main>
   );
