@@ -12,14 +12,13 @@ import {
   StandingEntrySchema,
   PlayerRoleSchema,
   PlayerStatusSchema,
-} from "./room";
+} from "./room.js";
 import {
-  ProblemClientViewSchema,
   ProblemSummarySchema,
   PlayerPrivateStateSchema,
   SpectateViewSchema,
   JudgeResultSchema,
-} from "./problem";
+} from "./problem.js";
 
 // ============================================================================
 // WebSocket Message Envelope

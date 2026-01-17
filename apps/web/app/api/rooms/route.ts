@@ -5,6 +5,7 @@ import {
   type HttpErrorResponse,
   RoomSettingsSchema,
 } from "@leet99/contracts";
+import { registerPartyPlayer, toWsUrl } from "@/server/partykit";
 
 /**
  * POST /api/rooms - Create a new room
@@ -12,6 +13,8 @@ import {
  * Creates a room in lobby phase and returns credentials for the host.
  */
 export async function POST(req: NextRequest) {
+  let roomId: string | undefined;
+
   try {
     const body = await req.json();
     const parsed = CreateRoomRequestSchema.safeParse(body);
@@ -41,40 +44,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(error, { status: 400 });
     }
 
-    // Generate room ID (6 chars, URL-safe)
-    const roomId = generateRoomId();
-
     // Generate player credentials
-    const playerId = `p_${generateId()}`;
-    const playerToken = `pt_${generateId()}`;
+    const playerId = `p_${crypto.randomUUID()}`;
+    const playerToken = `pt_${crypto.randomUUID()}`;
 
     // Merge settings with defaults
     const settings = RoomSettingsSchema.parse({
       ...settingsOverride,
     });
 
-    // Build WebSocket URL
-    // In production, this would be the PartyKit host
-    const partykitHost = process.env.PARTYKIT_HOST || "http://localhost:1999";
-    const partykitProject = process.env.PARTYKIT_PROJECT || "leet99";
-    const wsUrl = `${partykitHost}/parties/${partykitProject}/${roomId}`;
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      roomId = generateRoomId();
 
-    // TODO: Store room state in PartyKit or a backing store
-    // For now, we return mock data to allow the client to proceed
+      const registerResult = await registerPartyPlayer(roomId, {
+        playerId,
+        playerToken,
+        username: trimmedUsername,
+        role: "player",
+        isHost: true,
+        settings,
+      });
 
-    const response: CreateRoomResponse = {
-      roomId,
-      wsUrl,
-      playerId,
-      playerToken,
-      role: "player",
-      isHost: true,
-      settings,
+      if (registerResult.ok) {
+        const response: CreateRoomResponse = {
+          roomId,
+          wsUrl: toWsUrl(roomId),
+          playerId,
+          playerToken,
+          role: "player",
+          isHost: true,
+          settings: registerResult.data.settings,
+        };
+
+        return NextResponse.json(response, { status: 201 });
+      }
+
+      if (registerResult.status === 409) {
+        continue;
+      }
+
+      return NextResponse.json(registerResult.error, {
+        status: registerResult.status,
+      });
+    }
+
+    const error: HttpErrorResponse = {
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Failed to create room",
+      },
     };
-
-    return NextResponse.json(response, { status: 201 });
-  } catch (err) {
-    console.error("Error creating room:", err);
+    return NextResponse.json(error, { status: 500 });
+  } catch {
+    console.error("Failed to create room", { roomId });
     const error: HttpErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",
@@ -90,16 +113,15 @@ export async function POST(req: NextRequest) {
  */
 function generateRoomId(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(6);
+
+  crypto.getRandomValues(bytes);
+
   let result = "";
   for (let i = 0; i < 6; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
+    const index = bytes[i]! & 31;
+    result += chars[index]!;
   }
-  return result;
-}
 
-/**
- * Generate a random ID for player/token
- */
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 15);
+  return result;
 }

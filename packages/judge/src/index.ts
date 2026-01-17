@@ -13,7 +13,7 @@ import type {
  */
 
 // Judge0 language ID for Python 3
-const PYTHON3_LANGUAGE_ID = 71;
+const _PYTHON3_LANGUAGE_ID = 71;
 
 export interface JudgeConfig {
   judge0Url: string;
@@ -28,7 +28,7 @@ export interface JudgeConfig {
  */
 export async function runPublicTests(
   problem: ProblemFull,
-  code: string,
+  _code: string,
   _config: JudgeConfig,
 ): Promise<JudgeResult> {
   // TODO: Implement actual Judge0 integration
@@ -58,7 +58,7 @@ export async function runPublicTests(
  */
 export async function runAllTests(
   problem: ProblemFull,
-  code: string,
+  _code: string,
   _config: JudgeConfig,
 ): Promise<JudgeResult> {
   // TODO: Implement actual Judge0 integration
