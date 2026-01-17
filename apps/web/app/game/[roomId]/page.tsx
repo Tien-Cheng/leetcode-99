@@ -13,6 +13,7 @@ import {
   TargetingModal,
   Timer,
   Button,
+  MatchResultsModal,
   EffectsOverlay,
   ScoreDisplay,
   useGameEffects,
@@ -27,6 +28,7 @@ import { GameWrapper } from "./game-wrapper";
 function GamePageContent() {
   const params = useParams();
   const roomId = params.roomId as string;
+  const router = useRouter();
 
   // Game state from context
   const {

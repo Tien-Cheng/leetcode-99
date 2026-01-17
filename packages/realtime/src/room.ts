@@ -784,7 +784,7 @@ export default class Room implements Party.Server {
     // Persist
     await this.persistState();
 
-    // Schedule bot actions
+    // Schedule bot actions (sets state only, doesn't set alarm directly)
     await this.scheduleBotActions();
 
     // Schedule first problem arrival (coordinates all alarms)
@@ -2768,7 +2768,6 @@ export default class Room implements Party.Server {
       return;
     }
 
-    // Schedule alarm (use the earlier of phase transition, problem arrival, bot action, or match end)
     const warmupEndAt =
       this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
@@ -2823,7 +2822,7 @@ export default class Room implements Party.Server {
     }
     await this.room.storage.setAlarm(scheduledAt);
     console.log(
-      `[${this.state.roomId}] Scheduled next alarm at ${new Date(scheduledAt).toISOString()}`,
+      `[${this.state.roomId}] Scheduled next alarm at ${new Date(scheduledAt).toISOString()} (in ${Math.round(scheduledAt - now)}ms)`,
     );
   }
 
@@ -2974,6 +2973,7 @@ export default class Room implements Party.Server {
       now >= this.state.nextProblemArrivalAt - 100 // Tolerance
     ) {
       await this.handleProblemArrivals();
+      didWork = true;
     }
 
     // Handle warmup -> main transition

@@ -4,9 +4,9 @@ import React, { createContext, useContext, useState, useCallback, type ReactNode
 import { useWebSocket } from "../hooks/use-websocket";
 import type {
   MatchEndPayload,
-  MatchStartedPayload,
   StandingEntry,
   RoomSnapshotPayload,
+  MatchStartedPayload,
   PlayerPublic,
   RoomSettings,
   MatchPhase,
@@ -98,9 +98,8 @@ export function GameStateProvider({
   const [roomSettings, setRoomSettings] = useState<RoomSettings | null>(null);
   const [matchPhase, setMatchPhase] = useState<MatchPhase>("lobby");
   const [matchEndAt, setMatchEndAt] = useState<string | null>(null);
-  const [matchEndResult, setMatchEndResult] = useState<MatchEndPayload | null>(
-    null
-  );
+  const [matchEndResult, setMatchEndResult] =
+    useState<MatchEndPayload | null>(null);
 
   // Player state
   const [username, setUsername] = useState<string | null>(null);
