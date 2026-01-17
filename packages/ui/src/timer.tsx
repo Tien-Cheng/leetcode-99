@@ -14,8 +14,13 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   useEffect(() => {
+    // Calculate offset between server and client time to keep timer synced
+    const serverTimestamp = serverTime ? new Date(serverTime).getTime() : null;
+    const clientTimestamp = Date.now();
+    const offset = serverTimestamp ? serverTimestamp - clientTimestamp : 0;
+
     const calculateRemaining = () => {
-      const now = serverTime ? new Date(serverTime).getTime() : Date.now();
+      const now = Date.now() + offset;
       const end = new Date(endsAt).getTime();
       const remaining = Math.max(0, end - now);
       setTimeRemaining(remaining);
