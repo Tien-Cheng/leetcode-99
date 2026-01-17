@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "Leet99 - Battle Royale for Coders",
   description:
     "Tetris 99 meets LeetCode. Race to solve problems, attack opponents, and be the last coder standing.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
