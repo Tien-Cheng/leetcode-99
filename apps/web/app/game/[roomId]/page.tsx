@@ -24,6 +24,7 @@ import { useHotkeys } from "../../../components/hotkey-provider";
 import { useKeyboardShortcuts } from "../../../hooks/use-keyboard-shortcuts";
 import type { PlayerPublic, EventLogEntry } from "@leet99/contracts";
 import { GameWrapper } from "./game-wrapper";
+import { EliminatedSpectatorView } from "./eliminated-spectator-view";
 
 function GamePageContent() {
   const params = useParams();
@@ -59,6 +60,8 @@ function GamePageContent() {
     shopCatalog,
     shopCooldowns,
     debugAddScore,
+    myStatus,
+    spectatePlayer,
   } = useGameState();
 
   // Effects system
@@ -121,6 +124,21 @@ function GamePageContent() {
     }
     prevDebuffRef.current = activeDebuff;
   }, [activeDebuff, triggerEffect]);
+
+  // Auto-spectate first alive player when eliminated
+  useEffect(() => {
+    if (myStatus === "eliminated") {
+      const alivePlayer = playersPublic.find(
+        (p) =>
+          p.role !== "spectator" &&
+          p.status !== "eliminated" &&
+          p.status !== "lobby",
+      );
+      if (alivePlayer) {
+        spectatePlayer(alivePlayer.playerId);
+      }
+    }
+  }, [myStatus, playersPublic, spectatePlayer]);
 
   // Debounced code update for spectators
   useEffect(() => {
@@ -417,6 +435,11 @@ function GamePageContent() {
       };
     });
   };
+
+  // If player is eliminated, show spectator view
+  if (myStatus === "eliminated") {
+    return <EliminatedSpectatorView roomId={roomId} />;
+  }
 
   // If match ended, show leaderboard instead of game
   if (matchPhase === "ended") {

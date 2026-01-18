@@ -15,6 +15,7 @@ import type {
   RoomSnapshotPayload,
   MatchStartedPayload,
   PlayerPublic,
+  PlayerStatus,
   RoomSettings,
   MatchPhase,
   PlayerPrivateState,
@@ -48,6 +49,7 @@ interface GameStateContextValue {
   playerId: string | null;
   username: string | null;
   isHost: boolean;
+  myStatus: PlayerStatus;
   playerPrivateState: PlayerPrivateState | null;
   currentProblem: ProblemClientView | null;
   problemStack: ProblemSummary[];
@@ -116,6 +118,7 @@ export function GameStateProvider({
   // Player state
   const [username, setUsername] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [myStatus, setMyStatus] = useState<PlayerStatus>("lobby");
   const [playerPrivateState, setPlayerPrivateState] =
     useState<PlayerPrivateState | null>(null);
   const [activeDebuff, setActiveDebuff] = useState<ActiveDebuff | null>(null);
@@ -179,6 +182,7 @@ export function GameStateProvider({
     }
     setUsername(payload.me.username);
     setIsHost(payload.me.isHost);
+    setMyStatus(payload.me.status);
     setChat(payload.chat);
     setEventLog(payload.eventLog);
 
@@ -245,6 +249,7 @@ export function GameStateProvider({
         setScore(payload.player.score);
         setSolveStreak(payload.player.streak);
         setTargetingModeState(payload.player.targetingMode);
+        setMyStatus(payload.player.status);
       }
     },
     [playerId],
@@ -418,6 +423,7 @@ export function GameStateProvider({
     playerId,
     username,
     isHost,
+    myStatus,
     playerPrivateState,
     currentProblem,
     problemStack,

@@ -129,6 +129,7 @@ export function Minimap({
               ${getStatusStyles(player)}
               ${isSelf ? "border-primary glow-primary border-2" : ""}
               ${isTarget ? "ring-2 ring-accent ring-offset-1 ring-offset-base-100" : ""}
+              ${isSpectating ? "ring-2 ring-primary ring-offset-1 ring-offset-base-100 border-primary border-2 bg-primary/20" : ""}
               ${!isEliminated && onPlayerClick ? "hover:border-primary/50 cursor-pointer hover:scale-105" : "cursor-default"}
               ${isEliminated ? "line-through" : ""}
               transition-all duration-150
@@ -136,13 +137,19 @@ export function Minimap({
             title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""} - Score: ${player.score || 0}${player.activeDebuff ? ` [${player.activeDebuff.type.toUpperCase()}]` : ""}${isEliminated ? " [ELIMINATED]" : ""}`}
           >
 
+            {/* Spectating indicator */}
+            {isSpectating && (
+              <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[7px] text-primary bg-base-100 px-1 font-bold z-10 uppercase tracking-wider">
+                watching
+              </span>
+            )}
+
             {/* Score change indicator */}
             {hasScoreChange && player.lastScoreChange && (
               <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[8px] text-success animate-fly-up font-bold z-10">
                 +{player.lastScoreChange.value}
               </span>
             )}
-
 
             {/* Username abbreviation and score */}
             <span className={`${isSelf ? "font-bold" : ""} text-[10px]`}>
