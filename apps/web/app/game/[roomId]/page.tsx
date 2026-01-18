@@ -60,6 +60,7 @@ function GamePageContent() {
     __debugSetDebuff,
     shopCatalog,
     shopCooldowns,
+    isEliminated,
 
     debugAddScore,
   } = useGameState();
@@ -651,6 +652,29 @@ function GamePageContent() {
           <div className="px-4 py-2 bg-error/90 text-error-content font-mono text-sm font-bold border border-error rounded shadow-lg">
             ⚠️ ATTACKED BY: {lastAttackerInfo.username.toUpperCase()} (
             {lastAttackerInfo.attackType.toUpperCase()})
+          </div>
+        </div>
+      )}
+
+      {/* Game Over Overlay for Eliminated Players */}
+      {isEliminated && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-base-300/80 backdrop-blur-sm">
+          <div className="text-center p-8 border-4 border-error bg-base-100 rounded-lg shadow-2xl">
+            <h1 className="text-6xl font-bold text-error mb-4 font-mono animate-pulse">
+              GAME OVER
+            </h1>
+            <p className="text-xl text-muted font-mono mb-2">
+              Stack Overflow! You've been eliminated.
+            </p>
+            <p className="text-lg text-muted font-mono">
+              Waiting for match to end...
+            </p>
+            <div className="mt-6">
+              <Timer
+                endsAt={matchEndAt || new Date().toISOString()}
+                serverTime={serverTime || new Date().toISOString()}
+              />
+            </div>
           </div>
         </div>
       )}

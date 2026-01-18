@@ -50,6 +50,7 @@ interface GameStateContextValue {
   solveStreak: number;
   targetingMode: TargetingMode;
   lastAttackerInfo: { playerId: string; username: string; attackType: string } | null;
+  isEliminated: boolean;
 
   // Spectator state
   spectateState: SpectateView | null;
@@ -350,6 +351,11 @@ export function GameStateProvider({
   );
 
   const handleError = useCallback((payload: { code: string; message: string }) => {
+    // PLAYER_ELIMINATED is expected when trying to act after elimination - not a real error
+    if (payload.code === "PLAYER_ELIMINATED") {
+      console.info("Player is eliminated, actions blocked:", payload.message);
+      return;
+    }
     console.error("WebSocket error:", payload.code, payload.message);
     // Could show a toast notification here
   }, []);
@@ -429,6 +435,7 @@ export function GameStateProvider({
     solveStreak,
     targetingMode,
     lastAttackerInfo,
+    isEliminated: playersPublic.find(p => p.playerId === playerId)?.status === "eliminated",
 
     // Spectator state
     spectateState,

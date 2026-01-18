@@ -1857,7 +1857,7 @@ export default class Room implements Party.Server {
 
     let endReason: MatchEndReason | null = null;
 
-    // Check if only one player remains
+    // End match when only one player remains (lastAlive)
     if (alivePlayers.length <= 1) {
       endReason = "lastAlive";
     }
@@ -2635,8 +2635,8 @@ export default class Room implements Party.Server {
    * Calculate the problem arrival interval for a player based on phase and buffs/debuffs
    */
   private calculateProblemArrivalInterval(player: PlayerInternal): number {
-    // Base interval based on phase
-    const baseIntervalSec = this.state.match.phase === "warmup" ? 90 : 60;
+    // Base interval based on phase (faster for more pressure)
+    const baseIntervalSec = this.state.match.phase === "warmup" ? 15 : 10;
 
     // Apply multipliers
     let memoryLeakMultiplier = 1;
