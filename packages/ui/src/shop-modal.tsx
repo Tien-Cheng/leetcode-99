@@ -45,7 +45,10 @@ export function ShopModal({
       if (num >= 1 && num <= items.length) {
         e.preventDefault();
         const item = items[num - 1];
-        if (item && !item.isDisabled && score >= item.cost && !item.cooldownRemaining) {
+        if (!item) return;
+        // skipProblem can go negative (emergency escape)
+        const canAffordItem = item.id === "skipProblem" || score >= item.cost;
+        if (!item.isDisabled && canAffordItem && !item.cooldownRemaining) {
           onPurchase(item.id);
         }
       }
@@ -93,7 +96,8 @@ export function ShopModal({
         {/* Items */}
         <div className="space-y-2">
           {items.map((item) => {
-            const canAfford = score >= item.cost;
+            // skipProblem can go negative (emergency escape)
+            const canAfford = item.id === "skipProblem" || score >= item.cost;
             const isAvailable = !item.isDisabled && !item.cooldownRemaining;
             const isEnabled = canAfford && isAvailable;
 
