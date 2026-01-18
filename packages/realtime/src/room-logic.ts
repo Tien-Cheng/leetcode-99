@@ -384,7 +384,7 @@ export interface ShopCatalogItem {
 export const DEFAULT_SHOP_CATALOG: ShopCatalogItem[] = [
   { item: "clearDebuff", cost: 10 },
   { item: "memoryDefrag", cost: 10 },
-  { item: "skipProblem", cost: 15 },
+  { item: "skipProblem", cost: 5 },
   { item: "rateLimiter", cost: 10, cooldownSec: 60 },
   { item: "hint", cost: 5 },
 ];
@@ -409,7 +409,8 @@ export function canPurchaseItem(
     return { canPurchase: false, errorCode: "BAD_REQUEST" };
   }
 
-  if (playerScore < catalogItem.cost) {
+  // skipProblem can go below 0 (emergency escape option)
+  if (item !== "skipProblem" && playerScore < catalogItem.cost) {
     return { canPurchase: false, errorCode: "INSUFFICIENT_SCORE" };
   }
 
