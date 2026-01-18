@@ -1354,8 +1354,8 @@ export default class Room implements Party.Server {
       return;
     }
 
-    // Check score
-    if (player.score < catalogItem.cost) {
+    // Check score (skipProblem can go negative as emergency escape)
+    if (item !== "skipProblem" && player.score < catalogItem.cost) {
       this.sendError(conn, "INSUFFICIENT_SCORE", "Not enough points", requestId);
       return;
     }
@@ -2936,7 +2936,9 @@ export default class Room implements Party.Server {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      const temp = shuffled[i]!;
+      shuffled[i] = shuffled[j]!;
+      shuffled[j] = temp;
     }
     return shuffled;
   }

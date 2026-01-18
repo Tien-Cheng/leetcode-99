@@ -276,13 +276,13 @@ function GamePageContent() {
     shortcuts: [
       ...(currentProblem?.problemType === "code"
         ? [
-            {
-              key: "r",
-              altKey: true,
-              action: handleRun,
-              description: "Run Code",
-            },
-          ]
+          {
+            key: "r",
+            altKey: true,
+            action: handleRun,
+            description: "Run Code",
+          },
+        ]
         : []),
       {
         key: "s",
@@ -718,69 +718,69 @@ function GamePageContent() {
                 signature:
                   currentProblem.problemType === "code"
                     ? (
-                        currentProblem as Extract<
-                          typeof currentProblem,
-                          { problemType: "code" }
-                        >
-                      ).signature
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "code" }
+                      >
+                    ).signature
                     : "",
                 publicTests:
                   currentProblem.problemType === "code"
                     ? (
-                        currentProblem as Extract<
-                          typeof currentProblem,
-                          { problemType: "code" }
-                        >
-                      ).publicTests.map((t) => ({
-                        input:
-                          typeof t.input === "string"
-                            ? t.input
-                            : JSON.stringify(t.input ?? ""),
-                        output:
-                          typeof t.output === "string"
-                            ? t.output
-                            : JSON.stringify(t.output ?? ""),
-                      }))
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "code" }
+                      >
+                    ).publicTests.map((t) => ({
+                      input:
+                        typeof t.input === "string"
+                          ? t.input
+                          : JSON.stringify(t.input ?? ""),
+                      output:
+                        typeof t.output === "string"
+                          ? t.output
+                          : JSON.stringify(t.output ?? ""),
+                    }))
                     : [],
                 isGarbage: currentProblem.isGarbage,
                 problemType: currentProblem.problemType,
                 options:
                   currentProblem.problemType === "mcq"
                     ? (
-                        currentProblem as Extract<
-                          typeof currentProblem,
-                          { problemType: "mcq" }
-                        >
-                      ).options
+                      currentProblem as Extract<
+                        typeof currentProblem,
+                        { problemType: "mcq" }
+                      >
+                    ).options
                     : undefined,
                 selectedOptionId: selectedOptionId || undefined,
                 onOptionSelect: (id) => setSelectedOptionId(id),
               }}
               testResults={
                 lastJudgeResult &&
-                lastJudgeResult.problemId === currentProblem.problemId
+                  lastJudgeResult.problemId === currentProblem.problemId
                   ? lastJudgeResult.publicTests.map((t) => ({
-                      index: t.index,
-                      passed: t.passed,
-                      expected: t.expected ? String(t.expected) : undefined,
-                      received: t.received ? String(t.received) : undefined,
-                      stdout: t.stdout,
-                      stderr: t.stderr,
-                      error: t.error,
-                    }))
+                    index: t.index,
+                    passed: t.passed,
+                    expected: t.expected ? String(t.expected) : undefined,
+                    received: t.received ? String(t.received) : undefined,
+                    stdout: t.stdout,
+                    stderr: t.stderr,
+                    error: t.error,
+                  }))
                   : []
               }
               hiddenTestsPassed={
                 lastJudgeResult &&
-                lastJudgeResult.problemId === currentProblem.problemId &&
-                lastJudgeResult.kind === "submit"
+                  lastJudgeResult.problemId === currentProblem.problemId &&
+                  lastJudgeResult.kind === "submit"
                   ? lastJudgeResult.hiddenTestsPassed
                   : undefined
               }
               hiddenFailureMessage={
                 lastJudgeResult &&
-                lastJudgeResult.problemId === currentProblem.problemId &&
-                lastJudgeResult.kind === "submit"
+                  lastJudgeResult.problemId === currentProblem.problemId &&
+                  lastJudgeResult.kind === "submit"
                   ? lastJudgeResult.hiddenFailureMessage
                   : undefined
               }
@@ -901,7 +901,7 @@ function GamePageContent() {
                     0,
                     Math.ceil(
                       (new Date(activeBuff.endsAt).getTime() - Date.now()) /
-                        1000,
+                      1000,
                     ),
                   )}
                   s
@@ -960,8 +960,8 @@ function GamePageContent() {
             return;
           }
 
-          // Client-side validation
-          if (score < item.cost) {
+          // Client-side validation (skipProblem can go negative)
+          if (itemId !== "skipProblem" && score < item.cost) {
             setShopError(`Insufficient score (need ${item.cost} pts)`);
             return;
           }
