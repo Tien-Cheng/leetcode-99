@@ -1,5 +1,642 @@
 [
     {
+        "problemId": "reverse-integer-easy",
+        "title": "Reverse Integer",
+        "prompt": "Given a signed 32-bit integer x, return x with its digits reversed. If reversing x causes the value to go outside the signed 32-bit integer range [-2^31, 2^31 - 1], then return 0.",
+        "functionName": "reverse_integer",
+        "signature": "reverse_integer(x: int) -> int",
+        "starterCode": "def reverse_integer(x: int) -> int:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    123
+                ],
+                "output": 321
+            },
+            {
+                "input": [
+                    -123
+                ],
+                "output": -321
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    120
+                ],
+                "output": 21
+            },
+            {
+                "input": [
+                    0
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-list-append",
+        "title": "List Append",
+        "prompt": "What method adds an element to the end of a list in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "push()"
+            },
+            {
+                "id": "2",
+                "text": "append()"
+            },
+            {
+                "id": "3",
+                "text": "add()"
+            },
+            {
+                "id": "4",
+                "text": "insert()"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "valid-anagram-easy",
+        "title": "Valid Anagram",
+        "prompt": "Given two strings s and t, return true if t is an anagram of s, and false otherwise.",
+        "functionName": "is_anagram",
+        "signature": "is_anagram(s: str, t: str) -> bool",
+        "starterCode": "def is_anagram(s: str, t: str) -> bool:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    "anagram",
+                    "nagaram"
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "rat",
+                    "car"
+                ],
+                "output": false
+            },
+            {
+                "input": [
+                    "a",
+                    "a"
+                ],
+                "output": true
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-dict-get-default",
+        "title": "Dictionary get()",
+        "prompt": "What does d.get('key', 0) return if 'key' is not in dictionary d?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "KeyError"
+            },
+            {
+                "id": "2",
+                "text": "None"
+            },
+            {
+                "id": "3",
+                "text": "0"
+            },
+            {
+                "id": "4",
+                "text": "'' (empty string)"
+            }
+        ],
+        "correctAnswer": "3",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "remove-duplicates-easy",
+        "title": "Remove Duplicates from Sorted Array",
+        "prompt": "Given a sorted array nums, remove the duplicates in-place and return the number of unique elements.",
+        "functionName": "remove_duplicates",
+        "signature": "remove_duplicates(nums: list[int]) -> int",
+        "starterCode": "def remove_duplicates(nums: list[int]) -> int:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        1,
+                        1,
+                        2
+                    ]
+                ],
+                "output": 2
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        0,
+                        0,
+                        1,
+                        1,
+                        1,
+                        2,
+                        2,
+                        3,
+                        3,
+                        4
+                    ]
+                ],
+                "output": 5
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-set-add",
+        "title": "Set Add",
+        "prompt": "Which method adds an element to a set in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "append()"
+            },
+            {
+                "id": "2",
+                "text": "add()"
+            },
+            {
+                "id": "3",
+                "text": "insert()"
+            },
+            {
+                "id": "4",
+                "text": "push()"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "fizz-buzz-easy",
+        "title": "Fizz Buzz",
+        "prompt": "Return a list of strings from 1 to n following FizzBuzz rules.",
+        "functionName": "fizz_buzz",
+        "signature": "fizz_buzz(n: int) -> list[str]",
+        "starterCode": "def fizz_buzz(n: int) -> list[str]:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    5
+                ],
+                "output": [
+                    "1",
+                    "2",
+                    "Fizz",
+                    "4",
+                    "Buzz"
+                ]
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    3
+                ],
+                "output": [
+                    "1",
+                    "2",
+                    "Fizz"
+                ]
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-string-join",
+        "title": "String Join",
+        "prompt": "What does ''.join(['p','y','t','h','o','n']) return?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "p y t h o n"
+            },
+            {
+                "id": "2",
+                "text": "python"
+            },
+            {
+                "id": "3",
+                "text": "['p','y','t','h','o','n']"
+            },
+            {
+                "id": "4",
+                "text": "Error"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "move-zeroes-easy",
+        "title": "Move Zeroes",
+        "prompt": "Given an integer array nums, move all 0's to the end while maintaining the relative order of the non-zero elements (in-place).",
+        "functionName": "move_zeroes",
+        "signature": "move_zeroes(nums: list[int]) -> None",
+        "starterCode": "def move_zeroes(nums: list[int]) -> None:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        0,
+                        1,
+                        0,
+                        3,
+                        12
+                    ]
+                ],
+                "output": [
+                    1,
+                    3,
+                    12,
+                    0,
+                    0
+                ]
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        0
+                    ]
+                ],
+                "output": [
+                    0
+                ]
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-list-comprehension",
+        "title": "List Comprehension",
+        "prompt": "What is the result of [x*2 for x in range(4)]?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "[0, 2, 4, 6]"
+            },
+            {
+                "id": "2",
+                "text": "[0, 1, 2, 3]"
+            },
+            {
+                "id": "3",
+                "text": "[2, 4, 6, 8]"
+            },
+            {
+                "id": "4",
+                "text": "[1, 2, 3, 4]"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "single-number-easy",
+        "title": "Single Number",
+        "prompt": "Given a non-empty array of integers nums, every element appears twice except for one. Find that single one.",
+        "functionName": "single_number",
+        "signature": "single_number(nums: list[int]) -> int",
+        "starterCode": "def single_number(nums: list[int]) -> int:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        2,
+                        2,
+                        1
+                    ]
+                ],
+                "output": 1
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        4,
+                        1,
+                        2,
+                        1,
+                        2
+                    ]
+                ],
+                "output": 4
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-tuple-unpacking",
+        "title": "Tuple Unpacking",
+        "prompt": "What will be the value of a after: a, b = 1, 2; a, b = b, a?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "1"
+            },
+            {
+                "id": "2",
+                "text": "2"
+            },
+            {
+                "id": "3",
+                "text": "Error"
+            },
+            {
+                "id": "4",
+                "text": "None"
+            }
+        ],
+        "correctAnswer": "2",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "max-profit-easy",
+        "title": "Best Time to Buy and Sell Stock",
+        "prompt": "You are given an array prices where prices[i] is the price of a stock on the ith day. Return the maximum profit you can achieve.",
+        "functionName": "max_profit",
+        "signature": "max_profit(prices: list[int]) -> int",
+        "starterCode": "def max_profit(prices: list[int]) -> int:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    [
+                        7,
+                        1,
+                        5,
+                        3,
+                        6,
+                        4
+                    ]
+                ],
+                "output": 5
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    [
+                        7,
+                        6,
+                        4,
+                        3,
+                        1
+                    ]
+                ],
+                "output": 0
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-str-strip",
+        "title": "String Strip",
+        "prompt": "'  hello world  '.strip() returns:",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "'hello world'"
+            },
+            {
+                "id": "2",
+                "text": "'  hello world  '"
+            },
+            {
+                "id": "3",
+                "text": "'helloworld'"
+            },
+            {
+                "id": "4",
+                "text": "Error"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "valid-parentheses-easy",
+        "title": "Valid Parentheses",
+        "prompt": "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+        "functionName": "is_valid",
+        "signature": "is_valid(s: str) -> bool",
+        "starterCode": "def is_valid(s: str) -> bool:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    "()"
+                ],
+                "output": true
+            },
+            {
+                "input": [
+                    "()[]{}"
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    "(]"
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-sorted-function",
+        "title": "Sorted Function",
+        "prompt": "sorted([3,1,4,1,5]) returns:",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "[1,1,3,4,5]"
+            },
+            {
+                "id": "2",
+                "text": "[5,4,3,1,1]"
+            },
+            {
+                "id": "3",
+                "text": "Modifies list in place"
+            },
+            {
+                "id": "4",
+                "text": "Error"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "climbing-stairs-easy",
+        "title": "Climbing Stairs",
+        "prompt": "You can climb 1 or 2 steps at a time. In how many distinct ways can you climb to the top of a staircase with n steps?",
+        "functionName": "climb_stairs",
+        "signature": "climb_stairs(n: int) -> int",
+        "starterCode": "def climb_stairs(n: int) -> int:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    3
+                ],
+                "output": 3
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    4
+                ],
+                "output": 5
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-list-sort",
+        "title": "List Sort",
+        "prompt": "Which method sorts a list in-place in Python?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "sort()"
+            },
+            {
+                "id": "2",
+                "text": "sorted()"
+            },
+            {
+                "id": "3",
+                "text": "order()"
+            },
+            {
+                "id": "4",
+                "text": "arrange()"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
+        "problemId": "palindrome-number-easy",
+        "title": "Palindrome Number",
+        "prompt": "Given an integer x, return true if x is a palindrome integer.",
+        "functionName": "is_palindrome_num",
+        "signature": "is_palindrome_num(x: int) -> bool",
+        "starterCode": "def is_palindrome_num(x: int) -> bool:\n    pass",
+        "publicTests": [
+            {
+                "input": [
+                    121
+                ],
+                "output": true
+            }
+        ],
+        "hiddenTests": [
+            {
+                "input": [
+                    -121
+                ],
+                "output": false
+            },
+            {
+                "input": [
+                    10
+                ],
+                "output": false
+            }
+        ],
+        "difficulty": "easy",
+        "timeLimitMs": 5000,
+        "problemType": "code"
+    },
+    {
+        "problemId": "mcq-enumerate",
+        "title": "Enumerate Function",
+        "prompt": "What does enumerate() primarily provide when iterating over a sequence?",
+        "problemType": "mcq",
+        "options": [
+            {
+                "id": "1",
+                "text": "Index and value pairs"
+            },
+            {
+                "id": "2",
+                "text": "Only values"
+            },
+            {
+                "id": "3",
+                "text": "Only indices"
+            },
+            {
+                "id": "4",
+                "text": "Sorted version of sequence"
+            }
+        ],
+        "correctAnswer": "1",
+        "difficulty": "easy",
+        "timeLimitMs": 5000
+    },
+    {
         "problemId": "two-sum",
         "title": "Two Sum",
         "prompt": "Return indices of two numbers that add up to target.",
