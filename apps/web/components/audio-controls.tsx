@@ -63,7 +63,9 @@ export function AudioControls() {
 
       {/* Mute Toggle Button */}
       <button
-        onClick={toggleMute}
+        onClick={() => {
+          toggleMute();
+        }}
         className="p-2 border border-secondary bg-base-200 hover:bg-base-300 hover:border-primary transition-all rounded shadow-md"
         title={isMuted ? "Unmute (Audio is muted)" : "Mute"}
       >

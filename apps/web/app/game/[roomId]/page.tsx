@@ -101,6 +101,7 @@ function GamePageContent() {
   const prevDebuffRef = useRef(activeDebuff);
   const prevStackSizeRef = useRef(problemStack.length);
   const prevMatchPhaseRef = useRef(matchPhase);
+  const prevJudgeResultRef = useRef<typeof lastJudgeResult>(null);
 
   // Start game music when match starts
   useEffect(() => {
@@ -210,6 +211,35 @@ function GamePageContent() {
     }, 300);
     return () => clearTimeout(timer);
   }, [code, codeVersion, currentProblem, updateCode]);
+
+  // Play SFX on test/submit results
+  useEffect(() => {
+    if (lastJudgeResult && lastJudgeResult !== prevJudgeResultRef.current) {
+      if (lastJudgeResult.kind === "submit") {
+        // Submit result
+        if (lastJudgeResult.passed) {
+          playSFX("submit-success");
+        } else {
+          playSFX("submit-fail");
+        }
+      } else {
+        // Test result (run)
+        if (lastJudgeResult.passed) {
+          playSFX("test-pass");
+        } else {
+          playSFX("test-fail");
+        }
+      }
+      prevJudgeResultRef.current = lastJudgeResult;
+    }
+  }, [lastJudgeResult, playSFX]);
+
+  // Play SFX when stack grows
+  useEffect(() => {
+    if (problemStack.length > prevStackSizeRef.current) {
+      playSFX("stack-push");
+    }
+  }, [problemStack.length, playSFX]);
 
   // Show error toast for wrong MCQ answer
   useEffect(() => {
@@ -1053,6 +1083,9 @@ function GamePageContent() {
 
           // Send purchase
           purchaseItem(itemId as any);
+
+          // Play purchase SFX
+          playSFX("purchase");
 
           // Show success toast
           setToast({

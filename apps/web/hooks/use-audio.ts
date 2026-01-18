@@ -7,7 +7,16 @@ export type MusicTrack =
   | "results"
   | null;
 
-export type SFXType = "attack-general" | "attack-ddos";
+export type SFXType =
+  | "attack-general"
+  | "attack-ddos"
+  | "test-pass"
+  | "test-fail"
+  | "submit-success"
+  | "submit-fail"
+  | "stack-push"
+  | "purchase"
+  | "ui-click";
 
 interface AudioState {
   isMuted: boolean;
@@ -27,6 +36,13 @@ const MUSIC_FILES: Record<Exclude<MusicTrack, null>, string> = {
 const SFX_FILES: Record<SFXType, string> = {
   "attack-general": "/ost/hacker-alarm-124960.mp3",
   "attack-ddos": "/ost/denial-of-service-sci-fi-hacker-instrumental-267766.mp3",
+  "test-pass": "/sfx/success.mp3",
+  "test-fail": "/sfx/error.wav",
+  "submit-success": "/sfx/success.mp3",
+  "submit-fail": "/sfx/error.wav",
+  "stack-push": "/sfx/thud.wav",
+  purchase: "/sfx/kaching_sound_purchase.wav",
+  "ui-click": "/sfx/mech_keyboard_press.ogg",
 };
 
 const STORAGE_KEY = "leet99-audio-settings";
