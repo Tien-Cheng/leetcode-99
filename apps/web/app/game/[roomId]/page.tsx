@@ -24,11 +24,13 @@ import { useHotkeys } from "../../../components/hotkey-provider";
 import { useKeyboardShortcuts } from "../../../hooks/use-keyboard-shortcuts";
 import type { PlayerPublic, EventLogEntry } from "@leet99/contracts";
 import { GameWrapper } from "./game-wrapper";
+import { useAudioContext } from "../../../contexts/audio-context";
 
 function GamePageContent() {
   const params = useParams();
   const roomId = params.roomId as string;
   const router = useRouter();
+  const { playMusic, playSFX } = useAudioContext();
 
   // Game state from context
   const {
@@ -98,6 +100,73 @@ function GamePageContent() {
   // Track previous values for effect triggers
   const prevScoreRef = useRef(score);
   const prevDebuffRef = useRef(activeDebuff);
+  const prevStackSizeRef = useRef(problemStack.length);
+  const prevMatchPhaseRef = useRef(matchPhase);
+  const prevJudgeResultRef = useRef<typeof lastJudgeResult>(null);
+
+  // Start game music when match starts
+  useEffect(() => {
+    if (
+      (matchPhase === "main" || matchPhase === "warmup") &&
+      prevMatchPhaseRef.current === "lobby"
+    ) {
+      playMusic("game-normal");
+    } else if (
+      matchPhase === "ended" &&
+      prevMatchPhaseRef.current !== "ended"
+    ) {
+      playMusic("results");
+    } else if (
+      matchPhase === "lobby" &&
+      prevMatchPhaseRef.current !== "lobby"
+    ) {
+      playMusic("lobby");
+    }
+    prevMatchPhaseRef.current = matchPhase;
+  }, [matchPhase, playMusic]);
+
+  // Switch to tension music when stack is high or boss phase
+  useEffect(() => {
+    const stackSize = problemStack.length;
+    const stackLimit = roomSettings?.stackLimit || 10;
+    const isTension = stackSize >= Math.floor(stackLimit * 0.8); // 80% full
+    const isBossPhase = matchPhase === "boss";
+
+    if (
+      matchPhase === "main" ||
+      matchPhase === "boss" ||
+      matchPhase === "warmup"
+    ) {
+      if (
+        (isTension || isBossPhase) &&
+        prevStackSizeRef.current < Math.floor(stackLimit * 0.8)
+      ) {
+        // Just crossed into tension territory or boss phase started
+        playMusic("game-tension");
+      } else if (
+        !isTension &&
+        !isBossPhase &&
+        prevStackSizeRef.current >= Math.floor(stackLimit * 0.8)
+      ) {
+        // Dropped back below tension threshold and not in boss phase
+        playMusic("game-normal");
+      }
+    }
+    prevStackSizeRef.current = stackSize;
+  }, [problemStack.length, roomSettings?.stackLimit, matchPhase, playMusic]);
+
+  // Play SFX on attack received
+  useEffect(() => {
+    if (activeDebuff && !prevDebuffRef.current) {
+      // New debuff applied
+      if (activeDebuff.type === "ddos") {
+        playSFX("attack-ddos");
+      } else {
+        playSFX("attack-general");
+      }
+    }
+    prevDebuffRef.current = activeDebuff;
+  }, [activeDebuff, playSFX]);
 
   // Update code when problem changes
   useEffect(() => {
@@ -143,6 +212,35 @@ function GamePageContent() {
     }, 300);
     return () => clearTimeout(timer);
   }, [code, codeVersion, currentProblem, updateCode]);
+
+  // Play SFX on test/submit results
+  useEffect(() => {
+    if (lastJudgeResult && lastJudgeResult !== prevJudgeResultRef.current) {
+      if (lastJudgeResult.kind === "submit") {
+        // Submit result
+        if (lastJudgeResult.passed) {
+          playSFX("submit-success");
+        } else {
+          playSFX("submit-fail");
+        }
+      } else {
+        // Test result (run)
+        if (lastJudgeResult.passed) {
+          playSFX("test-pass");
+        } else {
+          playSFX("test-fail");
+        }
+      }
+      prevJudgeResultRef.current = lastJudgeResult;
+    }
+  }, [lastJudgeResult, playSFX]);
+
+  // Play SFX when stack grows
+  useEffect(() => {
+    if (problemStack.length > prevStackSizeRef.current) {
+      playSFX("stack-push");
+    }
+  }, [problemStack.length, playSFX]);
 
   // Show error toast for wrong MCQ answer
   useEffect(() => {
@@ -1009,6 +1107,9 @@ function GamePageContent() {
 
           // Send purchase
           purchaseItem(itemId as any);
+
+          // Play purchase SFX
+          playSFX("purchase");
 
           // Show success toast
           setToast({

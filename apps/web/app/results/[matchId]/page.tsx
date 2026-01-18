@@ -1,12 +1,20 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Button, Panel } from "@leet99/ui";
+import { useAudioContext } from "../../../contexts/audio-context";
 
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
   const _matchId = params.matchId as string;
+  const { playMusic } = useAudioContext();
+
+  // Start results music on mount
+  useEffect(() => {
+    playMusic("results");
+  }, [playMusic]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
