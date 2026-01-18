@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AudioProvider } from "../contexts/audio-context";
+import { AudioControls } from "../components/audio-controls";
 
 export const metadata: Metadata = {
   title: "Leet99 - Battle Royale for Coders",
@@ -33,7 +35,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-base-100 text-base-content antialiased">
-        {children}
+        <AudioProvider>
+          <AudioControls />
+          {children}
+        </AudioProvider>
       </body>
     </html>
   );

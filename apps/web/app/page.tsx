@@ -5,14 +5,24 @@ import Image from "next/image";
 import { Button } from "@leet99/ui";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAudioContext } from "../contexts/audio-context";
 
 export default function Home() {
   const router = useRouter();
+  const { playMusic } = useAudioContext();
+
+  // Start lobby music on mount
+  useEffect(() => {
+    playMusic("lobby");
+  }, [playMusic]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Only trigger if not in an input field
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
 

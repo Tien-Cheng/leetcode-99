@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button, Panel, Tile } from "@leet99/ui";
 import { useRoom, type StoredAuth } from "@/hooks/use-room";
+import { useAudioContext } from "../../../contexts/audio-context";
 
 export default function LobbyPage() {
   const router = useRouter();
@@ -38,8 +39,13 @@ export default function LobbyPage() {
   if (!auth) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
-        <div className="font-mono text-muted">Missing room auth. Please rejoin.</div>
-        <Button variant="secondary" onClick={() => router.push(`/join/${roomId}`)}>
+        <div className="font-mono text-muted">
+          Missing room auth. Please rejoin.
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => router.push(`/join/${roomId}`)}
+        >
           Go to Join
         </Button>
       </main>
@@ -57,6 +63,7 @@ type LobbyContentProps = {
 function LobbyContent({ roomId, auth }: LobbyContentProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const { playMusic } = useAudioContext();
 
   // Integrate PartyKit
   const {
@@ -67,8 +74,13 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
     me,
     startMatch,
     addBots,
-    sendMessage
+    sendMessage,
   } = useRoom(roomId, auth);
+
+  // Start lobby music on mount
+  useEffect(() => {
+    playMusic("lobby");
+  }, [playMusic]);
 
   // Redirect if match started
   useEffect(() => {
@@ -86,7 +98,11 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
 
   const handleLeaveRoom = () => {
     if (isHost) {
-      if (confirm("You are the host. Leaving will transfer host to another player. Continue?")) {
+      if (
+        confirm(
+          "You are the host. Leaving will transfer host to another player. Continue?",
+        )
+      ) {
         router.push("/");
       }
     } else {
@@ -113,7 +129,10 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
 
@@ -199,7 +218,7 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
                     variant={variant}
                     username={p.username}
                     isHost={p.isHost}
-                  // onRemove={() => {}} // TODO: Kick functionality
+                    // onRemove={() => {}} // TODO: Kick functionality
                   />
                 );
               })}
@@ -225,11 +244,15 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs text-muted">Difficulty</span>
-                    <span className="font-mono capitalize">{snapshot.match.settings.difficultyProfile}</span>
+                    <span className="font-mono capitalize">
+                      {snapshot.match.settings.difficultyProfile}
+                    </span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs text-muted">Intensity</span>
-                    <span className="font-mono capitalize">{snapshot.match.settings.attackIntensity}</span>
+                    <span className="font-mono capitalize">
+                      {snapshot.match.settings.attackIntensity}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -242,11 +265,7 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
               <Button variant="secondary" hotkey="B" onClick={handleAddBot}>
                 Add Bot
               </Button>
-              <Button
-                variant="primary"
-                hotkey="S"
-                onClick={handleStartMatch}
-              >
+              <Button variant="primary" hotkey="S" onClick={handleStartMatch}>
                 Start Match
               </Button>
             </div>
@@ -258,15 +277,23 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
           <Panel title="CHAT" className="h-full flex flex-col">
             <div className="flex-1 overflow-y-auto space-y-1 font-mono text-sm mb-4 p-2 bg-base-300/30 rounded">
               {chat.map((msg) => (
-                <div key={msg.id} className={`${msg.kind === "system" ? "text-accent italic" : "text-base-content"}`}>
+                <div
+                  key={msg.id}
+                  className={`${msg.kind === "system" ? "text-accent italic" : "text-base-content"}`}
+                >
                   {msg.kind === "system" ? (
                     <span>&gt; {msg.text}</span>
                   ) : (
-                    <span><span className="text-primary">{msg.fromUsername}:</span> {msg.text}</span>
+                    <span>
+                      <span className="text-primary">{msg.fromUsername}:</span>{" "}
+                      {msg.text}
+                    </span>
                   )}
                 </div>
               ))}
-              {chat.length === 0 && <div className="text-muted italic">No messages yet...</div>}
+              {chat.length === 0 && (
+                <div className="text-muted italic">No messages yet...</div>
+              )}
             </div>
             <input
               type="text"
