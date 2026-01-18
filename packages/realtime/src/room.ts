@@ -2967,14 +2967,32 @@ export default class Room implements Party.Server {
       pool = unseen;
     }
 
+    // First, randomly decide problem type (50% code, 50% MCQ)
+    const problemType = Math.random() < 0.5 ? "code" : "mcq";
+
+    // Filter pool by selected problem type
+    let typedPool = pool.filter((p) => p.problemType === problemType);
+
+    // If no problems of the selected type available (e.g., all seen),
+    // fall back to the other type
+    if (typedPool.length === 0) {
+      const fallbackType = problemType === "code" ? "mcq" : "code";
+      typedPool = pool.filter((p) => p.problemType === fallbackType);
+
+      // If still no problems, use the entire pool (should rarely happen)
+      if (typedPool.length === 0) {
+        typedPool = pool;
+      }
+    }
+
     // Shuffle pool first for better randomization
-    pool = this.shuffleArray(pool);
+    typedPool = this.shuffleArray(typedPool);
 
     // Apply difficulty weights
     const weights = this.getDifficultyWeights();
     const weightedPool: { problem: ProblemFull; weight: number }[] = [];
 
-    for (const problem of pool) {
+    for (const problem of typedPool) {
       const weight = weights[problem.difficulty] || 1;
       weightedPool.push({ problem, weight });
     }
@@ -2999,7 +3017,7 @@ export default class Room implements Party.Server {
     }
 
     // Fallback (should never reach here, but handle it safely)
-    const selected = shuffledWeightedPool[0]?.problem ?? pool[0];
+    const selected = shuffledWeightedPool[0]?.problem ?? typedPool[0];
     if (selected) {
       history.add(selected.problemId);
       return selected;
