@@ -72,13 +72,16 @@ function GamePageContent() {
 
   // Local editor state
   const [code, setCode] = useState(
-    currentProblem?.problemType === "code" ? currentProblem.starterCode : ""
+    currentProblem?.problemType === "code" ? currentProblem.starterCode : "",
   );
   const [codeVersion, setCodeVersion] = useState(1);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
   const [shopError, setShopError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -179,9 +182,8 @@ function GamePageContent() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const submission = currentProblem?.problemType === "mcq"
-        ? (selectedOptionId || "")
-        : code;
+      const submission =
+        currentProblem?.problemType === "mcq" ? selectedOptionId || "" : code;
       await submitCode(submission);
     } finally {
       setIsSubmitting(false);
@@ -214,7 +216,10 @@ function GamePageContent() {
     __debugSetDebuff({ type: "flashbang", endsAt });
     triggerEffect("attack");
     console.log("[DEBUG] Triggered Flashbang debuff (24s)");
-    console.log("[DEBUG] Setting activeDebuff to:", { type: "flashbang", endsAt });
+    console.log("[DEBUG] Setting activeDebuff to:", {
+      type: "flashbang",
+      endsAt,
+    });
   }, [__debugSetDebuff, triggerEffect]);
 
   const triggerDebuffVimLock = useCallback(() => {
@@ -258,10 +263,7 @@ function GamePageContent() {
       "%cCtrl+Shift+4: Trigger Memory Leak (glitch effects for 30s)",
       "color: #ffd93d;",
     );
-    console.log(
-      "%cCtrl+Shift+0: Clear all debuffs",
-      "color: #6bcf7f;",
-    );
+    console.log("%cCtrl+Shift+0: Clear all debuffs", "color: #6bcf7f;");
   }, []);
 
   // Handle debug add score (testing only)
@@ -273,7 +275,14 @@ function GamePageContent() {
   useKeyboardShortcuts({
     shortcuts: [
       ...(currentProblem?.problemType === "code"
-        ? [{ key: "r", altKey: true, action: handleRun, description: "Run Code" }]
+        ? [
+            {
+              key: "r",
+              altKey: true,
+              action: handleRun,
+              description: "Run Code",
+            },
+          ]
         : []),
       {
         key: "s",
@@ -354,7 +363,10 @@ function GamePageContent() {
         try {
           const endsAt = new Date(activeDebuff.endsAt).getTime();
           if (isNaN(endsAt)) {
-            console.warn("[Debuff] Invalid endsAt timestamp:", activeDebuff.endsAt);
+            console.warn(
+              "[Debuff] Invalid endsAt timestamp:",
+              activeDebuff.endsAt,
+            );
             return;
           }
           if (now >= endsAt) {
@@ -378,8 +390,16 @@ function GamePageContent() {
     const theme = isFlashbang ? "leet99-flashbang" : "leet99";
     const html = document.documentElement;
 
-    console.log("[Theme] Applying theme:", theme, "for debuff:", activeDebuff?.type);
-    console.log("[Theme] Current html data-theme:", html.getAttribute("data-theme"));
+    console.log(
+      "[Theme] Applying theme:",
+      theme,
+      "for debuff:",
+      activeDebuff?.type,
+    );
+    console.log(
+      "[Theme] Current html data-theme:",
+      html.getAttribute("data-theme"),
+    );
 
     // Remove old theme class if any
     html.classList.remove("leet99", "leet99-flashbang");
@@ -395,15 +415,22 @@ function GamePageContent() {
     console.log("[Theme] Theme after setting:", actualTheme);
 
     if (actualTheme !== theme) {
-      console.error("[Theme] Theme mismatch! Expected:", theme, "Got:", actualTheme);
+      console.error(
+        "[Theme] Theme mismatch! Expected:",
+        theme,
+        "Got:",
+        actualTheme,
+      );
     }
 
     // Add smooth transition when flashbang is active
     if (isFlashbang) {
-      html.style.transition = "background-color 1s ease, color 1s ease, border-color 1s ease";
+      html.style.transition =
+        "background-color 1s ease, color 1s ease, border-color 1s ease";
       // Small delay to ensure theme is applied before transition
       setTimeout(() => {
-        html.style.transition = "background-color 1s ease, color 1s ease, border-color 1s ease";
+        html.style.transition =
+          "background-color 1s ease, color 1s ease, border-color 1s ease";
       }, 10);
     } else {
       html.style.transition = "";
@@ -622,7 +649,8 @@ function GamePageContent() {
       {lastAttackerInfo && (
         <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] animate-slide-in-top">
           <div className="px-4 py-2 bg-error/90 text-error-content font-mono text-sm font-bold border border-error rounded shadow-lg">
-            ⚠️ ATTACKED BY: {lastAttackerInfo.username.toUpperCase()} ({lastAttackerInfo.attackType.toUpperCase()})
+            ⚠️ ATTACKED BY: {lastAttackerInfo.username.toUpperCase()} (
+            {lastAttackerInfo.attackType.toUpperCase()})
           </div>
         </div>
       )}
@@ -638,40 +666,42 @@ function GamePageContent() {
           {!isConnected && (
             <span className="text-error animate-pulse">(Disconnected)</span>
           )}
-          {activeDebuff && (() => {
-            // Calculate remaining time - use currentTime which updates every second
-            const now = currentTime;
-            const endsAt = new Date(activeDebuff.endsAt).getTime();
-            const remainingMs = Math.max(0, endsAt - now);
+          {activeDebuff &&
+            (() => {
+              // Calculate remaining time - use currentTime which updates every second
+              const now = currentTime;
+              const endsAt = new Date(activeDebuff.endsAt).getTime();
+              const remainingMs = Math.max(0, endsAt - now);
 
-            // If expired, don't show the debuff (should be cleared by useEffect)
-            if (remainingMs === 0) {
-              return null;
-            }
+              // If expired, don't show the debuff (should be cleared by useEffect)
+              if (remainingMs === 0) {
+                return null;
+              }
 
-            const remainingSec = Math.ceil(remainingMs / 1000);
-            const minutes = Math.floor(remainingSec / 60);
-            const seconds = remainingSec % 60;
-            const timeDisplay = minutes > 0
-              ? `${minutes}:${seconds.toString().padStart(2, '0')}`
-              : `${seconds}s`;
+              const remainingSec = Math.ceil(remainingMs / 1000);
+              const minutes = Math.floor(remainingSec / 60);
+              const seconds = remainingSec % 60;
+              const timeDisplay =
+                minutes > 0
+                  ? `${minutes}:${seconds.toString().padStart(2, "0")}`
+                  : `${seconds}s`;
 
-            return (
-              <span
-                className={`
+              return (
+                <span
+                  className={`
                 px-2 py-0.5 text-xs font-bold border flex items-center gap-1
                 ${activeDebuff.type === "ddos" ? "border-error text-error animate-pulse" : ""}
                 ${activeDebuff.type === "flashbang" ? "border-warning text-warning" : ""}
                 ${activeDebuff.type === "vimLock" ? "border-success text-success vim-cursor-blink" : ""}
                 ${activeDebuff.type === "memoryLeak" ? "border-warning text-warning glitch-text" : ""}
               `}
-                data-text={`[${activeDebuff.type.toUpperCase()}]`}
-              >
-                <span>[{activeDebuff.type.toUpperCase()}]</span>
-                <span className="opacity-75">({timeDisplay})</span>
-              </span>
-            );
-          })()}
+                  data-text={`[${activeDebuff.type.toUpperCase()}]`}
+                >
+                  <span>[{activeDebuff.type.toUpperCase()}]</span>
+                  <span className="opacity-75">({timeDisplay})</span>
+                </span>
+              );
+            })()}
         </div>
       </div>
 
@@ -687,59 +717,70 @@ function GamePageContent() {
                 prompt: currentProblem.prompt,
                 signature:
                   currentProblem.problemType === "code"
-                    ? (currentProblem as Extract<
-                      typeof currentProblem,
-                      { problemType: "code" }
-                    >).signature
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).signature
                     : "",
                 publicTests:
                   currentProblem.problemType === "code"
                     ? (
-                      currentProblem as Extract<
-                        typeof currentProblem,
-                        { problemType: "code" }
-                      >
-                    ).publicTests.map((t) => ({
-                      input: typeof t.input === "string" ? t.input : JSON.stringify(t.input ?? ""),
-                      output: typeof t.output === "string" ? t.output : JSON.stringify(t.output ?? ""),
-                    }))
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).publicTests.map((t) => ({
+                        input:
+                          typeof t.input === "string"
+                            ? t.input
+                            : JSON.stringify(t.input ?? ""),
+                        output:
+                          typeof t.output === "string"
+                            ? t.output
+                            : JSON.stringify(t.output ?? ""),
+                      }))
                     : [],
                 isGarbage: currentProblem.isGarbage,
                 problemType: currentProblem.problemType,
                 options:
                   currentProblem.problemType === "mcq"
                     ? (
-                      currentProblem as Extract<
-                        typeof currentProblem,
-                        { problemType: "mcq" }
-                      >
-                    ).options
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "mcq" }
+                        >
+                      ).options
                     : undefined,
                 selectedOptionId: selectedOptionId || undefined,
                 onOptionSelect: (id) => setSelectedOptionId(id),
               }}
               testResults={
                 lastJudgeResult &&
-                  lastJudgeResult.problemId === currentProblem.problemId
+                lastJudgeResult.problemId === currentProblem.problemId
                   ? lastJudgeResult.publicTests.map((t) => ({
-                    index: t.index,
-                    passed: t.passed,
-                    expected: t.expected ? String(t.expected) : undefined,
-                    received: t.received ? String(t.received) : undefined,
-                  }))
+                      index: t.index,
+                      passed: t.passed,
+                      expected: t.expected ? String(t.expected) : undefined,
+                      received: t.received ? String(t.received) : undefined,
+                      stdout: t.stdout,
+                      stderr: t.stderr,
+                      error: t.error,
+                    }))
                   : []
               }
               hiddenTestsPassed={
                 lastJudgeResult &&
-                  lastJudgeResult.problemId === currentProblem.problemId &&
-                  lastJudgeResult.kind === "submit"
+                lastJudgeResult.problemId === currentProblem.problemId &&
+                lastJudgeResult.kind === "submit"
                   ? lastJudgeResult.hiddenTestsPassed
                   : undefined
               }
               hiddenFailureMessage={
                 lastJudgeResult &&
-                  lastJudgeResult.problemId === currentProblem.problemId &&
-                  lastJudgeResult.kind === "submit"
+                lastJudgeResult.problemId === currentProblem.problemId &&
+                lastJudgeResult.kind === "submit"
                   ? lastJudgeResult.hiddenFailureMessage
                   : undefined
               }
@@ -806,7 +847,8 @@ function GamePageContent() {
             flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0
             transition-all duration-300
             ${ddosActive ? "border-error animate-pulse-red" : ""}
-          `}>
+          `}
+          >
             {currentProblem?.problemType === "code" && (
               <Button
                 variant="primary"
@@ -859,7 +901,7 @@ function GamePageContent() {
                     0,
                     Math.ceil(
                       (new Date(activeBuff.endsAt).getTime() - Date.now()) /
-                      1000,
+                        1000,
                     ),
                   )}
                   s
