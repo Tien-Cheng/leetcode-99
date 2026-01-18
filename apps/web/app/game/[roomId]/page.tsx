@@ -762,7 +762,7 @@ function GamePageContent() {
               GAME OVER
             </h1>
             <p className="text-xl text-muted font-mono mb-2">
-              Stack Overflow! You've been eliminated.
+              Stack Overflow! You&apos;ve been eliminated.
             </p>
             <p className="text-lg text-muted font-mono">
               Waiting for match to end...
