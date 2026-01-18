@@ -1813,7 +1813,9 @@ export default class Room implements Party.Server {
     const garbageProblems = allProblems.filter((p) => p.isGarbage);
 
     if (garbageProblems.length > 0) {
-      const selected = garbageProblems[Math.floor(Math.random() * garbageProblems.length)];
+      // Shuffle for better randomization
+      const shuffled = this.shuffleArray(garbageProblems);
+      const selected = shuffled[0];
       if (selected) return selected;
     }
 
@@ -1821,10 +1823,14 @@ export default class Room implements Party.Server {
     const easyProblems = allProblems.filter((p) => p.difficulty === "easy");
     let problem: ProblemFull | undefined;
     if (easyProblems.length > 0) {
-      problem = easyProblems[Math.floor(Math.random() * easyProblems.length)];
+      // Shuffle for better randomization
+      const shuffled = this.shuffleArray(easyProblems);
+      problem = shuffled[0];
     }
     if (!problem && allProblems.length > 0) {
-      problem = allProblems[Math.floor(Math.random() * allProblems.length)];
+      // Shuffle for better randomization
+      const shuffled = this.shuffleArray(allProblems);
+      problem = shuffled[0];
     }
 
     if (!problem) {
@@ -2916,6 +2922,18 @@ export default class Room implements Party.Server {
     return this.cachedProblems;
   }
 
+  /**
+   * Fisher-Yates shuffle for better randomization
+   */
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   private sampleProblem(
     playerId: string,
     excludeGarbage: boolean = true,
@@ -2949,23 +2967,47 @@ export default class Room implements Party.Server {
       pool = unseen;
     }
 
+    // First, randomly decide problem type (50% code, 50% MCQ)
+    const problemType = Math.random() < 0.5 ? "code" : "mcq";
+
+    // Filter pool by selected problem type
+    let typedPool = pool.filter((p) => p.problemType === problemType);
+
+    // If no problems of the selected type available (e.g., all seen),
+    // fall back to the other type
+    if (typedPool.length === 0) {
+      const fallbackType = problemType === "code" ? "mcq" : "code";
+      typedPool = pool.filter((p) => p.problemType === fallbackType);
+
+      // If still no problems, use the entire pool (should rarely happen)
+      if (typedPool.length === 0) {
+        typedPool = pool;
+      }
+    }
+
+    // Shuffle pool first for better randomization
+    typedPool = this.shuffleArray(typedPool);
+
     // Apply difficulty weights
     const weights = this.getDifficultyWeights();
     const weightedPool: { problem: ProblemFull; weight: number }[] = [];
 
-    for (const problem of pool) {
+    for (const problem of typedPool) {
       const weight = weights[problem.difficulty] || 1;
       weightedPool.push({ problem, weight });
     }
 
+    // Shuffle weighted pool to avoid sequential bias
+    const shuffledWeightedPool = this.shuffleArray(weightedPool);
+
     // Weighted random selection
-    const totalWeight = weightedPool.reduce(
+    const totalWeight = shuffledWeightedPool.reduce(
       (sum, item) => sum + item.weight,
       0,
     );
     let random = Math.random() * totalWeight;
 
-    for (const item of weightedPool) {
+    for (const item of shuffledWeightedPool) {
       random -= item.weight;
       if (random <= 0) {
         // Add to history
@@ -2975,7 +3017,7 @@ export default class Room implements Party.Server {
     }
 
     // Fallback (should never reach here, but handle it safely)
-    const selected = weightedPool[0]?.problem ?? pool[0];
+    const selected = shuffledWeightedPool[0]?.problem ?? typedPool[0];
     if (selected) {
       history.add(selected.problemId);
       return selected;
