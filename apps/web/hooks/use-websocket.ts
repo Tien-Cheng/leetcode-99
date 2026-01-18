@@ -536,6 +536,7 @@ export function useWebSocket(
 
   const spectatePlayer = useCallback(
     (playerId: string) => {
+      console.log("[WS] Sending SPECTATE_PLAYER:", { playerId });
       sendMessage({
         type: "SPECTATE_PLAYER",
         payload: { playerId },

@@ -9,7 +9,16 @@ import {
 import { z } from "zod";
 
 export function partyBaseUrl(): string {
-  return process.env.PARTYKIT_HOST || "http://127.0.0.1:1999";
+  const host = process.env.PARTYKIT_HOST || "http://127.0.0.1:1999";
+
+  // Validate URL format
+  try {
+    new URL(host);
+    return host;
+  } catch {
+    console.error("Invalid PARTYKIT_HOST environment variable", { host });
+    throw new Error(`Invalid PARTYKIT_HOST: ${host}`);
+  }
 }
 
 export function partyName(): string {
@@ -70,7 +79,35 @@ export async function registerPartyPlayer(
     };
   }
 
-  const url = new URL(`${partyRoomPath(roomId)}/register`, partyBaseUrl());
+  let url: URL;
+  try {
+    const baseUrl = partyBaseUrl();
+    const path = `${partyRoomPath(roomId)}/register`;
+    url = new URL(path, baseUrl);
+    console.log("PartyKit register URL", {
+      baseUrl,
+      path,
+      fullUrl: url.toString(),
+      roomId,
+    });
+  } catch (err) {
+    console.error("Failed to construct PartyKit URL", {
+      roomId,
+      error: err instanceof Error ? err.message : String(err),
+      PARTYKIT_HOST: process.env.PARTYKIT_HOST,
+    });
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to construct PartyKit URL",
+          details: err instanceof Error ? err.message : String(err),
+        },
+      },
+    };
+  }
 
 
   let response: Response;

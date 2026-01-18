@@ -319,6 +319,7 @@ export function GameStateProvider({
 
   const handleSpectateState = useCallback(
     (payload: { spectating: SpectateView | null }) => {
+      console.log("[GameState] Received SPECTATE_STATE:", payload.spectating);
       setSpectateState(payload.spectating);
     },
     [],
@@ -351,7 +352,10 @@ export function GameStateProvider({
 
   const handleError = useCallback(
     (payload: { code: string; message: string }) => {
-      console.error("WebSocket error:", payload.code, payload.message);
+      console.error("[GameState] WebSocket ERROR:", {
+        code: payload.code,
+        message: payload.message,
+      });
       // Could show a toast notification here
     },
     [],
