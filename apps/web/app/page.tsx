@@ -71,14 +71,14 @@ export default function Home() {
       </div>
 
       {/* Help link */}
-      <Button
+      {/* <Button
         variant="ghost"
         hotkey="?"
         className="text-muted"
         onClick={() => alert("Tutorial coming soon!")}
       >
         How to Play
-      </Button>
+      </Button> */}
 
       {/* Version */}
       <p className="fixed bottom-4 right-4 font-mono text-xs text-muted">
