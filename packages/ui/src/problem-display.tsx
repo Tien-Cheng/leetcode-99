@@ -25,6 +25,8 @@ export interface ProblemData {
 export interface ProblemDisplayProps {
   problem: ProblemData;
   testResults?: TestResult[];
+  hiddenTestsPassed?: boolean;
+  hiddenFailureMessage?: string;
   className?: string;
   isTransitioning?: boolean;
 }
@@ -36,6 +38,8 @@ export interface ProblemDisplayProps {
 export function ProblemDisplay({
   problem,
   testResults = [],
+  hiddenTestsPassed,
+  hiddenFailureMessage,
   className = "",
   isTransitioning = false,
 }: ProblemDisplayProps) {
@@ -94,7 +98,8 @@ export function ProblemDisplay({
     );
   };
 
-  const allPassed = testResults.length > 0 && testResults.every((t) => t.passed);
+  const publicPassed = testResults.length > 0 && testResults.every((t) => t.passed);
+  const allPassed = publicPassed && hiddenTestsPassed !== false; // Only true if public passed AND hidden didn't explicitly fail
 
   return (
     <div
@@ -132,6 +137,18 @@ export function ProblemDisplay({
           <span className="text-success font-mono text-sm font-bold">
             ✓ ALL TESTS PASSED!
           </span>
+        </div>
+      )}
+
+      {/* Hidden tests failed warning */}
+      {publicPassed && hiddenTestsPassed === false && (
+        <div className="bg-error/10 border border-error p-2 text-center animate-shake">
+          <span className="text-error font-mono text-sm font-bold">
+            ✗ HIDDEN TESTS FAILED
+          </span>
+          {hiddenFailureMessage && (
+            <div className="text-error/80 text-xs mt-1">{hiddenFailureMessage}</div>
+          )}
         </div>
       )}
 

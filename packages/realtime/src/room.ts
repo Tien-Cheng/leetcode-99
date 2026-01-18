@@ -48,9 +48,9 @@ import { saveMatch, type MatchPlayerEntry } from "@leet99/supabase";
 // ============================================================================
 
 const RATE_LIMITS = {
-  RUN_CODE: { intervalMs: 2000, maxRequests: 1 },
-  SUBMIT_CODE: { intervalMs: 3000, maxRequests: 1 },
-  CODE_UPDATE: { intervalMs: 100, maxRequests: 10 }, // 10 per second
+  RUN_CODE: { intervalMs: 200, maxRequests: 50 },      // Increased: was 2000ms/1 req
+  SUBMIT_CODE: { intervalMs: 200, maxRequests: 50 },   // Increased: was 3000ms/1 req
+  CODE_UPDATE: { intervalMs: 20, maxRequests: 500 },   // Increased: was 100ms/10 req
   SPECTATE_PLAYER: { intervalMs: 1000, maxRequests: 1 },
   SEND_CHAT: { intervalMs: 500, maxRequests: 2 }, // 2 per second
 };
@@ -1312,6 +1312,7 @@ export default class Room implements Party.Server {
       this.sendJudgeResult(conn, player, result, requestId);
       // Send updated snapshot with new problem
       const snapshot = this.buildRoomSnapshot(player);
+      console.log(`[processSubmissionResult] Sending ROOM_SNAPSHOT with problem: ${snapshot.self?.currentProblem?.problemId}`);
       conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
     }
 
@@ -2286,6 +2287,9 @@ export default class Room implements Party.Server {
       player.queued = [];
     }
 
+    const oldProblemId = player.currentProblem?.problemId;
+    console.log(`[advanceToNextProblem] Old problem: ${oldProblemId}, queue length: ${player.queued.length}`);
+
     // Pop from queue if available
     let nextProblem: ProblemFull | null = null;
     if (player.queued.length > 0) {
@@ -2319,6 +2323,9 @@ export default class Room implements Party.Server {
       player.code = nextProblem.problemType === "code" ? nextProblem.starterCode : "";
       player.codeVersion = 1;
       player.revealedHints = [];
+      console.log(`[advanceToNextProblem] Set new problem: ${player.currentProblem.problemId} (was: ${oldProblemId})`);
+    } else {
+      console.log(`[advanceToNextProblem] ERROR: No next problem available!`);
     }
   }
 
