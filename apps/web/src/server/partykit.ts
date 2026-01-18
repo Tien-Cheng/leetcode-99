@@ -8,6 +8,31 @@ import {
 } from "@leet99/contracts";
 import { z } from "zod";
 
+const DEFAULT_PARTY_BASE_URL = "http://127.0.0.1:1999";
+
+function normalizePartyBaseUrl(raw?: string): string {
+  const candidate = (raw ?? "").trim();
+  if (!candidate) {
+    return DEFAULT_PARTY_BASE_URL;
+  }
+
+  if (/^wss?:\/\//i.test(candidate)) {
+    return candidate.replace(/^ws(s?):\/\//i, "http$1://");
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate;
+  }
+
+  if (candidate.startsWith("//")) {
+    return `https:${candidate}`;
+  }
+
+  const isLocal =
+    /^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|$)/i.test(candidate);
+  return `${isLocal ? "http" : "https"}://${candidate}`;
+}
+
 export function partyBaseUrl(): string {
   const host = process.env.PARTYKIT_HOST || "http://127.0.0.1:1999";
 
@@ -19,6 +44,11 @@ export function partyBaseUrl(): string {
     console.error("Invalid PARTYKIT_HOST environment variable", { host });
     throw new Error(`Invalid PARTYKIT_HOST: ${host}`);
   }
+  return normalizePartyBaseUrl(
+    process.env.PARTYKIT_HOST ||
+    process.env.NEXT_PUBLIC_PARTYKIT_HOST ||
+    DEFAULT_PARTY_BASE_URL,
+  );
 }
 
 export function partyName(): string {
@@ -261,12 +291,12 @@ export async function fetchRoomState(
       error: parsedError.success
         ? parsedError.data
         : {
-            error: {
-              code: "INTERNAL_ERROR",
-              message: "PartyKit state fetch failed",
-              details: { status },
-            },
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "PartyKit state fetch failed",
+            details: { status },
           },
+        },
     };
   }
 
