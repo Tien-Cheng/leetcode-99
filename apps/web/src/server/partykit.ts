@@ -84,6 +84,12 @@ export async function registerPartyPlayer(
       body: JSON.stringify(parsed.data),
     });
   } catch (err) {
+    console.error("Failed to reach PartyKit", {
+      url: url.toString(),
+      roomId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     return {
       ok: false,
       status: 502,
@@ -91,7 +97,7 @@ export async function registerPartyPlayer(
         error: {
           code: "INTERNAL_ERROR",
           message: "Failed to reach PartyKit",
-          details: err instanceof Error ? err.message : err,
+          details: err instanceof Error ? err.message : String(err),
         },
       },
     };
@@ -108,6 +114,13 @@ export async function registerPartyPlayer(
 
   if (!response.ok) {
     const parsedError = HttpErrorResponseSchema.safeParse(body);
+    console.error("PartyKit register failed", {
+      url: url.toString(),
+      roomId,
+      status,
+      body,
+      parsedError: parsedError.success ? parsedError.data : parsedError.error,
+    });
     return {
       ok: false,
       status,
@@ -117,7 +130,7 @@ export async function registerPartyPlayer(
           error: {
             code: "INTERNAL_ERROR",
             message: "PartyKit register failed",
-            details: { status },
+            details: { status, body },
           },
         },
     };

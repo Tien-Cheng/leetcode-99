@@ -92,16 +92,21 @@ export async function POST(req: NextRequest) {
     const error: HttpErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",
-        message: "Failed to create room",
+        message: "Failed to create room after multiple attempts",
       },
     };
     return NextResponse.json(error, { status: 500 });
-  } catch {
-    console.error("Failed to create room", { roomId });
+  } catch (err) {
+    console.error("Failed to create room", {
+      roomId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     const error: HttpErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",
         message: "Failed to create room",
+        details: err instanceof Error ? err.message : String(err),
       },
     };
     return NextResponse.json(error, { status: 500 });
