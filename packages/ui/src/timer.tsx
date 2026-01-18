@@ -4,15 +4,22 @@ export interface TimerProps {
   endsAt: string; // ISO timestamp
   serverTime?: string; // ISO timestamp for sync
   className?: string;
+  variant?: "full" | "compact";
 }
 
 /**
  * Timer component - countdown display with dynamic urgency effects
  * Normal (white) > 60s, Warning (amber pulse) < 60s, Critical (red shake) < 15s
  */
-export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
+export function Timer({
+  endsAt,
+  serverTime,
+  className = "",
+  variant = "full",
+}: TimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [prevSeconds, setPrevSeconds] = useState<number | null>(null);
+  const showRing = variant === "full";
 
   useEffect(() => {
     // Calculate offset between server and client time to keep timer synced
@@ -78,33 +85,40 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
   return (
     <div className={`relative inline-flex items-center gap-2 ${className}`}>
       {/* Circular progress indicator */}
-      <div className="relative w-8 h-8">
-        <svg className="w-8 h-8 transform -rotate-90">
-          {/* Background circle */}
-          <circle
-            cx="16"
-            cy="16"
-            r="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-secondary opacity-30"
-          />
-          {/* Progress circle */}
-          <circle
-            cx="16"
-            cy="16"
-            r="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeDasharray={`${strokeLength} ${circumference}`}
-            strokeLinecap="round"
-            className={`transition-all duration-1000 ${seconds <= 30 ? "text-error" : seconds <= 60 ? "text-warning" : "text-primary"
+      {showRing && (
+        <div className="relative w-8 h-8">
+          <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
+            {/* Background circle */}
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-secondary opacity-30"
+            />
+            {/* Progress circle */}
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeDasharray={`${strokeLength} ${circumference}`}
+              strokeLinecap="round"
+              className={`transition-all duration-1000 ${
+                seconds <= 30
+                  ? "text-error"
+                  : seconds <= 60
+                    ? "text-warning"
+                    : "text-primary"
               }`}
-          />
-        </svg>
-      </div>
+            />
+          </svg>
+        </div>
+      )}
 
       {/* Time display */}
       <div
@@ -121,7 +135,9 @@ export function Timer({ endsAt, serverTime, className = "" }: TimerProps) {
 
       {/* Danger indicator */}
       {seconds <= 30 && seconds > 0 && (
-        <span className={`text-xs font-mono ${seconds <= 10 ? "animate-fire" : "text-error"}`}>
+        <span
+          className={`text-xs font-mono ${seconds <= 10 ? "animate-fire" : "text-error"}`}
+        >
           {seconds <= 10 ? "⚠ HURRY!" : "LOW TIME"}
         </span>
       )}

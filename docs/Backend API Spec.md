@@ -118,6 +118,16 @@ Servers SHOULD echo `requestId` on direct responses (`JUDGE_RESULT`, `ERROR`).
 ```ts
 type DifficultyProfile = "beginner" | "moderate" | "competitive";
 type AttackIntensity = "low" | "high";
+type MatchMode = "battleRoyale" | "sprint" | "duel" | "coOpDuo" | "endless";
+type TempoProfile = "steady" | "surge" | "chaos";
+
+type QuestionMix = {
+  code: number;
+  bugfix?: number;
+  fillBlank?: number;
+  trace?: number;
+  mcq?: number;
+};
 
 type RoomSettings = {
   matchDurationSec: number; // default 600
@@ -126,6 +136,9 @@ type RoomSettings = {
   startingQueued: number; // default 2
   difficultyProfile: DifficultyProfile;
   attackIntensity: AttackIntensity;
+  matchMode: MatchMode; // default "battleRoyale"
+  tempoProfile?: TempoProfile; // default "steady"
+  questionMix?: QuestionMix; // normalized weights
 };
 ```
 
@@ -133,6 +146,9 @@ Semantics (MVP):
 
 - `difficultyProfile` controls difficulty sampling weights.
 - `attackIntensity` scales timed debuff durations (see section 8.6).
+- `matchMode` toggles attacks/stack rules (solo/co-op disable attacks).
+- `tempoProfile` picks cadence presets (steady/surge/chaos).
+- `questionMix` sets weights for question kinds; omitted means code-heavy.
 
 ### 4.2 Player (public)
 
@@ -187,22 +203,42 @@ Clients MUST NEVER receive `hiddenTests`.
 
 ```ts
 type Difficulty = "easy" | "medium" | "hard";
+type QuestionKind = "code" | "bugfix" | "fillBlank" | "trace" | "mcq";
 
 type TestCase = {
   input: unknown; // JSON-serializable
   output: unknown; // JSON-serializable
 };
 
+type McqOption = {
+  id: string; // stable option id
+  text: string;
+};
+
+type AnswerSpec =
+  | {
+      kind: "mcq";
+      options: McqOption[];
+      multi?: boolean; // default false
+    }
+  | {
+      kind: "trace";
+      format: "string" | "json";
+    };
+
 type ProblemClientView = {
   problemId: string;
+  kind: QuestionKind;
   title: string;
   prompt: string;
-  functionName: string;
-  signature: string;
-  starterCode: string;
-  publicTests: TestCase[];
+  functionName?: string; // code/bugfix/fillBlank
+  signature?: string; // code/bugfix/fillBlank
+  starterCode?: string; // code/bugfix/fillBlank
+  publicTests?: TestCase[]; // code/bugfix/fillBlank
   difficulty: Difficulty;
   timeLimitMs: number;
+  expectedSolveSec?: number;
+  answerSpec?: AnswerSpec; // mcq/trace
   hintCount?: number; // number of purchasable hint lines
   isGarbage?: boolean;
 };
@@ -211,6 +247,7 @@ type ProblemClientView = {
 Notes:
 
 - Hint strings are not sent up-front; they appear in `self.revealedHints` / `spectating.revealedHints` after buying `hint`.
+- Non-code questions omit `starterCode` and `publicTests`; they include `answerSpec` for validation.
 
 ### 4.4 Judge results
 
@@ -226,14 +263,16 @@ type PublicTestResult = {
 };
 
 type JudgeResult = {
-  kind: "run" | "submit";
+  kind: "run" | "submit" | "answer";
   problemId: string;
   passed: boolean;
-  publicTests: PublicTestResult[];
+  publicTests?: PublicTestResult[];
   runtimeMs?: number;
   // Hidden test failures are opaque:
   hiddenTestsPassed?: boolean;
   hiddenFailureMessage?: string; // e.g. "Failed hidden tests"
+  answerCorrect?: boolean; // for mcq/trace
+  answerFeedback?: string; // short explanation or hint
 };
 ```
 
@@ -279,6 +318,7 @@ Notes:
 type ProblemSummary = {
   problemId: string;
   title: string;
+  kind: QuestionKind;
   difficulty: Difficulty;
   isGarbage?: boolean;
 };
@@ -287,7 +327,14 @@ type ProblemSummary = {
 ### 4.7 Match state (public)
 
 ```ts
-type MatchPhase = "lobby" | "warmup" | "main" | "boss" | "ended";
+type MatchPhase =
+  | "lobby"
+  | "warmup"
+  | "flow"
+  | "surge"
+  | "finale"
+  | "boss"
+  | "ended";
 
 type MatchEndReason = "lastAlive" | "timeExpired";
 
@@ -305,7 +352,7 @@ Semantics:
 
 - In lobby, `matchId` is `null` and `phase` is `lobby`.
 - On `START_MATCH`, server sets `matchId`, `startAt`, `endAt`, and `phase` to `warmup`.
-- Server may transition `phase` to `main` (and optionally `boss`) during the match.
+- Server may transition `phase` through `flow`, `surge`, and `finale` (and optionally `boss`) during the match.
 - When the match ends, `phase` becomes `ended` and `endReason` is set.
 
 ### 4.8 Private player state (self)
@@ -456,6 +503,7 @@ Rate limits are enforced per `playerId`.
 
 - `RUN_CODE`: max 1 request per 2 seconds
 - `SUBMIT_CODE`: max 1 request per 3 seconds
+- `SUBMIT_ANSWER`: max 1 request per 3 seconds
 - `CODE_UPDATE` (editor streaming): max 10 updates per second; `code` payload <= 50_000 bytes
 - `SPECTATE_PLAYER`: max 1 request per second
 - `SEND_CHAT`: max 2 messages per second; `text` <= 200 chars
@@ -484,7 +532,9 @@ Request body:
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
-    "attackIntensity": "low"
+    "attackIntensity": "low",
+    "matchMode": "battleRoyale",
+    "tempoProfile": "steady"
   }
 }
 ```
@@ -513,7 +563,9 @@ Response `201`:
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
-    "attackIntensity": "low"
+    "attackIntensity": "low",
+    "matchMode": "battleRoyale",
+    "tempoProfile": "steady"
   }
 }
 ```
@@ -559,7 +611,9 @@ Response `200`:
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
-    "attackIntensity": "low"
+    "attackIntensity": "low",
+    "matchMode": "battleRoyale",
+    "tempoProfile": "steady"
   }
 }
 ```
@@ -587,7 +641,9 @@ Response `200`:
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
-    "attackIntensity": "low"
+    "attackIntensity": "low",
+    "matchMode": "battleRoyale",
+    "tempoProfile": "steady"
   },
   "counts": {
     "players": 2,
@@ -620,7 +676,9 @@ Response `200`:
       "stackLimit": 10,
       "startingQueued": 2,
       "difficultyProfile": "moderate",
-      "attackIntensity": "low"
+      "attackIntensity": "low",
+      "matchMode": "battleRoyale",
+      "tempoProfile": "steady"
     }
   },
   "standings": [
@@ -750,7 +808,9 @@ Server → Client `ROOM_SNAPSHOT`:
         "stackLimit": 10,
         "startingQueued": 2,
         "difficultyProfile": "moderate",
-        "attackIntensity": "low"
+        "attackIntensity": "low",
+        "matchMode": "battleRoyale",
+        "tempoProfile": "steady"
       }
     },
     "eventLog": []
@@ -882,6 +942,7 @@ Rules (MVP):
 - Player MUST NOT be eliminated.
 - If `activeDebuff.type="ddos"`, server rejects with `ERROR` `FORBIDDEN` and includes `retryAfterMs` until `endsAt`.
 - `problemId` MUST equal the player’s current problem id.
+- Problem kind MUST be `code`, `bugfix`, or `fillBlank` (non-code uses `SUBMIT_ANSWER`).
 - Server runs `publicTests` only.
 - `RUN_CODE` does not change score/streak, does not send attacks, and does not advance the current problem.
 - Server responds with `JUDGE_RESULT` with `kind="run"`.
@@ -905,6 +966,7 @@ Validation:
 
 - Player MUST NOT be eliminated.
 - `problemId` MUST equal the player’s current problem id.
+- Problem kind MUST be `code`, `bugfix`, or `fillBlank` (non-code uses `SUBMIT_ANSWER`).
 
 Judging:
 
@@ -947,6 +1009,49 @@ Events:
   "payload": {
     "problemId": "two-sum",
     "code": "def two_sum(nums, target):\n    ..."
+  }
+}
+```
+
+#### `SUBMIT_ANSWER`
+
+Rules (MVP):
+
+Validation:
+
+- Player MUST NOT be eliminated.
+- `problemId` MUST equal the player’s current problem id.
+- Problem kind MUST be `mcq` or `trace`.
+
+Evaluation:
+
+- Server validates against `answerSpec` (no Judge0 call).
+- For MCQ, `answer` is an array of option ids (single-select uses a 1-item array).
+- For trace, `answer` is a JSON-serializable value.
+
+Scoring & streak:
+
+- If answer fails: `streak` resets to 0; score unchanged.
+- If answer passes:
+  - If `isGarbage: true`: +0 points; does not increment streak; sends no attack.
+  - Else points by difficulty (same as code by default; tune per mode).
+
+Problem advance + attacks:
+
+- Same as `SUBMIT_CODE` on pass (advance, attacks, streak handling).
+
+Events:
+
+- Server sends `JUDGE_RESULT` with `kind="answer"`.
+- Server updates `PLAYER_UPDATE`, `STACK_UPDATE`, and target events as applicable.
+
+```json
+{
+  "type": "SUBMIT_ANSWER",
+  "requestId": "req_7a",
+  "payload": {
+    "problemId": "trace-1",
+    "answer": ["b"]
   }
 }
 ```
@@ -1072,7 +1177,9 @@ Broadcast when room settings change (lobby only).
       "stackLimit": 10,
       "startingQueued": 2,
       "difficultyProfile": "moderate",
-      "attackIntensity": "low"
+      "attackIntensity": "low",
+      "matchMode": "battleRoyale",
+      "tempoProfile": "steady"
     }
   }
 }
@@ -1100,7 +1207,9 @@ Broadcast when the match transitions from `lobby` to `warmup`.
         "stackLimit": 10,
         "startingQueued": 2,
         "difficultyProfile": "moderate",
-        "attackIntensity": "low"
+        "attackIntensity": "low",
+        "matchMode": "battleRoyale",
+        "tempoProfile": "steady"
       }
     }
   }
@@ -1116,7 +1225,7 @@ Broadcast when `match.phase` changes (e.g. `warmup` → `main`).
   "type": "MATCH_PHASE_UPDATE",
   "payload": {
     "matchId": "m_123",
-    "phase": "main"
+    "phase": "flow"
   }
 }
 ```

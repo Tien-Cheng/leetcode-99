@@ -21,6 +21,7 @@ import type {
   RoomSettings,
   RoomSnapshotPayload,
   RunCodePayload,
+  SetRolePayload,
   SetTargetModePayload,
   ShopItem,
   SpectateView,
@@ -70,12 +71,12 @@ const BASE_DEBUFF_DURATIONS: Record<DebuffType, number> = {
 
 const DEBUFF_GRACE_PERIOD_MS = 5000; // 5s immunity after debuff ends
 
-const DEBUG_TIMERS = true;
+const DEBUG_TIMERS = false;
 
 // ============================================================================
 // Scoring Constants (per spec section 8.2)
 // ============================================================================
- 
+
 const DIFFICULTY_SCORES: Record<"easy" | "medium" | "hard", number> = {
   easy: 5,
   medium: 10,
@@ -232,19 +233,23 @@ export default class Room implements Party.Server {
       for (const player of this.state.players.values()) {
         if (player.rateLimits) {
           player.rateLimits = new Map(
-            Object.entries(player.rateLimits as unknown as Record<string, RateLimitState>),
+            Object.entries(
+              player.rateLimits as unknown as Record<string, RateLimitState>,
+            ),
           );
         }
         if (player.recentAttackers) {
           player.recentAttackers = new Map(
-            Object.entries(player.recentAttackers as unknown as Record<string, number>),
+            Object.entries(
+              player.recentAttackers as unknown as Record<string, number>,
+            ),
           );
         }
         if (player.shopCooldowns) {
           player.shopCooldowns = new Map(
-            Object.entries(player.shopCooldowns as unknown as Record<string, number>).map(
-              ([k, v]) => [k as ShopItem, v] as const,
-            ),
+            Object.entries(
+              player.shopCooldowns as unknown as Record<string, number>,
+            ).map(([k, v]) => [k as ShopItem, v] as const),
           );
         }
       }
@@ -369,6 +374,14 @@ export default class Room implements Party.Server {
           await this.handleSetTargetMode(
             sender,
             parsed.payload as SetTargetModePayload,
+            parsed.requestId,
+          );
+          break;
+
+        case "SET_ROLE":
+          await this.handleSetRole(
+            sender,
+            parsed.payload as { role: "player" | "spectator" },
             parsed.requestId,
           );
           break;
@@ -582,7 +595,13 @@ export default class Room implements Party.Server {
     // Rate limit check
     const rateCheck = this.checkRateLimit(player, "SEND_CHAT");
     if (!rateCheck.allowed) {
-      this.sendError(conn, "RATE_LIMITED", "Too many chat messages", requestId, rateCheck.retryAfterMs);
+      this.sendError(
+        conn,
+        "RATE_LIMITED",
+        "Too many chat messages",
+        requestId,
+        rateCheck.retryAfterMs,
+      );
       return;
     }
 
@@ -738,7 +757,8 @@ export default class Room implements Party.Server {
     ).toISOString();
 
     // Determine initial phase (skip warmup for very short matches)
-    const phase: MatchPhase = this.state.settings.matchDurationSec < 10 ? "main" : "warmup";
+    const phase: MatchPhase =
+      this.state.settings.matchDurationSec < 10 ? "main" : "warmup";
 
     // Update match state
     this.state.match = {
@@ -1027,11 +1047,22 @@ export default class Room implements Party.Server {
     }
 
     if (player.role !== "player") {
-      this.sendError(conn, "FORBIDDEN", "Only players can set target mode", requestId);
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Only players can set target mode",
+        requestId,
+      );
       return;
     }
 
-    const validModes: TargetingMode[] = ["random", "attackers", "topScore", "nearDeath", "rankAbove"];
+    const validModes: TargetingMode[] = [
+      "random",
+      "attackers",
+      "topScore",
+      "nearDeath",
+      "rankAbove",
+    ];
     if (!validModes.includes(payload.mode)) {
       this.sendError(conn, "BAD_REQUEST", "Invalid targeting mode", requestId);
       return;
@@ -1043,7 +1074,57 @@ export default class Room implements Party.Server {
     // Broadcast player update
     this.broadcastPlayerUpdate(player);
 
-    console.log(`[${this.state.roomId}] ${player.username} set targeting mode to ${payload.mode}`);
+    console.log(
+      `[${this.state.roomId}] ${player.username} set targeting mode to ${payload.mode}`,
+    );
+  }
+
+  private async handleSetRole(
+    conn: Party.Connection,
+    payload: SetRolePayload,
+    requestId?: string,
+  ) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) {
+      this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
+      return;
+    }
+
+    if (this.state.match.phase !== "lobby") {
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Can only change roles in the lobby",
+        requestId,
+      );
+      return;
+    }
+
+    if (player.role === payload.role) {
+      return;
+    }
+
+    if (payload.role === "player") {
+      let playerCount = 0;
+      for (const candidate of this.state.players.values()) {
+        if (candidate.role === "player") {
+          playerCount += 1;
+        }
+      }
+      if (playerCount >= this.state.settings.playerCap) {
+        this.sendError(conn, "ROOM_FULL", "Room is full", requestId);
+        return;
+      }
+    }
+
+    player.role = payload.role;
+    player.status = "lobby";
+    await this.persistState();
+
+    this.broadcastPlayerUpdate(player);
+    this.addSystemChat(
+      `${player.username} is now ${payload.role === "player" ? "a player" : "a spectator"}`,
+    );
   }
 
   private async handleCodeUpdate(
@@ -1058,26 +1139,47 @@ export default class Room implements Party.Server {
     }
 
     if (player.role !== "player") {
-      this.sendError(conn, "FORBIDDEN", "Only players can update code", requestId);
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Only players can update code",
+        requestId,
+      );
       return;
     }
 
     if (player.status === "eliminated") {
-      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      this.sendError(
+        conn,
+        "PLAYER_ELIMINATED",
+        "You are eliminated",
+        requestId,
+      );
       return;
     }
 
     // Rate limit check
     const rateCheck = this.checkRateLimit(player, "CODE_UPDATE");
     if (!rateCheck.allowed) {
-      this.sendError(conn, "RATE_LIMITED", "Too many code updates", requestId, rateCheck.retryAfterMs);
+      this.sendError(
+        conn,
+        "RATE_LIMITED",
+        "Too many code updates",
+        requestId,
+        rateCheck.retryAfterMs,
+      );
       return;
     }
 
     // Payload size check
     const codeByteLength = new TextEncoder().encode(payload.code).length;
     if (codeByteLength > CODE_MAX_BYTES) {
-      this.sendError(conn, "PAYLOAD_TOO_LARGE", "Code exceeds 50KB limit", requestId);
+      this.sendError(
+        conn,
+        "PAYLOAD_TOO_LARGE",
+        "Code exceeds 50KB limit",
+        requestId,
+      );
       return;
     }
 
@@ -1116,7 +1218,12 @@ export default class Room implements Party.Server {
     }
 
     if (player.status === "eliminated") {
-      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      this.sendError(
+        conn,
+        "PLAYER_ELIMINATED",
+        "You are eliminated",
+        requestId,
+      );
       return;
     }
 
@@ -1124,14 +1231,26 @@ export default class Room implements Party.Server {
     if (player.activeDebuff?.type === "ddos") {
       const endsAt = new Date(player.activeDebuff.endsAt).getTime();
       const retryAfterMs = Math.max(0, endsAt - Date.now());
-      this.sendError(conn, "FORBIDDEN", "Run disabled by DDoS attack", requestId, retryAfterMs);
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Run disabled by DDoS attack",
+        requestId,
+        retryAfterMs,
+      );
       return;
     }
 
     // Rate limit check
     const rateCheck = this.checkRateLimit(player, "RUN_CODE");
     if (!rateCheck.allowed) {
-      this.sendError(conn, "RATE_LIMITED", "Too many run requests", requestId, rateCheck.retryAfterMs);
+      this.sendError(
+        conn,
+        "RATE_LIMITED",
+        "Too many run requests",
+        requestId,
+        rateCheck.retryAfterMs,
+      );
       return;
     }
 
@@ -1150,7 +1269,12 @@ export default class Room implements Party.Server {
 
     // Run code is only for code problems, not MCQs
     if (problem.problemType === "mcq") {
-      this.sendError(conn, "INVALID_PROBLEM_TYPE", "Run code is not available for MCQ problems", requestId);
+      this.sendError(
+        conn,
+        "INVALID_PROBLEM_TYPE",
+        "Run code is not available for MCQ problems",
+        requestId,
+      );
       return;
     }
 
@@ -1175,7 +1299,12 @@ export default class Room implements Party.Server {
       this.sendJudgeResult(conn, player, result, requestId);
     } catch (error) {
       console.error(`[${this.state.roomId}] Judge error:`, error);
-      this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+      this.sendError(
+        conn,
+        "JUDGE_UNAVAILABLE",
+        "Judge service unavailable",
+        requestId,
+      );
     }
   }
 
@@ -1191,19 +1320,35 @@ export default class Room implements Party.Server {
     }
 
     if (player.role !== "player") {
-      this.sendError(conn, "FORBIDDEN", "Only players can submit code", requestId);
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Only players can submit code",
+        requestId,
+      );
       return;
     }
 
     if (player.status === "eliminated") {
-      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      this.sendError(
+        conn,
+        "PLAYER_ELIMINATED",
+        "You are eliminated",
+        requestId,
+      );
       return;
     }
 
     // Rate limit check
     const rateCheck = this.checkRateLimit(player, "SUBMIT_CODE");
     if (!rateCheck.allowed) {
-      this.sendError(conn, "RATE_LIMITED", "Too many submit requests", requestId, rateCheck.retryAfterMs);
+      this.sendError(
+        conn,
+        "RATE_LIMITED",
+        "Too many submit requests",
+        requestId,
+        rateCheck.retryAfterMs,
+      );
       return;
     }
 
@@ -1247,7 +1392,12 @@ export default class Room implements Party.Server {
           result = await runAllTests(problem, payload.code, judgeConfig);
         } catch (error) {
           console.error(`[${this.state.roomId}] Judge error:`, error);
-          this.sendError(conn, "JUDGE_UNAVAILABLE", "Judge service unavailable", requestId);
+          this.sendError(
+            conn,
+            "JUDGE_UNAVAILABLE",
+            "Judge service unavailable",
+            requestId,
+          );
           return;
         }
       }
@@ -1287,7 +1437,10 @@ export default class Room implements Party.Server {
       player.streak += 1;
 
       // Send attack (unless streak is multiple of 3, then memoryLeak)
-      const attackType = this.determineAttackType(problem.difficulty, player.streak);
+      const attackType = this.determineAttackType(
+        problem.difficulty,
+        player.streak,
+      );
       await this.sendAttack(player, attackType);
 
       this.addEventLog(
@@ -1296,7 +1449,10 @@ export default class Room implements Party.Server {
       );
     } else {
       // Garbage problem - no points, no streak increment, no attack
-      this.addEventLog("info", `${player.username} cleared garbage: ${problem.title}`);
+      this.addEventLog(
+        "info",
+        `${player.username} cleared garbage: ${problem.title}`,
+      );
     }
 
     // Advance to next problem
@@ -1337,12 +1493,22 @@ export default class Room implements Party.Server {
     }
 
     if (player.role !== "player") {
-      this.sendError(conn, "FORBIDDEN", "Only players can spend points", requestId);
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "Only players can spend points",
+        requestId,
+      );
       return;
     }
 
     if (player.status === "eliminated") {
-      this.sendError(conn, "PLAYER_ELIMINATED", "You are eliminated", requestId);
+      this.sendError(
+        conn,
+        "PLAYER_ELIMINATED",
+        "You are eliminated",
+        requestId,
+      );
       return;
     }
 
@@ -1355,7 +1521,12 @@ export default class Room implements Party.Server {
 
     // Check score
     if (player.score < catalogItem.cost) {
-      this.sendError(conn, "INSUFFICIENT_SCORE", "Not enough points", requestId);
+      this.sendError(
+        conn,
+        "INSUFFICIENT_SCORE",
+        "Not enough points",
+        requestId,
+      );
       return;
     }
 
@@ -1366,14 +1537,25 @@ export default class Room implements Party.Server {
     const cooldownEndsAt = player.shopCooldowns.get(item);
     if (cooldownEndsAt && Date.now() < cooldownEndsAt) {
       const retryAfterMs = cooldownEndsAt - Date.now();
-      this.sendError(conn, "ITEM_ON_COOLDOWN", "Item on cooldown", requestId, retryAfterMs);
+      this.sendError(
+        conn,
+        "ITEM_ON_COOLDOWN",
+        "Item on cooldown",
+        requestId,
+        retryAfterMs,
+      );
       return;
     }
 
     // Apply item effect
     const success = await this.applyShopItem(player, item);
     if (!success) {
-      this.sendError(conn, "BAD_REQUEST", "Cannot use this item now", requestId);
+      this.sendError(
+        conn,
+        "BAD_REQUEST",
+        "Cannot use this item now",
+        requestId,
+      );
       return;
     }
 
@@ -1382,7 +1564,10 @@ export default class Room implements Party.Server {
 
     // Set cooldown if applicable
     if (catalogItem.cooldownSec) {
-      player.shopCooldowns.set(item, Date.now() + catalogItem.cooldownSec * 1000);
+      player.shopCooldowns.set(
+        item,
+        Date.now() + catalogItem.cooldownSec * 1000,
+      );
     }
 
     // Broadcast updates
@@ -1402,7 +1587,10 @@ export default class Room implements Party.Server {
     console.log(`[${this.state.roomId}] ${player.username} purchased ${item}`);
   }
 
-  private async applyShopItem(player: PlayerInternal, item: ShopItem): Promise<boolean> {
+  private async applyShopItem(
+    player: PlayerInternal,
+    item: ShopItem,
+  ): Promise<boolean> {
     switch (item) {
       case "clearDebuff":
         if (!player.activeDebuff) {
@@ -1443,7 +1631,9 @@ export default class Room implements Party.Server {
         if (!player.currentProblem) {
           return false;
         }
-        const fullProblem = this.getFullProblem(player.currentProblem.problemId);
+        const fullProblem = this.getFullProblem(
+          player.currentProblem.problemId,
+        );
         if (!fullProblem || !fullProblem.hints) {
           return false;
         }
@@ -1481,27 +1671,48 @@ export default class Room implements Party.Server {
     const canSpectate =
       player.role === "spectator" || player.status === "eliminated";
     if (!canSpectate) {
-      this.sendError(conn, "FORBIDDEN", "You cannot spectate while alive", requestId);
+      this.sendError(
+        conn,
+        "FORBIDDEN",
+        "You cannot spectate while alive",
+        requestId,
+      );
       return;
     }
 
     // Rate limit check
     const rateCheck = this.checkRateLimit(player, "SPECTATE_PLAYER");
     if (!rateCheck.allowed) {
-      this.sendError(conn, "RATE_LIMITED", "Too many spectate requests", requestId, rateCheck.retryAfterMs);
+      this.sendError(
+        conn,
+        "RATE_LIMITED",
+        "Too many spectate requests",
+        requestId,
+        rateCheck.retryAfterMs,
+      );
       return;
     }
 
     // Find target player
     const target = this.state.players.get(payload.playerId);
     if (!target) {
-      this.sendError(conn, "PLAYER_NOT_FOUND", "Target player not found", requestId);
+      this.sendError(
+        conn,
+        "PLAYER_NOT_FOUND",
+        "Target player not found",
+        requestId,
+      );
       return;
     }
 
     // Can only spectate players/bots, not spectators
     if (target.role === "spectator") {
-      this.sendError(conn, "BAD_REQUEST", "Cannot spectate a spectator", requestId);
+      this.sendError(
+        conn,
+        "BAD_REQUEST",
+        "Cannot spectate a spectator",
+        requestId,
+      );
       return;
     }
 
@@ -1510,14 +1721,19 @@ export default class Room implements Party.Server {
 
     // Send spectate state
     const spectateView = this.buildSpectateView(target);
-    const msg: WSMessage<"SPECTATE_STATE", { spectating: SpectateView | null }> = {
+    const msg: WSMessage<
+      "SPECTATE_STATE",
+      { spectating: SpectateView | null }
+    > = {
       type: "SPECTATE_STATE",
       requestId,
       payload: { spectating: spectateView },
     };
     conn.send(JSON.stringify(msg));
 
-    console.log(`[${this.state.roomId}] ${player.username} is now spectating ${target.username}`);
+    console.log(
+      `[${this.state.roomId}] ${player.username} is now spectating ${target.username}`,
+    );
   }
 
   private async handleStopSpectate(conn: Party.Connection, requestId?: string) {
@@ -1530,7 +1746,10 @@ export default class Room implements Party.Server {
     player.spectatingPlayerId = null;
 
     // Send spectate state with null
-    const msg: WSMessage<"SPECTATE_STATE", { spectating: SpectateView | null }> = {
+    const msg: WSMessage<
+      "SPECTATE_STATE",
+      { spectating: SpectateView | null }
+    > = {
       type: "SPECTATE_STATE",
       requestId,
       payload: { spectating: null },
@@ -1557,7 +1776,10 @@ export default class Room implements Party.Server {
     player.score += payload.amount;
 
     // Log the cheat
-    this.addEventLog("info", `[DEBUG] ${player.username} added ${payload.amount} points (total: ${player.score})`);
+    this.addEventLog(
+      "info",
+      `[DEBUG] ${player.username} added ${payload.amount} points (total: ${player.score})`,
+    );
 
     // Broadcast player update
     this.broadcastPlayerUpdate(player);
@@ -1571,7 +1793,10 @@ export default class Room implements Party.Server {
   // Attack System
   // ============================================================================
 
-  private determineAttackType(difficulty: "easy" | "medium" | "hard", streak: number): AttackType {
+  private determineAttackType(
+    difficulty: "easy" | "medium" | "hard",
+    streak: number,
+  ): AttackType {
     // If streak is multiple of 3, send memoryLeak
     if (streak > 0 && streak % 3 === 0) {
       return "memoryLeak";
@@ -1611,11 +1836,14 @@ export default class Room implements Party.Server {
       // Send attack received event
       const targetConn = this.getPlayerConnection(target);
       if (targetConn) {
-        const msg: WSMessage<"ATTACK_RECEIVED", {
-          type: AttackType;
-          fromPlayerId: string;
-          addedProblem?: ProblemSummary;
-        }> = {
+        const msg: WSMessage<
+          "ATTACK_RECEIVED",
+          {
+            type: AttackType;
+            fromPlayerId: string;
+            addedProblem?: ProblemSummary;
+          }
+        > = {
           type: "ATTACK_RECEIVED",
           payload: {
             type: "garbageDrop",
@@ -1665,11 +1893,14 @@ export default class Room implements Party.Server {
       // Send attack received event
       const targetConn = this.getPlayerConnection(target);
       if (targetConn) {
-        const msg: WSMessage<"ATTACK_RECEIVED", {
-          type: AttackType;
-          fromPlayerId: string;
-          endsAt?: string;
-        }> = {
+        const msg: WSMessage<
+          "ATTACK_RECEIVED",
+          {
+            type: AttackType;
+            fromPlayerId: string;
+            endsAt?: string;
+          }
+        > = {
           type: "ATTACK_RECEIVED",
           payload: {
             type: attackType,
@@ -1705,7 +1936,9 @@ export default class Room implements Party.Server {
 
     switch (attacker.targetingMode) {
       case "random":
-        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+        return (
+          validTargets[Math.floor(Math.random() * validTargets.length)] ?? null
+        );
 
       case "attackers": {
         // Find recent attackers (within 20s)
@@ -1715,17 +1948,25 @@ export default class Room implements Party.Server {
           return lastAttacked && now - lastAttacked <= 20000;
         });
         if (recentAttackers.length > 0) {
-          return recentAttackers[Math.floor(Math.random() * recentAttackers.length)] ?? null;
+          return (
+            recentAttackers[
+              Math.floor(Math.random() * recentAttackers.length)
+            ] ?? null
+          );
         }
         // Fallback to random
-        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+        return (
+          validTargets[Math.floor(Math.random() * validTargets.length)] ?? null
+        );
       }
 
       case "topScore": {
         // Find highest score, tie-break randomly
         const maxScore = Math.max(...validTargets.map((t) => t.score));
         const topScorers = validTargets.filter((t) => t.score === maxScore);
-        return topScorers[Math.floor(Math.random() * topScorers.length)] ?? null;
+        return (
+          topScorers[Math.floor(Math.random() * topScorers.length)] ?? null
+        );
       }
 
       case "nearDeath": {
@@ -1737,7 +1978,8 @@ export default class Room implements Party.Server {
         }));
         const maxRatio = Math.max(...ratios.map((r) => r.ratio));
         const nearDeathPlayers = ratios.filter((r) => r.ratio === maxRatio);
-        const selected = nearDeathPlayers[Math.floor(Math.random() * nearDeathPlayers.length)];
+        const selected =
+          nearDeathPlayers[Math.floor(Math.random() * nearDeathPlayers.length)];
         return selected?.player ?? null;
       }
 
@@ -1754,7 +1996,9 @@ export default class Room implements Party.Server {
           return a.playerId.localeCompare(b.playerId);
         });
 
-        const myIndex = sorted.findIndex((p) => p.playerId === attacker.playerId);
+        const myIndex = sorted.findIndex(
+          (p) => p.playerId === attacker.playerId,
+        );
         if (myIndex > 0) {
           // Player right above me
           return sorted[myIndex - 1] ?? null;
@@ -1762,15 +2006,22 @@ export default class Room implements Party.Server {
         // If I'm #1, fallback to random (or maybe top score, which is also me)
         // User said "right on top of ranking of you", so if I'm #1 there's no one above.
         // Fallback to random among others.
-        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+        return (
+          validTargets[Math.floor(Math.random() * validTargets.length)] ?? null
+        );
       }
 
       default:
-        return validTargets[Math.floor(Math.random() * validTargets.length)] ?? null;
+        return (
+          validTargets[Math.floor(Math.random() * validTargets.length)] ?? null
+        );
     }
   }
 
-  private async scheduleDebuffExpiry(player: PlayerInternal, durationMs: number) {
+  private async scheduleDebuffExpiry(
+    player: PlayerInternal,
+    durationMs: number,
+  ) {
     // For simplicity, we'll handle debuff expiry in onAlarm
     // The alarm system will check for expired debuffs
     const expiryAt = Date.now() + durationMs;
@@ -1812,7 +2063,8 @@ export default class Room implements Party.Server {
     const garbageProblems = allProblems.filter((p) => p.isGarbage);
 
     if (garbageProblems.length > 0) {
-      const selected = garbageProblems[Math.floor(Math.random() * garbageProblems.length)];
+      const selected =
+        garbageProblems[Math.floor(Math.random() * garbageProblems.length)];
       if (selected) return selected;
     }
 
@@ -1838,7 +2090,10 @@ export default class Room implements Party.Server {
   // ============================================================================
 
   private async checkMatchEnd() {
-    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+    if (
+      this.state.match.phase === "lobby" ||
+      this.state.match.phase === "ended"
+    ) {
       return;
     }
 
@@ -1856,7 +2111,10 @@ export default class Room implements Party.Server {
 
     // Check if time expired (with 100ms tolerance for server timing)
     const now = Date.now();
-    if (this.state.match.endAt && new Date(this.state.match.endAt).getTime() <= now + 100) {
+    if (
+      this.state.match.endAt &&
+      new Date(this.state.match.endAt).getTime() <= now + 100
+    ) {
       endReason = "timeExpired";
     }
 
@@ -2019,7 +2277,10 @@ export default class Room implements Party.Server {
   }
 
   private async scheduleBotActions() {
-    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+    if (
+      this.state.match.phase === "lobby" ||
+      this.state.match.phase === "ended"
+    ) {
       this.state.nextBotActionAt = null;
       return;
     }
@@ -2052,7 +2313,10 @@ export default class Room implements Party.Server {
   }
 
   private async handleBotActions() {
-    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+    if (
+      this.state.match.phase === "lobby" ||
+      this.state.match.phase === "ended"
+    ) {
       return;
     }
 
@@ -2108,7 +2372,10 @@ export default class Room implements Party.Server {
         bot.streak += 1;
 
         // Send attack
-        const attackType = this.determineAttackType(problem.difficulty, bot.streak);
+        const attackType = this.determineAttackType(
+          problem.difficulty,
+          bot.streak,
+        );
         await this.sendAttack(bot, attackType);
 
         this.addEventLog(
@@ -2116,7 +2383,10 @@ export default class Room implements Party.Server {
           `${bot.username} solved ${problem.title} (+${points}) and sent ${attackType}`,
         );
       } else {
-        this.addEventLog("info", `${bot.username} cleared garbage: ${problem.title}`);
+        this.addEventLog(
+          "info",
+          `${bot.username} cleared garbage: ${problem.title}`,
+        );
       }
 
       this.advanceToNextProblem(bot);
@@ -2315,7 +2585,8 @@ export default class Room implements Party.Server {
 
     if (nextProblem) {
       player.currentProblem = this.toClientView(nextProblem);
-      player.code = nextProblem.problemType === "code" ? nextProblem.starterCode : "";
+      player.code =
+        nextProblem.problemType === "code" ? nextProblem.starterCode : "";
       player.codeVersion = 1;
       player.revealedHints = [];
     }
@@ -2336,7 +2607,9 @@ export default class Room implements Party.Server {
     return undefined;
   }
 
-  private getPlayerConnection(player: PlayerInternal): Party.Connection | undefined {
+  private getPlayerConnection(
+    player: PlayerInternal,
+  ): Party.Connection | undefined {
     if (!player.connectionId) return undefined;
     for (const conn of this.room.getConnections()) {
       if (conn.id === player.connectionId) {
@@ -2467,7 +2740,10 @@ export default class Room implements Party.Server {
     this.sendJudgeResultToSpectators(player, result);
   }
 
-  private sendJudgeResultToSpectators(player: PlayerInternal, result: JudgeResult) {
+  private sendJudgeResultToSpectators(
+    player: PlayerInternal,
+    result: JudgeResult,
+  ) {
     for (const spectator of this.state.players.values()) {
       if (spectator.spectatingPlayerId === player.playerId) {
         const conn = this.getPlayerConnection(spectator);
@@ -2482,17 +2758,23 @@ export default class Room implements Party.Server {
     }
   }
 
-  private relayCodeUpdateToSpectators(player: PlayerInternal, payload: CodeUpdateClientPayload) {
+  private relayCodeUpdateToSpectators(
+    player: PlayerInternal,
+    payload: CodeUpdateClientPayload,
+  ) {
     for (const spectator of this.state.players.values()) {
       if (spectator.spectatingPlayerId === player.playerId) {
         const conn = this.getPlayerConnection(spectator);
         if (conn) {
-          const msg: WSMessage<"CODE_UPDATE", {
-            playerId: string;
-            problemId: string;
-            code: string;
-            codeVersion: number;
-          }> = {
+          const msg: WSMessage<
+            "CODE_UPDATE",
+            {
+              playerId: string;
+              problemId: string;
+              code: string;
+              codeVersion: number;
+            }
+          > = {
             type: "CODE_UPDATE",
             payload: {
               playerId: player.playerId,
@@ -2513,7 +2795,10 @@ export default class Room implements Party.Server {
         const conn = this.getPlayerConnection(spectator);
         if (conn) {
           const spectateView = this.buildSpectateView(player);
-          const msg: WSMessage<"SPECTATE_STATE", { spectating: SpectateView | null }> = {
+          const msg: WSMessage<
+            "SPECTATE_STATE",
+            { spectating: SpectateView | null }
+          > = {
             type: "SPECTATE_STATE",
             payload: { spectating: spectateView },
           };
@@ -2604,7 +2889,8 @@ export default class Room implements Party.Server {
       publicTests,
       runtimeMs: Math.floor(Math.random() * 100) + 10,
       hiddenTestsPassed: kind === "submit" ? passed : undefined,
-      hiddenFailureMessage: kind === "submit" && !passed ? "Failed hidden tests" : undefined,
+      hiddenFailureMessage:
+        kind === "submit" && !passed ? "Failed hidden tests" : undefined,
     };
   }
 
@@ -2730,7 +3016,9 @@ export default class Room implements Party.Server {
             const conn = this.getPlayerConnection(player);
             if (conn) {
               const snapshot = this.buildRoomSnapshot(player);
-              conn.send(JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }));
+              conn.send(
+                JSON.stringify({ type: "ROOM_SNAPSHOT", payload: snapshot }),
+              );
             }
           }
         } catch (error) {
@@ -2837,14 +3125,17 @@ export default class Room implements Party.Server {
    * Schedule the next alarm based on the earliest pending event.
    */
   private async scheduleNextAlarm(): Promise<void> {
-    if (this.state.match.phase === "lobby" || this.state.match.phase === "ended") {
+    if (
+      this.state.match.phase === "lobby" ||
+      this.state.match.phase === "ended"
+    ) {
       return;
     }
 
     const warmupEndAt =
       this.state.match.startAt && this.state.match.phase === "warmup"
         ? new Date(this.state.match.startAt).getTime() +
-        this.state.settings.matchDurationSec * 1000 * 0.1
+          this.state.settings.matchDurationSec * 1000 * 0.1
         : Infinity;
 
     const matchEndAt = this.state.match.endAt
@@ -2997,13 +3288,23 @@ export default class Room implements Party.Server {
   private toClientView(problem: ProblemFull): ProblemClientView {
     // Strip hidden tests and server-only fields
     if (problem.problemType === "code") {
-      const { hiddenTests: _hiddenTests, hints, solutionSketch: _solutionSketch, ...clientView } = problem;
+      const {
+        hiddenTests: _hiddenTests,
+        hints,
+        solutionSketch: _solutionSketch,
+        ...clientView
+      } = problem;
       return {
         ...clientView,
         hintCount: hints?.length,
       };
     } else {
-      const { hiddenTests: _hiddenTests, hints, correctAnswer: _correctAnswer, ...clientView } = problem;
+      const {
+        hiddenTests: _hiddenTests,
+        hints,
+        correctAnswer: _correctAnswer,
+        ...clientView
+      } = problem;
       return {
         ...clientView,
         hintCount: hints?.length,
@@ -3013,8 +3314,6 @@ export default class Room implements Party.Server {
 
   async onAlarm() {
     const now = Date.now();
-    this.addEventLog("info", `Server: onAlarm (phase: ${this.state.match.phase})`);
-
     if (DEBUG_TIMERS) {
       console.log(
         `[${this.state.roomId}] onAlarm now=${new Date(now).toISOString()} ` +
@@ -3034,7 +3333,9 @@ export default class Room implements Party.Server {
       this.state.match.endAt &&
       new Date(this.state.match.endAt).getTime() <= now + 100
     ) {
-      console.log(`[${this.state.roomId}] Match end time reached, checking end...`);
+      console.log(
+        `[${this.state.roomId}] Match end time reached, checking end...`,
+      );
       await this.checkMatchEnd();
       return;
     }
@@ -3088,7 +3389,6 @@ export default class Room implements Party.Server {
   // ============================================================================
 
   async onRequest(req: Party.Request): Promise<Response> {
-
     const url = new URL(req.url);
 
     // POST /parties/leet99/:roomId/register - Register a new player

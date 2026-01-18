@@ -76,6 +76,7 @@ export type PartyRegisterRequest = {
   role: "player" | "spectator";
   isHost: boolean;
   settings?: Partial<RoomSettings>;
+  allowLateJoin?: boolean;
 };
 
 export type PartyRegisterResponse = {
@@ -166,8 +167,13 @@ export function applyPartyRegister(
     }
   }
 
-  if (req.role === "player" && state.match.phase !== "lobby") {
-    return makeError("MATCH_ALREADY_STARTED", "Match already started");
+  const isLobby = state.match.phase === "lobby";
+  const allowLateJoin = req.allowLateJoin === true;
+
+  if (req.role === "player" && !isLobby) {
+    if (!allowLateJoin || state.match.phase === "ended") {
+      return makeError("MATCH_ALREADY_STARTED", "Match already started");
+    }
   }
 
   const countsBefore = countHumans(state);
@@ -178,13 +184,19 @@ export function applyPartyRegister(
     return makeError("ROOM_FULL", "Room is full");
   }
 
+  const playerStatus = isLobby
+    ? "lobby"
+    : req.role === "player"
+      ? "coding"
+      : "lobby";
+
   const player: PlayerInternal = {
     playerId: req.playerId,
     playerToken: req.playerToken,
     username: req.username,
     role: req.role,
     isHost: req.isHost,
-    status: "lobby",
+    status: playerStatus,
     score: 0,
     streak: 0,
     targetingMode: "random",

@@ -4,6 +4,7 @@ import {
   type WSMessage,
   type RoomSnapshotPayload,
   type JoinRoomPayload,
+  type SetRolePayload,
 } from "@leet99/contracts";
 
 const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
@@ -81,7 +82,18 @@ export function useRoom(roomId: string, auth: StoredAuth) {
             } else {
               newPlayers.push(msg.payload.player);
             }
-            return { ...prev, players: newPlayers };
+
+            // Update 'me' if this player update is for the current user
+            let newMe = prev.me;
+            if (msg.payload.player.playerId === prev.me.playerId) {
+              newMe = {
+                ...prev.me,
+                role: msg.payload.player.role,
+                status: msg.payload.player.status,
+              };
+            }
+
+            return { ...prev, players: newPlayers, me: newMe };
           });
           break;
 
@@ -160,6 +172,14 @@ export function useRoom(roomId: string, auth: StoredAuth) {
     [socket],
   );
 
+  const setRole = useCallback(
+    (role: SetRolePayload["role"]) => {
+      if (!socket) return;
+      socket.send(JSON.stringify({ type: "SET_ROLE", payload: { role } }));
+    },
+    [socket],
+  );
+
   return {
     socket,
     connected,
@@ -171,5 +191,6 @@ export function useRoom(roomId: string, auth: StoredAuth) {
     startMatch,
     addBots,
     sendMessage,
+    setRole,
   };
 }

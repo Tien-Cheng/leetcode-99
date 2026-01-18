@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Button, Input } from "@leet99/ui";
+import { Button, Input, JoinModeModal } from "@leet99/ui";
 import Link from "next/link";
 
 export default function JoinRoomByLinkPage() {
@@ -12,6 +12,7 @@ export default function JoinRoomByLinkPage() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const usernameRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus username input
@@ -80,12 +81,9 @@ export default function JoinRoomByLinkPage() {
             setError("Username already taken in this room");
             break;
           case "MATCH_ALREADY_STARTED":
-            if (confirm("Match already started. Join as spectator?")) {
-              await joinAsSpectator(roomId, trimmedUsername);
-              return;
-            }
-            setError("Match already in progress");
-            break;
+            setShowJoinModal(true);
+            setLoading(false);
+            return;
           default:
             setError(data.error?.message || "Failed to join room");
         }
@@ -118,6 +116,8 @@ export default function JoinRoomByLinkPage() {
   };
 
   const joinAsSpectator = async (roomId: string, username: string) => {
+    setLoading(true);
+    setShowJoinModal(false);
     try {
       const response = await fetch(`/api/rooms/${roomId}/join`, {
         method: "POST",
@@ -154,56 +154,108 @@ export default function JoinRoomByLinkPage() {
     }
   };
 
+  const joinAsPlayer = async (roomId: string, username: string) => {
+    setLoading(true);
+    setShowJoinModal(false);
+    try {
+      const response = await fetch(`/api/rooms/${roomId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          role: "player",
+          allowLateJoin: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error?.message || "Failed to join as player");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem(
+        `room_${data.roomId}`,
+        JSON.stringify({
+          roomId: data.roomId,
+          playerId: data.playerId,
+          playerToken: data.playerToken,
+          wsUrl: data.wsUrl,
+          role: "player",
+        }),
+      );
+
+      router.push(`/game/${data.roomId}`);
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <div className="w-full max-w-md space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="font-mono text-3xl font-bold text-primary">
-            JOIN ROOM
-          </h1>
-          <p className="mt-2 font-mono text-sm text-muted">
-            Room Code: <span className="text-accent">{roomId}</span>
-          </p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            ref={usernameRef}
-            label="Your Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter username"
-            maxLength={16}
-            disabled={loading}
-          />
-
-          {/* Error Message */}
-          {error && (
-            <div className="text-error text-sm font-mono">✗ {error}</div>
-          )}
-
-          {/* Actions */}
-          <div className="space-y-3">
-            <Button
-              type="submit"
-              variant="primary"
-              hotkey="Enter"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Joining..." : "Join Room"}
-            </Button>
-
-            <Link href="/">
-              <Button variant="ghost" hotkey="Esc" className="w-full">
-                Back to Home
-              </Button>
-            </Link>
+    <>
+      <JoinModeModal
+        isOpen={showJoinModal}
+        onClose={() => {
+          setShowJoinModal(false);
+          setLoading(false);
+        }}
+        onSelectPlayer={() => joinAsPlayer(roomId, username.trim())}
+        onSelectSpectator={() => joinAsSpectator(roomId, username.trim())}
+        roomFull={false}
+      />
+      <main className="flex min-h-screen flex-col items-center justify-center p-8">
+        <div className="w-full max-w-md space-y-6">
+          {/* Header */}
+          <div className="text-center">
+            <h1 className="font-mono text-3xl font-bold text-primary">
+              JOIN ROOM
+            </h1>
+            <p className="mt-2 font-mono text-sm text-muted">
+              Room Code: <span className="text-accent">{roomId}</span>
+            </p>
           </div>
-        </form>
-      </div>
-    </main>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              ref={usernameRef}
+              label="Your Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              maxLength={16}
+              disabled={loading}
+            />
+
+            {/* Error Message */}
+            {error && (
+              <div className="text-error text-sm font-mono">✗ {error}</div>
+            )}
+
+            {/* Actions */}
+            <div className="space-y-3">
+              <Button
+                type="submit"
+                variant="primary"
+                hotkey="Enter"
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? "Joining..." : "Join Room"}
+              </Button>
+
+              <Link href="/">
+                <Button variant="ghost" hotkey="Esc" className="w-full">
+                  Back to Home
+                </Button>
+              </Link>
+            </div>
+          </form>
+        </div>
+      </main>
+    </>
   );
 }

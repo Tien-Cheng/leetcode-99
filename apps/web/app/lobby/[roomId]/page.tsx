@@ -73,6 +73,7 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
     startMatch,
     addBots,
     sendMessage,
+    setRole,
   } = useRoom(roomId, auth);
 
   // Redirect if match started
@@ -181,13 +182,16 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
           >
             {copied ? "Copied!" : "Copy Link"}
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => router.push(`/spectate/${roomId}`)}
-            className="text-sm"
-          >
-            Spectate View
-          </Button>
+          {snapshot?.match.phase !== "lobby" && (
+            <Button
+              variant="ghost"
+              onClick={() => router.push(`/spectate/${roomId}`)}
+              className="text-sm"
+              title="Watch the match in spectator mode"
+            >
+              Spectate View
+            </Button>
+          )}
           <div className="text-sm font-mono text-muted">
             {players.length} / 8 Players
           </div>
@@ -201,6 +205,40 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
       <div className="flex flex-1 gap-4">
         {/* Left: Players & Settings */}
         <div className="flex-1 space-y-4">
+          {/* Role Toggle */}
+          {me && (
+            <Panel title="Your Role">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRole("player")}
+                  className={`flex-1 px-4 py-3 border font-mono transition-all ${
+                    me.role === "player"
+                      ? "border-accent bg-accent/10 border-2"
+                      : "border-secondary hover:border-primary hover:bg-primary/5"
+                  }`}
+                >
+                  <div className="text-base-content font-bold">Player</div>
+                  <div className="text-xs text-muted mt-1">
+                    {me.role === "player" ? "Current" : "Compete in the match"}
+                  </div>
+                </button>
+                <button
+                  onClick={() => setRole("spectator")}
+                  className={`flex-1 px-4 py-3 border font-mono transition-all ${
+                    me.role === "spectator"
+                      ? "border-accent bg-accent/10 border-2"
+                      : "border-secondary hover:border-primary hover:bg-primary/5"
+                  }`}
+                >
+                  <div className="text-base-content font-bold">Spectator</div>
+                  <div className="text-xs text-muted mt-1">
+                    {me.role === "spectator" ? "Current" : "Watch the action"}
+                  </div>
+                </button>
+              </div>
+            </Panel>
+          )}
+
           {/* Players Grid */}
           <Panel title={`Players (${players.length}/8)`}>
             <div className="grid grid-cols-4 gap-3 bg-base-300/50 p-4 rounded-lg min-h-[300px]">

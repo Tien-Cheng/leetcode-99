@@ -1,7 +1,6 @@
 import React from "react";
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger" | "ghost";
   hotkey?: string;
   children: React.ReactNode;
@@ -20,7 +19,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "font-mono px-4 py-2 border transition-all duration-100 disabled:opacity-50 disabled:cursor-not-allowed";
+    "font-mono px-4 py-2 border transition-all duration-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
   const variantStyles = {
     primary:

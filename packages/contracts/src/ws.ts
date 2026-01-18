@@ -55,6 +55,13 @@ export type SetTargetModeMessage = WSMessage<
   SetTargetModePayload
 >;
 
+// SET_ROLE
+export const SetRolePayloadSchema = z.object({
+  role: PlayerRoleSchema.extract(["player", "spectator"]),
+});
+export type SetRolePayload = z.infer<typeof SetRolePayloadSchema>;
+export type SetRoleMessage = WSMessage<"SET_ROLE", SetRolePayload>;
+
 // UPDATE_SETTINGS (host-only, lobby-only)
 export const UpdateSettingsPayloadSchema = z.object({
   patch: RoomSettingsSchema.partial(),
@@ -161,6 +168,7 @@ export type DebugAddScoreMessage = WSMessage<
 export type ClientMessage =
   | JoinRoomMessage
   | SetTargetModeMessage
+  | SetRoleMessage
   | UpdateSettingsMessage
   | StartMatchMessage
   | ReturnToLobbyMessage
@@ -177,6 +185,7 @@ export type ClientMessage =
 export const ClientMessageTypeSchema = z.enum([
   "JOIN_ROOM",
   "SET_TARGET_MODE",
+  "SET_ROLE",
   "UPDATE_SETTINGS",
   "START_MATCH",
   "RETURN_TO_LOBBY",

@@ -59,7 +59,7 @@ function SpectatePageContent({ roomId }: { roomId: string }) {
   }, [activeTargetId, targets, stopSpectate]);
 
   useEffect(() => {
-    if (!activeTargetId && targets.length > 0) {
+    if (!activeTargetId && targets.length > 0 && targets[0]) {
       spectatePlayer(targets[0].playerId);
     }
   }, [activeTargetId, targets, spectatePlayer]);
@@ -124,12 +124,13 @@ function SpectatePageContent({ roomId }: { roomId: string }) {
       />
 
       {/* Top Bar */}
-      <div className="flex items-center justify-between mb-2 px-2">
+      <div className="flex items-center justify-between mb-1 px-1.5">
         <Timer
           endsAt={matchEndAt || new Date().toISOString()}
           serverTime={serverTime || new Date().toISOString()}
+          variant="compact"
         />
-        <div className="font-mono text-sm text-muted flex items-center gap-3">
+        <div className="font-mono text-xs text-muted flex items-center gap-2 leading-none">
           <div>
             Room: <span className="text-primary">{roomId}</span>
             {!isConnected && (
@@ -138,7 +139,7 @@ function SpectatePageContent({ roomId }: { roomId: string }) {
               </span>
             )}
           </div>
-          <div className="text-xs uppercase tracking-widest">
+          <div className="text-[10px] uppercase tracking-widest">
             Spectating
             <span className="text-primary ml-2">
               {spectateState?.username ?? "--"}
@@ -161,15 +162,20 @@ function SpectatePageContent({ roomId }: { roomId: string }) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button
             variant="secondary"
             onClick={() => stopSpectate()}
             disabled={!activeTargetId}
+            className="px-2 py-1 text-xs"
           >
             Stop
           </Button>
-          <Button variant="ghost" onClick={() => router.push("/")}>
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/")}
+            className="px-2 py-1 text-xs"
+          >
             Exit
           </Button>
         </div>

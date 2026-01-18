@@ -35,6 +35,7 @@ export type CreateRoomResponse = z.infer<typeof CreateRoomResponseSchema>;
 export const JoinRoomRequestSchema = z.object({
   username: UsernameSchema,
   role: PlayerRoleSchema.extract(["player", "spectator"]).default("player"),
+  allowLateJoin: z.boolean().optional(),
 });
 export type JoinRoomRequest = z.infer<typeof JoinRoomRequestSchema>;
 
@@ -63,6 +64,7 @@ export const PartyRegisterRequestSchema = z.object({
   role: PlayerRoleSchema.extract(["player", "spectator"]),
   isHost: z.boolean(),
   settings: RoomSettingsSchema.partial().optional(),
+  allowLateJoin: z.boolean().optional(),
 });
 export type PartyRegisterRequest = z.infer<typeof PartyRegisterRequestSchema>;
 

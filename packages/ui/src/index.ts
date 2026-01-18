@@ -21,6 +21,7 @@ export * from "./shop-modal";
 export * from "./timer";
 export * from "./targeting-modal";
 export * from "./match-results-modal";
+export * from "./join-mode-modal";
 
 // Dynamic effects components
 export * from "./effects-overlay";
@@ -31,4 +32,3 @@ export * from "./toast";
 export * from "./editor-wrapper";
 
 export const UI_VERSION = "0.1.0";
-

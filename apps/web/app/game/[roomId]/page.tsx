@@ -58,7 +58,6 @@ function GamePageContent() {
     isHost,
     shopCatalog,
     shopCooldowns,
-    playerPrivateState,
     debugAddScore,
   } = useGameState();
 
@@ -70,13 +69,16 @@ function GamePageContent() {
 
   // Local editor state
   const [code, setCode] = useState(
-    currentProblem?.problemType === "code" ? currentProblem.starterCode : ""
+    currentProblem?.problemType === "code" ? currentProblem.starterCode : "",
   );
   const [codeVersion, setCodeVersion] = useState(1);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
   const [shopError, setShopError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -154,9 +156,8 @@ function GamePageContent() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const submission = currentProblem?.problemType === "mcq"
-        ? (selectedOptionId || "")
-        : code;
+      const submission =
+        currentProblem?.problemType === "mcq" ? selectedOptionId || "" : code;
       await submitCode(submission);
     } finally {
       setIsSubmitting(false);
@@ -184,7 +185,14 @@ function GamePageContent() {
   useKeyboardShortcuts({
     shortcuts: [
       ...(currentProblem?.problemType === "code"
-        ? [{ key: "r", altKey: true, action: handleRun, description: "Run Code" }]
+        ? [
+            {
+              key: "r",
+              altKey: true,
+              action: handleRun,
+              description: "Run Code",
+            },
+          ]
         : []),
       {
         key: "s",
@@ -442,12 +450,12 @@ function GamePageContent() {
       )}
 
       {/* Top Bar */}
-      <div className="flex items-center justify-between mb-2 px-2">
+      <div className="flex items-center justify-between mb-1 px-1.5">
         <Timer
           endsAt={matchEndAt || new Date().toISOString()}
           serverTime={serverTime || new Date().toISOString()}
         />
-        <div className="font-mono text-sm text-muted flex items-center gap-2">
+        <div className="font-mono text-xs text-muted flex items-center gap-2 leading-none">
           Room: <span className="text-primary">{roomId}</span>
           {!isConnected && (
             <span className="text-error animate-pulse">(Disconnected)</span>
@@ -481,46 +489,48 @@ function GamePageContent() {
                 prompt: currentProblem.prompt,
                 signature:
                   currentProblem.problemType === "code"
-                    ? (currentProblem as Extract<
-                      typeof currentProblem,
-                      { problemType: "code" }
-                    >).signature
+                    ? (
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).signature
                     : "",
                 publicTests:
                   currentProblem.problemType === "code"
                     ? (
-                      currentProblem as Extract<
-                        typeof currentProblem,
-                        { problemType: "code" }
-                      >
-                    ).publicTests.map((t) => ({
-                      input: String(t.input ?? ""),
-                      output: String(t.output ?? ""),
-                    }))
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "code" }
+                        >
+                      ).publicTests.map((t) => ({
+                        input: String(t.input ?? ""),
+                        output: String(t.output ?? ""),
+                      }))
                     : [],
                 isGarbage: currentProblem.isGarbage,
                 problemType: currentProblem.problemType,
                 options:
                   currentProblem.problemType === "mcq"
                     ? (
-                      currentProblem as Extract<
-                        typeof currentProblem,
-                        { problemType: "mcq" }
-                      >
-                    ).options
+                        currentProblem as Extract<
+                          typeof currentProblem,
+                          { problemType: "mcq" }
+                        >
+                      ).options
                     : undefined,
                 selectedOptionId: selectedOptionId || undefined,
                 onOptionSelect: (id) => setSelectedOptionId(id),
               }}
               testResults={
                 lastJudgeResult &&
-                  lastJudgeResult.problemId === currentProblem.problemId
+                lastJudgeResult.problemId === currentProblem.problemId
                   ? lastJudgeResult.publicTests.map((t) => ({
-                    index: t.index,
-                    passed: t.passed,
-                    expected: t.expected ? String(t.expected) : undefined,
-                    received: t.received ? String(t.received) : undefined,
-                  }))
+                      index: t.index,
+                      passed: t.passed,
+                      expected: t.expected ? String(t.expected) : undefined,
+                      received: t.received ? String(t.received) : undefined,
+                    }))
                   : []
               }
             />
@@ -585,7 +595,8 @@ function GamePageContent() {
             flex items-center gap-3 p-2 border border-secondary bg-base-200 flex-shrink-0
             transition-all duration-300
             ${ddosActive ? "border-error animate-pulse-red" : ""}
-          `}>
+          `}
+          >
             {currentProblem?.problemType === "code" && (
               <Button
                 variant="primary"
@@ -638,7 +649,7 @@ function GamePageContent() {
                     0,
                     Math.ceil(
                       (new Date(activeBuff.endsAt).getTime() - Date.now()) /
-                      1000,
+                        1000,
                     ),
                   )}
                   s

@@ -308,6 +308,10 @@ Shared URL (e.g., /join/AB12CD) → Join Room Screen (code pre-filled, enter use
 └─────────────────────────────────────────────────────────────┘
 ```
 
+**Micro-question variant**:
+
+- MCQ/Trace skip Run; select an option or input an answer and submit.
+
 ### 4.6 Getting Attacked
 
 ```
@@ -414,8 +418,11 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  Room Settings (optional)                               │    │
 │  │  ─────────────────────────────────────────────────      │    │
+│  │  Mode:             [Battle Royale ▼]                   │    │
 │  │  Duration:         [10 min ▼]                           │    │
 │  │  Difficulty:       [Moderate ▼]                         │    │
+│  │  Tempo Profile:    [Steady ▼]                           │    │
+│  │  Question Mix:     [Code-heavy ▼]                       │    │
 │  │  Attack Intensity: [Low ▼]                              │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                                                                 │
@@ -431,7 +438,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 **Elements**:
 
 - **Username input**: Text field, auto-focused, 1-16 chars
-- **Settings section**: Collapsible or always visible, dropdowns for each setting
+- **Settings section**: Collapsible or always visible; includes mode, tempo profile, question mix, difficulty, and attack intensity (disabled when mode has no attacks)
 - **Create button**: Primary CTA, `[Enter]` hotkey
 - **Back link**: `[Esc]` returns to Landing
 
@@ -551,8 +558,11 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 │                                   │  ├─────────────────────────┤│
 │  ─────────────────────────────    │  │ [Enter message...]      ││
 │  Settings (Host only)             │  └─────────────────────────┘│
+│  Mode: [Battle Royale ▼]          │                             │
 │  Duration: [10 min ▼]             │                             │
 │  Difficulty: [Moderate ▼]         │                             │
+│  Tempo Profile: [Steady ▼]        │                             │
+│  Question Mix: [Code-heavy ▼]     │                             │
 │  Attack Intensity: [Low ▼]        │                             │
 │  ─────────────────────────────    │                             │
 │                                   │                             │
@@ -577,9 +587,12 @@ _Player Grid_
 
 _Settings Panel (Host Only)_
 
+- **Mode**: Dropdown (Battle Royale / Sprint / Duel / Co-op Duo / Endless)
 - **Match duration**: Dropdown (6-10 min)
 - **Difficulty profile**: Dropdown (Beginner / Moderate / Competitive)
-- **Attack intensity**: Dropdown (Low / High)
+- **Tempo profile**: Dropdown (Steady / Surge / Chaos)
+- **Question mix**: Dropdown (Code-heavy / Mixed / Micro-heavy)
+- **Attack intensity**: Dropdown (Low / High; disabled for modes without attacks)
 - **Non-hosts**: See settings as read-only text (no dropdowns)
 - **Live sync**: Changes broadcast immediately via `SETTINGS_UPDATE`
 
@@ -744,9 +757,12 @@ _Host Actions_
 
 - **Title + difficulty badge**: Color-coded (`--success` easy, `--warning` medium, `--danger` hard)
 - **Prompt**: Scrollable description
-- **Signature**: Highlighted code block
-- **Public tests**: Collapsible list, shows input/expected output
+- **Signature**: Highlighted code block (code/bugfix/fill-blank only)
+- **Public tests**: Collapsible list, shows input/expected output (code types only)
 - **Test results**: Updated after Run — ✓ pass, ✗ fail, ○ not run
+- **MCQ panel**: Option list with hotkeys `[1-4]`, selected state, and a “Submit Answer” CTA
+- **Trace panel**: Single-line answer input (JSON/string), with quick examples under the input
+- **Quickfire badge**: Small “MICRO” tag on short questions to signal fast pacing
 
 #### Stack Panel (Right)
 
@@ -782,12 +798,13 @@ _Host Actions_
 #### Action Bar (Bottom)
 
 - **Run button**: `[Alt+R]` — runs public tests (disabled during DDOS)
-- **Submit button**: `[Alt+S]` — submits for scoring
+- **Submit/Answer button**: `[Alt+S]` — submits code or final answer depending on question kind
 - **Shop button**: `[Alt+B]` — opens shop overlay
 - **Score display**: Current points
 - **Streak display**: Current streak count
 - **Vim indicator**: `[VIM]` when Vim mode active
 - **Timer**: Match time remaining (top of screen, prominent)
+- **Phase pill**: `Warmup` / `Flow` / `Surge` / `Finale` label near timer with subtle pulse during surges
 
 #### Shop Overlay (Hidden by default)
 
@@ -826,7 +843,8 @@ _Host Actions_
 | Key | Action |
 |-----|--------|
 | `Alt/Option+R` | Run code (public tests) |
-| `Alt/Option+S` | Submit code |
+| `Alt/Option+S` | Submit code / answer |
+| `1-4` | Select MCQ option (when MCQ panel focused) |
 | `Alt/Option+B` | Open/close shop |
 | `Alt/Option+T` | Open targeting mode menu |
 | `Alt/Option+V` | Toggle Vim mode |

@@ -5,7 +5,8 @@ Tetris 99 / battle-royale party game, but players race to solve bite-sized LeetC
 ## TL;DR
 
 - Players join a lobby (2–8 real players + bots for demo).
-- Everyone receives a stream of short **function-only Python** problems.
+- Everyone receives a stream of short **function-first Python** problems.
+- Question mix blends code problems with fast micro-questions (MCQ, trace, bugfix) to keep tempo.
 - Unsolved problems accumulate in a **stack**. If your stack overflows, you’re eliminated.
 - Clearing problems scores points and **auto-attacks** your target (Tetris 99 targeting).
 - Winner is **last player standing**. If time expires: highest `score` wins (tie-break by lowest `stackSize`, then stable by `playerId`).
@@ -39,9 +40,12 @@ Tetris 99 / battle-royale party game, but players race to solve bite-sized LeetC
 - 2 to 99 player rooms (MVP: 2–8 + bots).
 - Lobby-only chat (players + spectators) for coordination; system messages for join/leave, bots added, and host transfer.
 - Configurable:
+  - Mode (Battle Royale / Sprint / Duel / Co-op Duo / Endless)
   - Total match time (default 10 minutes; configurable 6–10 minutes)
   - Question difficulty profile (Beginner / Moderate / Competitive)
-  - Attack intensity (Low/High)
+  - Tempo profile (Steady / Surge / Chaos)
+  - Question mix preset (Code-heavy / Mixed / Micro-heavy)
+  - Attack intensity (Low/High; disabled in non-PVP modes)
 
 ### Match Loop (Battle Royale)
 
@@ -59,7 +63,7 @@ Mental model:
 
 1. You start with a **current problem** (active) plus **2 queued problems** in your stack (queued-only; current is not counted in `stackSize`).
 2. New problems arrive every `T` seconds; each player draws independently from the question bank. New arrivals are pushed onto the **top** of your stack (they never interrupt your current editor). MVP sampling: avoid repeating a problem for the same player until the bank is exhausted; repeats are allowed after.
-3. When you `SUBMIT_CODE`:
+3. When you `SUBMIT_CODE` or `SUBMIT_ANSWER`:
    - If the submission fails: your **streak resets**.
    - If the submission passes and the problem is **garbage**: you get **0 points** and send **no attack**.
    - If the submission passes and the problem is **non-garbage**: you gain points and send an attack to your current target.
@@ -72,6 +76,7 @@ Mental model:
 - Easy: +5
 - Medium: +10
 - Hard: +20
+- Micro-questions: default same as difficulty (tune via mode/tempo as needed)
 - Garbage micro-problems: **0 points**
 
 ## Questions
@@ -81,28 +86,48 @@ Mental model:
 Problems must be:
 
 - Fast to understand (<30s read time)
-- Fast to implement (ideally 1–5 minutes)
+- Fast to solve (20–300s depending on difficulty)
 - Not too much boilerplate
-- Function-only (LeetCode style)
+- Function-first Python (code is the core, but micro-questions are allowed)
 
-### Format (Function-only Python)
+### Question Types (planned mix)
+
+We keep code as the core, but mix in micro-question types to keep tempo high without exhausting players.
+
+- **Code (default)**: function-only LeetCode-style problems.
+- **Bugfix**: nearly-correct code with 1–3 intentional bugs; fix only the broken lines.
+- **Fill-in-the-blank**: missing expressions/lines inside starter code; no full rewrite.
+- **Trace / Output**: read a short snippet and select the correct output/state.
+- **MCQ**: quick conceptual checks or algorithm selection.
+
+Design rules:
+
+- Every type is deterministic and auto-checkable.
+- Micro-questions should resolve in 20–60 seconds; code questions in 60–300 seconds.
+- Never require long prose or multi-step essay answers.
+
+### Format (Problem schema)
 
 Each question defines:
 
+- `kind` (`code` | `bugfix` | `fillBlank` | `trace` | `mcq`)
 - `title`
 - `prompt` (short)
-- `functionName`
-- `signature` (Python)
-- `starterCode` (includes signature and docstring)
-- `publicTests` (visible)
-- `hiddenTests` (server-side only; recommended 2–5 cases; used on Submit)
+- `functionName` (code/bugfix/fillBlank only)
+- `signature` (Python; code/bugfix/fillBlank only)
+- `starterCode` (code/bugfix/fillBlank only; includes signature and docstring)
+- `publicTests` (code/bugfix/fillBlank only; visible)
+- `hiddenTests` (code/bugfix/fillBlank only; server-side only)
+- `answerSpec` (trace/mcq only; options + answer key)
 - `timeLimitMs` (per submission)
+- `expectedSolveSec` (optional; used for pacing)
 - `isGarbage` (optional boolean; default false)
 
 **MVP rule**
 
-- `RUN_CODE` runs `publicTests` only
+- `RUN_CODE` runs `publicTests` only (code/bugfix/fillBlank)
 - `SUBMIT_CODE` runs `publicTests + hiddenTests`, awards points, and triggers attacks (non-garbage only)
+- `SUBMIT_ANSWER` validates `answerSpec`, awards points, and may trigger attacks (non-garbage only)
 
 Example signature:
 
@@ -121,17 +146,32 @@ def two_sum(nums: list[int], target: int) -> list[int]:
 - Phase 3: “Boss / curve-leveler”
   - a few medium-hard, but avoid long implementation
 
+### Tempo Curve (Match Pacing)
+
+Pacing is the combination of **incoming stack cadence** + **question mix**.
+
+- **Warmup (0–90s)**: mostly micro-questions + easy code; slower stack cadence.
+- **Flow (90s–6m)**: balanced mix; normal cadence.
+- **Surge windows (2–3 bursts)**: 30–45s of faster drops + micro-heavy mix.
+- **Finale (last 60–90s)**: higher cadence, no new debuffs in final 15s to reduce unfair stuns.
+
+Pacing levers:
+
+- **Mix shift**: more micro-questions when cadence rises, fewer long code tasks.
+- **Relief beats**: brief 15s “clear window” after a surge (no new drops) to prevent hopeless spirals.
+- **Comeback juice**: small bonus points for clearing while under a debuff (+1) to keep attacks from feeling purely punitive.
+
 ### Question Sources
 
 - Hard-coded curated set for MVP (10–30 questions is enough).
 
 **Question Bank MVP Minimum (for playability)**
 
-- 5 Easy (including 2 warmup/fix-the-code)
-- 5 Medium
+- 5 Easy (including 2 warmup/fix-the-code or micro-questions)
+- 5 Medium (include at least 2 micro-questions)
 - 2 Hard
 - 5 Garbage micro-problems
-- Total: 17
+- Total: 17+
 
 Checkpoint: if we don’t have 17 questions by Hour 8, deprioritize Hard problems and reuse Easy/Medium.
 
@@ -175,11 +215,27 @@ Checkpoint: if we don’t have 17 questions by Hour 8, deprioritize Hard problem
 - Starting queued stack: 2
 - Incoming problems: every 60s (baseline; configurable per room)
 - Warmup (first ~90s): every 90s
+- Surge windows: 2 × 45s per match at 4:00 and 7:30 (cadence 40s, micro-heavy mix)
+- Clear windows: 15s no new drops after a surge
 - Under **Memory Leak**: every 30s for 30s
 - **Garbage Drop**: add exactly +1 garbage micro-problem (0 points; no attacks)
 - Max concurrent debuffs: 1 (new debuff refreshes duration)
 - Post-debuff grace: 5s “no new debuffs” to reduce chain-stuns (does not apply to `Garbage Drop`, which is not a timed debuff)
 - **Rate Limiter** (shop): base incoming interval ×2 for 30s (multiplicative with Memory Leak); suggested cost: 10; cooldown: 60s. Applies to the current phase cadence (warmup/main).
+
+## Game Modes (planned)
+
+- **Battle Royale (default)**: last player standing, full targeting + attacks.
+- **Sprint (solo)**: 3–5 minutes, race for score and accuracy; no attacks, faster cadence.
+- **Duel (1v1)**: smaller stack limit, higher cadence, shorter match (4–6 minutes).
+- **Co-op Duo**: shared score + shared stack; attacks disabled, but stack cadence ramps faster.
+- **Endless Practice**: no eliminations, adaptive question mix for warmup/training.
+
+Mode-level knobs:
+
+- `stackLimit`, cadence, and surge windows scale by mode.
+- Attacks are disabled in modes that are solo/co-op.
+- Question mix can be mode-specific (e.g., Sprint favors micro-questions).
 
 ## PVP Mechanics
 
@@ -365,7 +421,7 @@ Room state (authoritative on server):
 - `currentProblemByPlayer`: current active problem id (not counted in stack)
 - `targetingModeByPlayer`
 - `activeDebuffsByPlayer`: {type, endsAt}
-- `match`: startAt, endAt, phase (warmup/main/boss), settings
+- `match`: startAt, endAt, phase (warmup/flow/surge/finale/boss), settings
 - `eventLog`: recent events for terminal feed
 
 ### Client/Server Events
@@ -374,8 +430,9 @@ Client → Server:
 
 - `JOIN_ROOM`
 - `SET_TARGET_MODE`
-- `RUN_CODE` (problemId, code) (optional; can run client-side only)
+- `RUN_CODE` (problemId, code) (code/bugfix/fillBlank only; optional if client runs locally)
 - `SUBMIT_CODE` (problemId, code)
+- `SUBMIT_ANSWER` (problemId, answer)
 - `SPEND_POINTS` (item)
 
 Server → Client:
@@ -394,10 +451,11 @@ Server → Client:
   - Default: client-side Pyodide runs `publicTests` only (fast feedback; not authoritative)
   - Fallback: server runs `publicTests` only (if Pyodide isn’t ready)
 - `SUBMIT_CODE`: server runs `publicTests + hiddenTests` via Judge0 (authoritative)
+- `SUBMIT_ANSWER`: server validates `answerSpec` for MCQ/trace (no Judge0 call)
 - Server returns:
   - passed/failed
   - failing test details (public only; hidden failures are opaque)
-  - runtime/errors
+  - runtime/errors (code only)
 - On correct `SUBMIT_CODE`:
   - award points
   - pop stack

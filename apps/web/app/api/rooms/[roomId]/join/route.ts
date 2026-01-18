@@ -36,6 +36,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     const { username } = parsed.data;
     const role = parsed.data.role ?? "player";
+    const allowLateJoin = parsed.data.allowLateJoin;
 
     // Validate username
     const trimmedUsername = username.trim();
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       username: trimmedUsername,
       role,
       isHost: false,
+      allowLateJoin,
     });
 
     if (!registerResult.ok) {
