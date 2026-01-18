@@ -103,7 +103,7 @@ Spend your hard-earned points to gain an edge:
 ### Project Structure
 
 ```
-Leet-99/
+leet-99/
 ├── apps/
 │   └── web/              # Next.js frontend application
 ├── packages/
@@ -278,12 +278,6 @@ Bots participate fully in scoring, stacks, and elimination.
 - ✅ Winner determined: last alive or highest score
 - ✅ Bots fill lobbies for demos
 - ✅ Deployed publicly
-
----
-
-## 📝 License
-
-This project is licensed under the [AGPL-3.0](./LICENSE) license.
 
 ---
 
