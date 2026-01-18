@@ -63,13 +63,13 @@ When you solve a problem, you attack your current target:
 
 Spend your hard-earned points to gain an edge:
 
-| Item          | Cost | Effect                              |
-| ------------- | ---- | ----------------------------------- |
-| Clear Debuff  | 10   | Remove active debuff                |
-| Memory Defrag | 10   | Remove all garbage from stack       |
-| Skip Problem  | 15   | Discard current problem             |
-| Rate Limiter  | 10   | Halve incoming problem rate for 30s |
-| Hint          | 5    | Reveal a hint for current problem   |
+| Item          | Cost | Effect                                    |
+| ------------- | ---- | ----------------------------------------- |
+| Clear Debuff  | 10   | Remove active debuff                      |
+| Memory Defrag | 10   | Remove all garbage from stack             |
+| Skip Problem  | 5    | Discard current problem (can go negative) |
+| Rate Limiter  | 10   | Halve incoming problem rate for 30s       |
+| Hint          | 5    | Reveal a hint for current problem         |
 
 ---
 

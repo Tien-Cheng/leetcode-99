@@ -87,7 +87,7 @@ export const PlayerPublicSchema = z.object({
   role: PlayerRoleSchema,
   status: PlayerStatusSchema,
   isHost: z.boolean(),
-  score: z.number().int().min(0),
+  score: z.number().int(), // Can go negative (skipProblem allows debt)
   streak: z.number().int().min(0),
   targetingMode: TargetingModeSchema,
   stackSize: z.number().int().min(0),
@@ -193,7 +193,7 @@ export type ShopCatalogItem = z.infer<typeof ShopCatalogItemSchema>;
 export const DEFAULT_SHOP_CATALOG: ShopCatalogItem[] = [
   { item: "clearDebuff", cost: 10 },
   { item: "memoryDefrag", cost: 10 },
-  { item: "skipProblem", cost: 15 },
+  { item: "skipProblem", cost: 5 },
   { item: "rateLimiter", cost: 10, cooldownSec: 60 },
   // { item: "hint", cost: 5 }, // TODO: Uncomment when hint system is ready
 ];

@@ -446,9 +446,10 @@ test("Shop Purchase Validation", async (t) => {
     assert.equal(canPurchaseItem("clearDebuff", 10, undefined, 1000).canPurchase, true);
     assert.equal(canPurchaseItem("clearDebuff", 9, undefined, 1000).canPurchase, false);
 
-    // skipProblem costs 15
-    assert.equal(canPurchaseItem("skipProblem", 15, undefined, 1000).canPurchase, true);
-    assert.equal(canPurchaseItem("skipProblem", 14, undefined, 1000).canPurchase, false);
+    // skipProblem costs 5 and can go negative (emergency escape)
+    assert.equal(canPurchaseItem("skipProblem", 5, undefined, 1000).canPurchase, true);
+    assert.equal(canPurchaseItem("skipProblem", 0, undefined, 1000).canPurchase, true); // Can go negative!
+    assert.equal(canPurchaseItem("skipProblem", -10, undefined, 1000).canPurchase, true); // Even with negative score
 
     // hint costs 5
     assert.equal(canPurchaseItem("hint", 5, undefined, 1000).canPurchase, true);
