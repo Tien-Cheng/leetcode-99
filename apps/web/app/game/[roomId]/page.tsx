@@ -700,8 +700,8 @@ function GamePageContent() {
                         { problemType: "code" }
                       >
                     ).publicTests.map((t) => ({
-                      input: String(t.input ?? ""),
-                      output: String(t.output ?? ""),
+                      input: typeof t.input === "string" ? t.input : JSON.stringify(t.input ?? ""),
+                      output: typeof t.output === "string" ? t.output : JSON.stringify(t.output ?? ""),
                     }))
                     : [],
                 isGarbage: currentProblem.isGarbage,
@@ -728,6 +728,20 @@ function GamePageContent() {
                     received: t.received ? String(t.received) : undefined,
                   }))
                   : []
+              }
+              hiddenTestsPassed={
+                lastJudgeResult &&
+                  lastJudgeResult.problemId === currentProblem.problemId &&
+                  lastJudgeResult.kind === "submit"
+                  ? lastJudgeResult.hiddenTestsPassed
+                  : undefined
+              }
+              hiddenFailureMessage={
+                lastJudgeResult &&
+                  lastJudgeResult.problemId === currentProblem.problemId &&
+                  lastJudgeResult.kind === "submit"
+                  ? lastJudgeResult.hiddenFailureMessage
+                  : undefined
               }
             />
           ) : (
