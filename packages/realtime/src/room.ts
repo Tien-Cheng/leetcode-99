@@ -3063,8 +3063,6 @@ export default class Room implements Party.Server {
 
   async onAlarm() {
     const now = Date.now();
-    this.addEventLog("info", `Server: onAlarm (phase: ${this.state.match.phase})`);
-
     if (DEBUG_TIMERS) {
       console.log(
         `[${this.state.roomId}] onAlarm now=${new Date(now).toISOString()} ` +
