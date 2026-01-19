@@ -30,6 +30,8 @@ jobs:
       - name: Typecheck
         working-directory: packages/realtime
         run: pnpm run typecheck
+      - name: Build (workspace deps)
+        run: pnpm turbo build --filter @leet99/realtime
       - name: Deploy PartyKit
         working-directory: packages/realtime
         run: pnpm run deploy
