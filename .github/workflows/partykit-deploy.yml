@@ -1,0 +1,44 @@
+name: Deploy PartyKit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/realtime/**"
+      - ".github/workflows/partykit-deploy.yml"
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: packages/realtime
+        run: pnpm run lint --if-present
+      - name: Typecheck
+        working-directory: packages/realtime
+        run: pnpm run typecheck --if-present
+      - name: Deploy PartyKit
+        working-directory: packages/realtime
+        run: pnpm deploy
+        env:
+          # Required GitHub Actions secret: personal access token or PartyKit token
+          # Configure in: Repository settings → Secrets and variables → Actions → New repository secret
+          # Name: PARTYKIT_TOKEN
+          PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_TOKEN }}
+          # Required GitHub Actions secret: PartyKit account login/identifier used for deployment
+          # Configure in: Repository settings → Secrets and variables → Actions → New repository secret
+          # Name: PARTYKIT_LOGIN
+          PARTYKIT_LOGIN: ${{ secrets.PARTYKIT_LOGIN }}
