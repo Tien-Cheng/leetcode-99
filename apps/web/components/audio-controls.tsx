@@ -34,7 +34,7 @@ export function AudioControls() {
     >
       {/* Volume Sliders (show on hover) */}
       {showSliders && (
-        <div className="flex flex-col gap-2 bg-base-200 border border-secondary p-3 rounded shadow-lg animate-fade-in absolute bottom-full left-0 mb-2">
+        <div className="flex flex-col gap-2 bg-base-200 border border-secondary p-3 rounded shadow-lg animate-fade-in absolute bottom-full left-0">
           {/* Music Volume */}
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-muted w-12">Music</span>
