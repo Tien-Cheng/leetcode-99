@@ -25,6 +25,10 @@ import type {
   RoomSettings,
 } from "@leet99/contracts";
 
+const DEV_TOOLS_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === "true" &&
+  process.env.NODE_ENV !== "production";
+
 interface UseWebSocketOptions {
   wsUrl: string;
   playerId: string;
@@ -553,6 +557,7 @@ export function useWebSocket(
 
   const debugAddScore = useCallback(
     (amount: number) => {
+      if (!DEV_TOOLS_ENABLED) return;
       sendMessage({
         type: "DEBUG_ADD_SCORE",
         payload: { amount },

@@ -26,6 +26,10 @@ import type { PlayerPublic, EventLogEntry } from "@leet99/contracts";
 import { GameWrapper } from "./game-wrapper";
 import { useAudioContext } from "../../../contexts/audio-context";
 
+const DEV_TOOLS_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === "true" &&
+  process.env.NODE_ENV !== "production";
+
 function GamePageContent() {
   const params = useParams();
   const roomId = params.roomId as string;
@@ -304,6 +308,7 @@ function GamePageContent() {
   // Secret debug handlers to trigger debuffs (for testing)
   // Using actual game durations
   const triggerDebuffDDOS = useCallback(() => {
+    if (!DEV_TOOLS_ENABLED) return;
     const endsAt = new Date(Date.now() + 8000).toISOString();
     __debugSetDebuff({ type: "ddos", endsAt });
     triggerEffect("attack");
@@ -311,6 +316,7 @@ function GamePageContent() {
   }, [__debugSetDebuff, triggerEffect]);
 
   const triggerDebuffFlashbang = useCallback(() => {
+    if (!DEV_TOOLS_ENABLED) return;
     const endsAt = new Date(Date.now() + 24000).toISOString();
     __debugSetDebuff({ type: "flashbang", endsAt });
     triggerEffect("attack");
@@ -322,6 +328,7 @@ function GamePageContent() {
   }, [__debugSetDebuff, triggerEffect]);
 
   const triggerDebuffVimLock = useCallback(() => {
+    if (!DEV_TOOLS_ENABLED) return;
     const endsAt = new Date(Date.now() + 12000).toISOString();
     __debugSetDebuff({ type: "vimLock", endsAt });
     triggerEffect("attack");
@@ -329,6 +336,7 @@ function GamePageContent() {
   }, [__debugSetDebuff, triggerEffect]);
 
   const triggerDebuffMemoryLeak = useCallback(() => {
+    if (!DEV_TOOLS_ENABLED) return;
     const endsAt = new Date(Date.now() + 30000).toISOString();
     __debugSetDebuff({ type: "memoryLeak", endsAt });
     triggerEffect("attack");
@@ -336,12 +344,14 @@ function GamePageContent() {
   }, [__debugSetDebuff, triggerEffect]);
 
   const clearDebuffManual = useCallback(() => {
+    if (!DEV_TOOLS_ENABLED) return;
     __debugSetDebuff(null);
     console.log("[DEBUG] Cleared all debuffs");
   }, [__debugSetDebuff]);
 
   // Log debug shortcuts on mount
   useEffect(() => {
+    if (!DEV_TOOLS_ENABLED) return;
     console.log(
       "%c🎮 DEBUG SHORTCUTS ENABLED",
       "color: #00ffd5; font-weight: bold; font-size: 14px;",
@@ -367,8 +377,55 @@ function GamePageContent() {
 
   // Handle debug add score (testing only)
   const handleDebugAddScore = () => {
+    if (!DEV_TOOLS_ENABLED) return;
     debugAddScore(500);
   };
+
+  const debugShortcuts = DEV_TOOLS_ENABLED
+    ? [
+        {
+          key: "1",
+          shiftKey: true,
+          ctrlKey: true,
+          action: triggerDebuffDDOS,
+          description: "[DEBUG] Trigger DDOS",
+        },
+        {
+          key: "2",
+          shiftKey: true,
+          ctrlKey: true,
+          action: triggerDebuffFlashbang,
+          description: "[DEBUG] Trigger Flashbang",
+        },
+        {
+          key: "3",
+          shiftKey: true,
+          ctrlKey: true,
+          action: triggerDebuffVimLock,
+          description: "[DEBUG] Trigger Vim Lock",
+        },
+        {
+          key: "4",
+          shiftKey: true,
+          ctrlKey: true,
+          action: triggerDebuffMemoryLeak,
+          description: "[DEBUG] Trigger Memory Leak",
+        },
+        {
+          key: "0",
+          shiftKey: true,
+          ctrlKey: true,
+          action: clearDebuffManual,
+          description: "[DEBUG] Clear All Debuffs",
+        },
+        {
+          key: "$",
+          shiftKey: true,
+          action: handleDebugAddScore,
+          description: "[DEBUG] Add 500 Points",
+        },
+      ]
+    : [];
 
   // Register global shortcuts
   useKeyboardShortcuts({
@@ -401,48 +458,7 @@ function GamePageContent() {
         action: handleTargetingToggle,
         description: "Targeting Mode",
       },
-      // SECRET DEBUG SHORTCUTS (Ctrl+Shift+[key])
-      {
-        key: "1",
-        shiftKey: true,
-        ctrlKey: true,
-        action: triggerDebuffDDOS,
-        description: "[DEBUG] Trigger DDOS",
-      },
-      {
-        key: "2",
-        shiftKey: true,
-        ctrlKey: true,
-        action: triggerDebuffFlashbang,
-        description: "[DEBUG] Trigger Flashbang",
-      },
-      {
-        key: "3",
-        shiftKey: true,
-        ctrlKey: true,
-        action: triggerDebuffVimLock,
-        description: "[DEBUG] Trigger Vim Lock",
-      },
-      {
-        key: "4",
-        shiftKey: true,
-        ctrlKey: true,
-        action: triggerDebuffMemoryLeak,
-        description: "[DEBUG] Trigger Memory Leak",
-      },
-      {
-        key: "0",
-        shiftKey: true,
-        ctrlKey: true,
-        action: clearDebuffManual,
-        description: "[DEBUG] Clear All Debuffs",
-      },
-      {
-        key: "$",
-        shiftKey: true,
-        action: handleDebugAddScore,
-        description: "[DEBUG] Add 500 Points",
-      },
+      ...debugShortcuts,
     ],
     enabled: true,
     disableWhenInputFocused: false, // Allow debug shortcuts even when editor is focused
