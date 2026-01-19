@@ -161,6 +161,9 @@ export function calculateDebuffDuration(
   attackIntensity: "low" | "high",
 ): number {
   const baseDuration = BASE_DEBUFF_DURATIONS[debuffType];
+  if (baseDuration === undefined) {
+    return 0;
+  }
   if (attackIntensity === "high") {
     return Math.round(baseDuration * 1.3);
   }
@@ -469,7 +472,7 @@ export const DIFFICULTY_WEIGHTS: Record<
 export function getDifficultyWeights(
   profile: DifficultyProfile,
 ): Record<"easy" | "medium" | "hard", number> {
-  return DIFFICULTY_WEIGHTS[profile];
+  return DIFFICULTY_WEIGHTS[profile] ?? DIFFICULTY_WEIGHTS.moderate;
 }
 
 // ============================================================================

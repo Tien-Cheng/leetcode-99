@@ -151,7 +151,7 @@ export function sampleProblem(
     // Weighted random selection
     const candidates: ProblemFull[] = [];
     for (const problem of fallback) {
-      const weight = weights[problem.difficulty];
+      const weight = weights[problem.difficulty] ?? 0;
       for (let i = 0; i < Math.ceil(weight * 100); i++) {
         candidates.push(problem);
       }
@@ -174,7 +174,7 @@ export function sampleProblem(
   // Weighted random selection from unseen problems
   const candidates: ProblemFull[] = [];
   for (const problem of unseenProblems) {
-    const weight = weights[problem.difficulty];
+    const weight = weights[problem.difficulty] ?? 0;
     for (let i = 0; i < Math.ceil(weight * 100); i++) {
       candidates.push(problem);
     }

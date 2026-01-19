@@ -1282,7 +1282,7 @@ export default class Room implements Party.Server {
 
     if (!isGarbage) {
       // Award points based on difficulty
-      const points = DIFFICULTY_SCORES[problem.difficulty] || 0;
+      const points = DIFFICULTY_SCORES[problem.difficulty] ?? 0;
       player.score += points;
       player.streak += 1;
 
@@ -1652,10 +1652,15 @@ export default class Room implements Party.Server {
       }
 
       // Calculate duration with intensity scaling
-      let duration = BASE_DEBUFF_DURATIONS[debuffType];
-      if (this.state.settings.attackIntensity === "high") {
-        duration = Math.round(duration * 1.3);
+      const baseDuration = BASE_DEBUFF_DURATIONS[debuffType];
+      if (baseDuration === undefined) {
+        this.addEventLog("error", `Unknown debuff type: ${debuffType}`);
+        return;
       }
+      const duration =
+        this.state.settings.attackIntensity === "high"
+          ? Math.round(baseDuration * 1.3)
+          : baseDuration;
 
       const endsAt = new Date(Date.now() + duration).toISOString();
       target.activeDebuff = { type: debuffType, endsAt };
@@ -2111,7 +2116,7 @@ export default class Room implements Party.Server {
       const isGarbage = problem.isGarbage ?? false;
 
       if (!isGarbage) {
-        const points = DIFFICULTY_SCORES[problem.difficulty] || 0;
+        const points = DIFFICULTY_SCORES[problem.difficulty] ?? 0;
         bot.score += points;
         bot.streak += 1;
 
@@ -3002,7 +3007,7 @@ export default class Room implements Party.Server {
     const weightedPool: { problem: ProblemFull; weight: number }[] = [];
 
     for (const problem of typedPool) {
-      const weight = weights[problem.difficulty] || 1;
+      const weight = weights[problem.difficulty] ?? 1;
       weightedPool.push({ problem, weight });
     }
 
@@ -3043,7 +3048,7 @@ export default class Room implements Party.Server {
       moderate: { easy: 40, medium: 40, hard: 20 },
       competitive: { easy: 20, medium: 40, hard: 40 },
     };
-    return DIFFICULTY_WEIGHTS[profile];
+    return DIFFICULTY_WEIGHTS[profile] ?? DIFFICULTY_WEIGHTS.moderate;
   }
 
   private toClientView(problem: ProblemFull): ProblemClientView {
