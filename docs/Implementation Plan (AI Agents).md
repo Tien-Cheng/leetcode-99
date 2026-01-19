@@ -283,7 +283,7 @@ If an agent needs a new endpoint, it must first propose the contract and update 
 
 - Respect spec caps:
   - `CODE_UPDATE` <= 50_000 bytes
-  - throttle `CODE_UPDATE` (max 10/s)
+  - throttle `CODE_UPDATE` (max 20 per 100ms)
 - Spectator code streaming is expensive; degrade gracefully:
   - prefer snapshots
   - send code updates only to authorized spectators

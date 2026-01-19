@@ -141,7 +141,7 @@ export function useRoom(roomId: string, auth: StoredAuth) {
   const startMatch = useCallback(() => {
     console.log("[useRoom] startMatch called", { socketReady: !!socket });
     if (!socket) return;
-    socket.send(JSON.stringify({ type: "START_MATCH" }));
+    socket.send(JSON.stringify({ type: "START_MATCH", payload: {} }));
   }, [socket]);
 
   const addBots = useCallback(

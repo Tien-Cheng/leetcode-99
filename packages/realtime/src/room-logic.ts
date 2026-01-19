@@ -27,9 +27,9 @@ export interface RateLimitState {
 }
 
 export const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  RUN_CODE: { intervalMs: 2000, maxRequests: 1 },
-  SUBMIT_CODE: { intervalMs: 3000, maxRequests: 1 },
-  CODE_UPDATE: { intervalMs: 100, maxRequests: 10 },
+  RUN_CODE: { intervalMs: 1000, maxRequests: 1 },
+  SUBMIT_CODE: { intervalMs: 1500, maxRequests: 1 },
+  CODE_UPDATE: { intervalMs: 100, maxRequests: 20 },
   SPECTATE_PLAYER: { intervalMs: 1000, maxRequests: 1 },
   SEND_CHAT: { intervalMs: 500, maxRequests: 2 },
 };

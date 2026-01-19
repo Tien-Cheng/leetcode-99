@@ -52,34 +52,34 @@ test("Rate Limiting", async (t) => {
 
   await t.test("blocks request when limit reached", () => {
     const state: RateLimitState = { lastRequestAt: 1000, requestCount: 1 };
-    const result = checkRateLimit("RUN_CODE", state, 1500); // 500ms later, limit is 2000ms
+    const result = checkRateLimit("RUN_CODE", state, 1500); // 500ms later, limit is 1000ms
 
     assert.equal(result.allowed, false);
-    assert.equal(result.retryAfterMs, 1500); // 2000 - 500 = 1500ms to wait
+    assert.equal(result.retryAfterMs, 500); // 1000 - 500 = 500ms to wait
   });
 
   await t.test("allows request after interval passes", () => {
     const state: RateLimitState = { lastRequestAt: 1000, requestCount: 1 };
-    const result = checkRateLimit("RUN_CODE", state, 3500); // 2500ms later, interval is 2000ms
+    const result = checkRateLimit("RUN_CODE", state, 2100); // 1100ms later, interval is 1000ms
 
     assert.equal(result.allowed, true);
     assert.equal(result.newState.requestCount, 1); // Reset
-    assert.equal(result.newState.lastRequestAt, 3500);
+    assert.equal(result.newState.lastRequestAt, 2100);
   });
 
   await t.test("allows multiple requests within limit (CODE_UPDATE)", () => {
-    // CODE_UPDATE allows 10 requests per 100ms
+    // CODE_UPDATE allows 20 requests per 100ms
     let state: RateLimitState | undefined;
     const now = 1000;
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       const result = checkRateLimit("CODE_UPDATE", state, now + i);
       assert.equal(result.allowed, true, `Request ${i + 1} should be allowed`);
       state = result.newState;
     }
 
-    // 11th request should be blocked
-    const result = checkRateLimit("CODE_UPDATE", state, now + 10);
+    // 21st request should be blocked
+    const result = checkRateLimit("CODE_UPDATE", state, now + 20);
     assert.equal(result.allowed, false);
   });
 
