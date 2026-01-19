@@ -100,5 +100,5 @@ RapidAPI enforces rate limits based on your plan:
 
 Our app-level rate limits:
 
-- `RUN_CODE`: max 1 per 2 seconds per player
-- `SUBMIT_CODE`: max 1 per 3 seconds per player
+- `RUN_CODE`: max 1 per 1 second per player
+- `SUBMIT_CODE`: max 1 per 1.5 seconds per player

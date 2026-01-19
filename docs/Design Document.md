@@ -406,8 +406,8 @@ Server → Client:
 
 ### Rate Limits (MVP)
 
-- `RUN_CODE`: max 1 per 2 seconds per player (client debounce + server enforce only if server fallback is enabled)
-- `SUBMIT_CODE`: max 1 per 3 seconds per player
+- `RUN_CODE`: max 1 per 1 second per player (client debounce + server enforce only if server fallback is enabled)
+- `SUBMIT_CODE`: max 1 per 1.5 seconds per player
 - Excess requests return `RATE_LIMITED`
 
 ## UI / UX (Riced Workstation)

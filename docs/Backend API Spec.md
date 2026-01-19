@@ -454,9 +454,9 @@ All WebSocket errors (server → client):
 
 Rate limits are enforced per `playerId`.
 
-- `RUN_CODE`: max 1 request per 2 seconds
-- `SUBMIT_CODE`: max 1 request per 3 seconds
-- `CODE_UPDATE` (editor streaming): max 10 updates per second; `code` payload <= 50_000 bytes
+- `RUN_CODE`: max 1 request per 1 second
+- `SUBMIT_CODE`: max 1 request per 1.5 seconds
+- `CODE_UPDATE` (editor streaming): max 20 updates per 100ms; `code` payload <= 50_000 bytes
 - `SPECTATE_PLAYER`: max 1 request per second
 - `SEND_CHAT`: max 2 messages per second; `text` <= 200 chars
 
