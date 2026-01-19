@@ -26,6 +26,12 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: packages/realtime
+        run: pnpm run lint --if-present
+      - name: Typecheck
+        working-directory: packages/realtime
+        run: pnpm run typecheck --if-present
       - name: Deploy PartyKit
         working-directory: packages/realtime
         run: pnpm deploy
