@@ -2,7 +2,6 @@ import type * as Party from "partykit/server";
 import type {
   AttackType,
   ChatMessage,
-  ClientMessageType,
   CodeUpdateClientPayload,
   DebuffType,
   ErrorPayload,
@@ -31,12 +30,28 @@ import type {
   WSMessage,
 } from "@leet99/contracts";
 import {
+  AddBotsPayloadSchema,
+  CodeUpdateClientPayloadSchema,
+  ClientMessageTypeSchema,
   DEFAULT_SHOP_CATALOG,
+  DebugAddScorePayloadSchema,
+  JoinRoomPayloadSchema,
+  ReturnToLobbyPayloadSchema,
+  RunCodePayloadSchema,
+  SendChatPayloadSchema,
   PartyRegisterRequestSchema,
   PartyRegisterResponseSchema,
+  SetTargetModePayloadSchema,
+  SpectatePlayerPayloadSchema,
+  SpendPointsPayloadSchema,
+  StartMatchPayloadSchema,
+  StopSpectatePayloadSchema,
+  SubmitCodePayloadSchema,
+  UpdateSettingsPayloadSchema,
   ProblemFullSchema,
   RoomSettingsSchema,
 } from "@leet99/contracts";
+import { z } from "zod";
 import { randomUUID } from "node:crypto";
 
 import { applyPartyRegister } from "./register.ts";
@@ -48,11 +63,11 @@ import { saveMatch, type MatchPlayerEntry } from "@leet99/supabase";
 // ============================================================================
 
 const RATE_LIMITS = {
-  RUN_CODE: { intervalMs: 200, maxRequests: 50 },      // Increased: was 2000ms/1 req
-  SUBMIT_CODE: { intervalMs: 200, maxRequests: 50 },   // Increased: was 3000ms/1 req
-  CODE_UPDATE: { intervalMs: 20, maxRequests: 500 },   // Increased: was 100ms/10 req
+  RUN_CODE: { intervalMs: 1000, maxRequests: 1 },
+  SUBMIT_CODE: { intervalMs: 1500, maxRequests: 1 },
+  CODE_UPDATE: { intervalMs: 100, maxRequests: 20 },
   SPECTATE_PLAYER: { intervalMs: 1000, maxRequests: 1 },
-  SEND_CHAT: { intervalMs: 500, maxRequests: 2 }, // 2 per second
+  SEND_CHAT: { intervalMs: 500, maxRequests: 2 },
 };
 
 const CODE_MAX_BYTES = 50000;
@@ -70,7 +85,17 @@ const BASE_DEBUFF_DURATIONS: Record<DebuffType, number> = {
 
 const DEBUFF_GRACE_PERIOD_MS = 5000; // 5s immunity after debuff ends
 
-const DEBUG_TIMERS = true;
+const DEV_TOOLS_ENABLED =
+  process.env.ENABLE_DEV_TOOLS === "true" &&
+  process.env.NODE_ENV !== "production";
+
+const DEBUG_TIMERS = DEV_TOOLS_ENABLED;
+
+const ClientMessageEnvelopeSchema = z.object({
+  type: ClientMessageTypeSchema,
+  requestId: z.string().optional(),
+  payload: z.unknown(),
+});
 
 // ============================================================================
 // Scoring Constants (per spec section 8.2)
@@ -318,130 +343,180 @@ export default class Room implements Party.Server {
 
   async onMessage(message: string, sender: Party.Connection) {
     console.log(`[Room ${this.state.roomId}][RX] ${message.slice(0, 100)}`);
+    let raw: unknown;
     try {
-      const parsed = JSON.parse(message) as WSMessage<
-        ClientMessageType,
-        unknown
-      >;
+      raw = JSON.parse(message);
+    } catch (err) {
+      console.error(`[${this.state.roomId}] Error parsing message:`, err);
+      this.sendError(sender, "BAD_REQUEST", "Invalid JSON message");
+      return;
+    }
 
-      switch (parsed.type) {
-        case "JOIN_ROOM":
-          await this.handleJoinRoom(
-            sender,
-            parsed.payload as JoinRoomPayload,
-            parsed.requestId,
-          );
+    const envelope = ClientMessageEnvelopeSchema.safeParse(raw);
+    if (!envelope.success) {
+      this.sendError(sender, "BAD_REQUEST", "Invalid message envelope");
+      return;
+    }
+
+    const { type, payload, requestId } = envelope.data;
+
+    try {
+      switch (type) {
+        case "JOIN_ROOM": {
+          const parsedPayload = JoinRoomPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid JOIN_ROOM payload", requestId);
+            return;
+          }
+          await this.handleJoinRoom(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "SEND_CHAT":
-          await this.handleSendChat(
-            sender,
-            parsed.payload as { text: string },
-            parsed.requestId,
-          );
+        case "SEND_CHAT": {
+          const parsedPayload = SendChatPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid SEND_CHAT payload", requestId);
+            return;
+          }
+          await this.handleSendChat(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "UPDATE_SETTINGS":
-          await this.handleUpdateSettings(
-            sender,
-            parsed.payload as { patch: Partial<RoomSettings> },
-            parsed.requestId,
-          );
+        case "UPDATE_SETTINGS": {
+          const parsedPayload = UpdateSettingsPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid UPDATE_SETTINGS payload", requestId);
+            return;
+          }
+          await this.handleUpdateSettings(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "START_MATCH":
-          await this.handleStartMatch(sender, parsed.requestId);
+        case "START_MATCH": {
+          const parsedPayload = StartMatchPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid START_MATCH payload", requestId);
+            return;
+          }
+          await this.handleStartMatch(sender, requestId);
           break;
+        }
 
-        case "ADD_BOTS":
-          await this.handleAddBots(
-            sender,
-            parsed.payload as { count: number },
-            parsed.requestId,
-          );
+        case "ADD_BOTS": {
+          const parsedPayload = AddBotsPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid ADD_BOTS payload", requestId);
+            return;
+          }
+          await this.handleAddBots(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "RETURN_TO_LOBBY":
-          await this.handleReturnToLobby(sender, parsed.requestId);
+        case "RETURN_TO_LOBBY": {
+          const parsedPayload = ReturnToLobbyPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid RETURN_TO_LOBBY payload", requestId);
+            return;
+          }
+          await this.handleReturnToLobby(sender, requestId);
           break;
+        }
 
-        case "SET_TARGET_MODE":
-          await this.handleSetTargetMode(
-            sender,
-            parsed.payload as SetTargetModePayload,
-            parsed.requestId,
-          );
+        case "SET_TARGET_MODE": {
+          const parsedPayload = SetTargetModePayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid SET_TARGET_MODE payload", requestId);
+            return;
+          }
+          await this.handleSetTargetMode(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "CODE_UPDATE":
-          await this.handleCodeUpdate(
-            sender,
-            parsed.payload as CodeUpdateClientPayload,
-            parsed.requestId,
-          );
+        case "CODE_UPDATE": {
+          const parsedPayload = CodeUpdateClientPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid CODE_UPDATE payload", requestId);
+            return;
+          }
+          await this.handleCodeUpdate(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "RUN_CODE":
-          await this.handleRunCode(
-            sender,
-            parsed.payload as RunCodePayload,
-            parsed.requestId,
-          );
+        case "RUN_CODE": {
+          const parsedPayload = RunCodePayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid RUN_CODE payload", requestId);
+            return;
+          }
+          await this.handleRunCode(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "SUBMIT_CODE":
-          await this.handleSubmitCode(
-            sender,
-            parsed.payload as SubmitCodePayload,
-            parsed.requestId,
-          );
+        case "SUBMIT_CODE": {
+          const parsedPayload = SubmitCodePayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid SUBMIT_CODE payload", requestId);
+            return;
+          }
+          await this.handleSubmitCode(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "SPEND_POINTS":
-          await this.handleSpendPoints(
-            sender,
-            parsed.payload as SpendPointsPayload,
-            parsed.requestId,
-          );
+        case "SPEND_POINTS": {
+          const parsedPayload = SpendPointsPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid SPEND_POINTS payload", requestId);
+            return;
+          }
+          await this.handleSpendPoints(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "SPECTATE_PLAYER":
-          await this.handleSpectatePlayer(
-            sender,
-            parsed.payload as { playerId: string },
-            parsed.requestId,
-          );
+        case "SPECTATE_PLAYER": {
+          const parsedPayload = SpectatePlayerPayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid SPECTATE_PLAYER payload", requestId);
+            return;
+          }
+          await this.handleSpectatePlayer(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        case "STOP_SPECTATE":
-          await this.handleStopSpectate(sender, parsed.requestId);
+        case "STOP_SPECTATE": {
+          const parsedPayload = StopSpectatePayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid STOP_SPECTATE payload", requestId);
+            return;
+          }
+          await this.handleStopSpectate(sender, requestId);
           break;
+        }
 
-        case "DEBUG_ADD_SCORE":
-          await this.handleDebugAddScore(
-            sender,
-            parsed.payload as { amount: number },
-            parsed.requestId,
-          );
+        case "DEBUG_ADD_SCORE": {
+          const parsedPayload = DebugAddScorePayloadSchema.safeParse(payload);
+          if (!parsedPayload.success) {
+            this.sendError(sender, "BAD_REQUEST", "Invalid DEBUG_ADD_SCORE payload", requestId);
+            return;
+          }
+          await this.handleDebugAddScore(sender, parsedPayload.data, requestId);
           break;
+        }
 
-        default:
+        default: {
+          const neverType: never = type;
           this.sendError(
             sender,
             "BAD_REQUEST",
-            `Unknown message type: ${parsed.type}`,
-            parsed.requestId,
+            `Unknown message type: ${neverType}`,
+            requestId,
           );
+        }
       }
     } catch (err) {
       console.error(`[${this.state.roomId}] Error processing message:`, err);
-      if (err instanceof SyntaxError) {
-        this.sendError(sender, "BAD_REQUEST", "Invalid JSON message");
-      } else {
-        const errorMessage =
-          err instanceof Error ? err.message : "Internal server error";
-        this.sendError(sender, "INTERNAL_ERROR", errorMessage);
-      }
+      const errorMessage =
+        err instanceof Error ? err.message : "Internal server error";
+      this.sendError(sender, "INTERNAL_ERROR", errorMessage, requestId);
     }
   }
 
@@ -858,11 +933,11 @@ export default class Room implements Party.Server {
 
     // Validate count
     const count = payload.count;
-    if (!Number.isInteger(count) || count < 1 || count > 20) {
+    if (!Number.isInteger(count) || count < 1 || count > 10) {
       this.sendError(
         conn,
         "BAD_REQUEST",
-        "Invalid bot count (must be 1-20)",
+        "Invalid bot count (must be 1-10)",
         requestId,
       );
       return;
@@ -1549,6 +1624,11 @@ export default class Room implements Party.Server {
     payload: { amount: number },
     requestId?: string,
   ) {
+    if (!DEV_TOOLS_ENABLED) {
+      this.sendError(conn, "FORBIDDEN", "Debug tools disabled", requestId);
+      return;
+    }
+
     const player = this.findPlayerByConnection(conn.id);
     if (!player) {
       this.sendError(conn, "UNAUTHORIZED", "Not authenticated", requestId);
