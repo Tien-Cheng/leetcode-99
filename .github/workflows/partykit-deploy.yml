@@ -26,7 +26,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Lint
         working-directory: packages/realtime
-        run: pnpm run lint --if-present
+        run: pnpm run lint
       - name: Typecheck
         working-directory: packages/realtime
         run: pnpm run typecheck --if-present
