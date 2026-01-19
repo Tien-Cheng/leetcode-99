@@ -15,7 +15,8 @@
     "@leet99/contracts": "workspace:*",
     "@leet99/judge": "workspace:*",
     "@leet99/supabase": "workspace:*",
-    "partykit": "0.0.115"
+    "partykit": "0.0.115",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
