@@ -29,7 +29,7 @@ jobs:
         run: pnpm run lint
       - name: Typecheck
         working-directory: packages/realtime
-        run: pnpm run typecheck --if-present
+        run: pnpm run typecheck
       - name: Deploy PartyKit
         working-directory: packages/realtime
         run: pnpm deploy
