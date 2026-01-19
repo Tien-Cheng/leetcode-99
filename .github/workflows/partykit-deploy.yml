@@ -34,5 +34,11 @@ jobs:
         working-directory: packages/realtime
         run: pnpm deploy
         env:
+          # Required GitHub Actions secret: personal access token or PartyKit token
+          # Configure in: Repository settings → Secrets and variables → Actions → New repository secret
+          # Name: PARTYKIT_TOKEN
           PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_TOKEN }}
+          # Required GitHub Actions secret: PartyKit account login/identifier used for deployment
+          # Configure in: Repository settings → Secrets and variables → Actions → New repository secret
+          # Name: PARTYKIT_LOGIN
           PARTYKIT_LOGIN: ${{ secrets.PARTYKIT_LOGIN }}
