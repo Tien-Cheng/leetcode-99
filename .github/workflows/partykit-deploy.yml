@@ -32,7 +32,7 @@ jobs:
         run: pnpm run typecheck
       - name: Deploy PartyKit
         working-directory: packages/realtime
-        run: pnpm deploy
+        run: pnpm run deploy
         env:
           # Required GitHub Actions secret: personal access token or PartyKit token
           # Configure in: Repository settings → Secrets and variables → Actions → New repository secret
