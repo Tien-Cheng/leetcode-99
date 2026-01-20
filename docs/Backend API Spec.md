@@ -121,7 +121,7 @@ type AttackIntensity = "low" | "high";
 
 type RoomSettings = {
   matchDurationSec: number; // default 600
-  playerCap: number; // human players only, default 8
+  playerCap: number; // human players only, default 99
   stackLimit: number; // default 10
   startingQueued: number; // default 2
   difficultyProfile: DifficultyProfile;
@@ -322,11 +322,13 @@ type PlayerPrivateState = {
 };
 ```
 
-### 4.9 Spectate view (read-only)
+### 4.9 Spectate view (read-only, future)
 
 This shape is only sent to clients who are allowed to spectate a target player.
 
 ```ts
+type SpectateMode = "global" | "player";
+
 type SpectateView = {
   playerId: string;
   username: string;
@@ -480,7 +482,7 @@ Request body:
   "username": "alice",
   "settings": {
     "matchDurationSec": 600,
-    "playerCap": 8,
+    "playerCap": 99,
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
@@ -509,7 +511,7 @@ Response `201`:
   "isHost": true,
   "settings": {
     "matchDurationSec": 600,
-    "playerCap": 8,
+    "playerCap": 99,
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
@@ -555,7 +557,7 @@ Response `200`:
   "role": "player",
   "settings": {
     "matchDurationSec": 600,
-    "playerCap": 8,
+    "playerCap": 99,
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
@@ -583,7 +585,7 @@ Response `200`:
   "phase": "lobby",
   "settings": {
     "matchDurationSec": 600,
-    "playerCap": 8,
+    "playerCap": 99,
     "stackLimit": 10,
     "startingQueued": 2,
     "difficultyProfile": "moderate",
@@ -616,7 +618,7 @@ Response `200`:
     "endReason": "timeExpired",
     "settings": {
       "matchDurationSec": 600,
-      "playerCap": 8,
+      "playerCap": 99,
       "stackLimit": 10,
       "startingQueued": 2,
       "difficultyProfile": "moderate",
@@ -746,7 +748,7 @@ Server → Client `ROOM_SNAPSHOT`:
       "phase": "lobby",
       "settings": {
         "matchDurationSec": 600,
-        "playerCap": 8,
+        "playerCap": 99,
         "stackLimit": 10,
         "startingQueued": 2,
         "difficultyProfile": "moderate",
@@ -1003,6 +1005,7 @@ Permissions:
 - Allowed for `role="spectator"`.
 - Allowed for `status="eliminated"`.
 - Forbidden for alive players.
+- (Future) Server responds with `SPECTATE_STATE` when spectate modes ship.
 
 ```json
 {
@@ -1018,7 +1021,7 @@ Permissions:
 
 Stops spectating and clears `spectating`.
 
-- Server responds with `SPECTATE_STATE` where `spectating` is `null`.
+- (Future) Server responds with `SPECTATE_STATE` where `spectating` is `null`.
 
 ```json
 {
@@ -1068,7 +1071,7 @@ Broadcast when room settings change (lobby only).
   "payload": {
     "settings": {
       "matchDurationSec": 600,
-      "playerCap": 8,
+      "playerCap": 99,
       "stackLimit": 10,
       "startingQueued": 2,
       "difficultyProfile": "moderate",
@@ -1096,7 +1099,7 @@ Broadcast when the match transitions from `lobby` to `warmup`.
       "endAt": "2026-01-16T12:10:00.000Z",
       "settings": {
         "matchDurationSec": 600,
-        "playerCap": 8,
+        "playerCap": 99,
         "stackLimit": 10,
         "startingQueued": 2,
         "difficultyProfile": "moderate",
@@ -1266,6 +1269,7 @@ Garbage Drop example:
 Sent after `SPECTATE_PLAYER` (and `STOP_SPECTATE`).
 
 - `spectating` is `null` when not currently spectating anyone.
+- (Future) `spectateMode` is added when global/player modes ship.
 
 ```json
 {

@@ -539,7 +539,7 @@ In-Game → Click shop icon (or hotkey) → Shop panel opens
 │  Room: AB12CD  [Copy Link]                    [Leave Room]      │
 ├───────────────────────────────────┬─────────────────────────────┤
 │                                   │  ┌─────────────────────────┐│
-│  Players (4/8)                    │  │ [CHAT]                  ││
+│  Players (4/99)                   │  │ [CHAT]                  ││
 │  ┌────────┐ ┌────────┐ ┌────────┐ │  │                         ││
 │  │ alice  │ │  bob   │ │ Bot 1  │ │  │ > alice joined          ││
 │  │ [HOST] │ │        │ │ (Med) X│ │  │ > bob joined            ││
@@ -1778,10 +1778,31 @@ Decisions deferred for implementation or future discussion:
 
 ### 9.8 Scalability
 
-- **Large lobbies**: Current UI designed for 8 players. Does minimap scale to 99? May need:
-  - Scrollable minimap
-  - Grouped/paginated player view
-  - Different layout entirely
+- **Responsive roster density (Lobby + in-game HUD)**:
+  - **2–12 players**: card roster (full name, role badge, status, stack bar, score).
+  - **13–36 players**: compact list (name, status color, stack bar, score).
+  - **37–99 players**: dense 11×9 grid (initials/icon only); hover/selection reveals name + status + stack + score.
+  - Sticky header with `Players (x/99)` and quick filters: All / Alive / Bots / Spectators.
+- **Minimap scaling + information budget**:
+  - Minimap footprint fixed on desktop; tiles change density.
+  - **≤16 players**: large tiles (status + stack bar + score microtext).
+  - **17–49 players**: medium tiles (status + stack bar + score dot).
+  - **50–99 players**: micro tiles (status + stack bar).
+  - Tile encoding: status color, stack pressure bar (0–10), score hint, target ring; 1–2px debuff glyph.
+- **Minimap density sketch (not to scale)**:
+  ```text
+  ≤16 players (large)     17–49 players (medium)    50–99 players (micro)
+  [AL|####] [BZ|### ]     [A|###] [B|## ]           [A|#][B|#][C|#][D|#]
+  [CY|##  ] [DK|#####]    [C|## ] [D|###]           [E|#][F|#][G|#][H|#]
+  ```
+- **Progressive disclosure**:
+  - Hover/selection reveals tooltip: name, status, stack size, score, streak, debuff.
+  - Clicking a tile pins a focus panel in sidebar (stack timeline sparkline + last submit result).
+- **Spectator minimap modes (future)**:
+  - Global view (default): full-width minimap replaces editor; larger tiles allow stack bar + score + streak microtext + debuff glyphs.
+  - Player view: zoom into a single player (Tetris 99 style) with their editor + stack panel; minimap collapses to side.
+  - Spectator toggles Global ↔ Player via click or hotkey (`Tab`).
+- **Design note**: avoid full stack content previews for all players; emphasize pressure + status at a glance.
 - **Performance with many players**: Terminal log, minimap updates, WebSocket traffic — needs stress testing.
 
 ---

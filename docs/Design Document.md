@@ -4,7 +4,7 @@ Tetris 99 / battle-royale party game, but players race to solve bite-sized LeetC
 
 ## TL;DR
 
-- Players join a lobby (2–8 real players + bots for demo).
+- Players join a lobby (2–99 real players + bots for demo).
 - Everyone receives a stream of short **function-only Python** problems.
 - Unsolved problems accumulate in a **stack**. If your stack overflows, you’re eliminated.
 - Clearing problems scores points and **auto-attacks** your target (Tetris 99 targeting).
@@ -17,7 +17,7 @@ Tetris 99 / battle-royale party game, but players race to solve bite-sized LeetC
 - A deployable web game with a real multiplayer feel.
 - Tight, fast-paced loop: read → code → run → submit → attack.
 - Memorable “riced workstation” identity (game UI, not generic SaaS).
-- MVP Battle Royale mode that’s fun with 2–8 players.
+- MVP Battle Royale mode that’s fun with 2–99 players.
 
 ### Non-goals (MVP)
 
@@ -36,7 +36,7 @@ Tetris 99 / battle-royale party game, but players race to solve bite-sized LeetC
 
 ### Lobby
 
-- 2 to 99 player rooms (MVP: 2–8 + bots).
+- 2 to 99 player rooms (MVP: 2–99 + bots).
 - Lobby-only chat (players + spectators) for coordination; system messages for join/leave, bots added, and host transfer.
 - Configurable:
   - Total match time (default 10 minutes; configurable 6–10 minutes)
