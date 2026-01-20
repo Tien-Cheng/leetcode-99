@@ -48,7 +48,7 @@ function createMockState(roomId: string = "test_room"): RoomState {
     isCreated: true,
     settings: {
       matchDurationSec: 120,
-      playerCap: 8,
+      playerCap: 99,
       stackLimit: 10,
       startingQueued: 2,
       difficultyProfile: "moderate",
@@ -60,7 +60,7 @@ function createMockState(roomId: string = "test_room"): RoomState {
       phase: "lobby",
       settings: {
         matchDurationSec: 120,
-        playerCap: 8,
+        playerCap: 99,
         stackLimit: 10,
         startingQueued: 2,
         difficultyProfile: "moderate",

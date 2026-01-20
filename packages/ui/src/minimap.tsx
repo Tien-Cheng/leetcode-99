@@ -8,6 +8,7 @@ export interface MinimapPlayer {
   isTyping?: boolean;
   lastScoreChange?: { value: number; at: number };
   score?: number;
+  stackSize?: number;
   activeDebuff?: { type: string; endsAt: string } | null;
 }
 
@@ -16,6 +17,7 @@ export interface MinimapProps {
   selfId: string;
   targetId?: string;
   spectatingId?: string;
+  stackLimit?: number;
   onPlayerClick?: (playerId: string) => void;
   className?: string;
 }
@@ -28,28 +30,67 @@ export function Minimap({
   players,
   selfId,
   targetId,
-
+  stackLimit,
   onPlayerClick,
   className = "",
 }: MinimapProps) {
-  const [recentEliminations, setRecentEliminations] = useState<Set<string>>(new Set());
+  const [recentEliminations, setRecentEliminations] = useState<Set<string>>(
+    new Set(),
+  );
+  const playerCount = players.length;
+  const density =
+    playerCount <= 16 ? "large" : playerCount <= 49 ? "medium" : "micro";
 
-  // Calculate max score for relative bars
-  const maxScore = Math.max(...players.map(p => p.score || 0), 1);
+  const gridRowsClass =
+    density === "large"
+      ? "grid-rows-4"
+      : density === "medium"
+        ? "grid-rows-7"
+        : "grid-rows-9";
+  const gapClass = density === "micro" ? "gap-1" : "gap-1.5";
+  const scrollClass =
+    density === "large"
+      ? "max-h-[240px]"
+      : density === "medium"
+        ? "max-h-[320px]"
+        : "max-h-[360px]";
+  const tilePaddingClass =
+    density === "large"
+      ? "p-1.5 min-h-[44px]"
+      : density === "medium"
+        ? "p-1 min-h-[32px]"
+        : "p-0.5 min-h-[24px]";
+  const textSizeClass =
+    density === "micro"
+      ? "text-[8px]"
+      : density === "medium"
+        ? "text-[9px]"
+        : "text-[10px]";
+  const barHeightClass = density === "micro" ? "h-1" : "h-2";
+  const minBarWidth = density === "micro" ? 4 : 8;
+  const showScoreNumber = density === "large";
+  const showScoreDot = density === "medium";
+
+  const maxScore = Math.max(...players.map((p) => p.score || 0), 1);
+  const maxStack = Math.max(...players.map((p) => p.stackSize || 0), 1);
 
   // Track eliminations for explosion effect
   useEffect(() => {
-    const eliminated = players.filter(p => p.status === "eliminated").map(p => p.id);
-    const newEliminations = eliminated.filter(id => !recentEliminations.has(id));
+    const eliminated = players
+      .filter((p) => p.status === "eliminated")
+      .map((p) => p.id);
+    const newEliminations = eliminated.filter(
+      (id) => !recentEliminations.has(id),
+    );
 
     if (newEliminations.length > 0) {
-      setRecentEliminations(prev => new Set([...prev, ...newEliminations]));
+      setRecentEliminations((prev) => new Set([...prev, ...newEliminations]));
 
       // Clear explosion effect after animation
       setTimeout(() => {
-        setRecentEliminations(prev => {
+        setRecentEliminations((prev) => {
           const next = new Set(prev);
-          newEliminations.forEach(id => next.delete(id));
+          newEliminations.forEach((id) => next.delete(id));
           return next;
         });
       }, 500);
@@ -91,29 +132,64 @@ export function Minimap({
     }
   };
 
-
-
-  const getAbbreviation = (username: string) => {
-    return username.slice(0, 2).toLowerCase();
+  const getBotLabel = (username: string) => {
+    const match = username.match(/\d+/g)?.[0];
+    return match ? `B${match}` : "BOT";
   };
 
-  const getScoreBarColor = (player: MinimapPlayer, isSelf: boolean) => {
+  const getDisplayLabel = (player: MinimapPlayer) => {
+    if (player.isBot) {
+      return getBotLabel(player.username);
+    }
+
+    if (density === "large") {
+      const trimmed = player.username.slice(0, 12);
+      return player.username.length > 12 ? `${trimmed}…` : trimmed;
+    }
+
+    if (density === "medium") {
+      const trimmed = player.username.slice(0, 6).toUpperCase();
+      return player.username.length > 6 ? `${trimmed}…` : trimmed;
+    }
+
+    return player.username.slice(0, 2).toUpperCase();
+  };
+
+  const getPressureBarColor = (
+    player: MinimapPlayer,
+    isSelf: boolean,
+    stackRatio: number,
+  ) => {
     if (player.status === "eliminated") return "bg-secondary/30";
+    if (stackRatio >= 0.8) return "bg-error";
+    if (stackRatio >= 0.6) return "bg-warning";
     if (player.activeDebuff) return "bg-warning";
     if (isSelf) return "bg-primary";
     return "bg-success";
   };
 
   return (
-    <div className={`grid grid-cols-4 gap-1.5 ${className}`}>
+    <div
+      className={`grid grid-flow-col auto-cols-fr ${gridRowsClass} ${gapClass} ${scrollClass} overflow-y-auto pr-1 ${className}`}
+    >
       {players.map((player) => {
         const isSelf = player.id === selfId;
         const isTarget = player.id === targetId;
 
         const isEliminated = player.status === "eliminated";
-        const hasScoreChange = player.lastScoreChange &&
+        const hasScoreChange =
+          player.lastScoreChange &&
           Date.now() - player.lastScoreChange.at < 2000;
-        const scorePercent = maxScore > 0 ? ((player.score || 0) / maxScore) * 100 : 0;
+        const stackSize = player.stackSize ?? 0;
+        const stackRatio =
+          stackLimit && stackLimit > 0
+            ? stackSize / stackLimit
+            : stackSize / maxStack;
+        const stackPercent = Math.min(stackRatio, 1) * 100;
+        const stackWidth =
+          stackPercent === 0 ? 0 : Math.max(stackPercent, minBarWidth);
+        const scoreRatio = maxScore > 0 ? (player.score || 0) / maxScore : 0;
+        const scoreOpacity = Math.min(Math.max(scoreRatio, 0), 1);
 
         return (
           <button
@@ -121,8 +197,8 @@ export function Minimap({
             onClick={() => !isEliminated && onPlayerClick?.(player.id)}
             disabled={isEliminated}
             className={`
-              flex flex-col items-center justify-center relative p-1
-              border text-xs font-mono min-h-[44px]
+              flex flex-col items-center justify-center relative border font-mono
+              ${tilePaddingClass} ${textSizeClass}
               ${getStatusStyles(player)}
               ${isSelf ? "border-primary glow-primary border-2" : ""}
               ${isTarget ? "ring-2 ring-accent ring-offset-1 ring-offset-base-100" : ""}
@@ -130,9 +206,8 @@ export function Minimap({
               ${isEliminated ? "line-through" : ""}
               transition-all duration-150
             `}
-            title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""} - Score: ${player.score || 0}${player.activeDebuff ? ` [${player.activeDebuff.type.toUpperCase()}]` : ""}${isEliminated ? " [ELIMINATED]" : ""}`}
+            title={`${player.username}${player.isBot ? " (Bot)" : ""}${isSelf ? " (You)" : ""}${isEliminated ? " [ELIMINATED]" : ""} · Stack: ${stackSize}${stackLimit ? `/${stackLimit}` : ""} · Score: ${player.score || 0}${player.activeDebuff ? ` [${player.activeDebuff.type.toUpperCase()}]` : ""}`}
           >
-
             {/* Score change indicator */}
             {hasScoreChange && player.lastScoreChange && (
               <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[8px] text-success animate-fly-up font-bold z-10">
@@ -140,24 +215,35 @@ export function Minimap({
               </span>
             )}
 
-
-            {/* Username abbreviation and score */}
-            <span className={`${isSelf ? "font-bold" : ""} text-[10px]`}>
-              {getAbbreviation(player.username)}
+            {/* Username label */}
+            <span
+              className={`${isSelf ? "font-bold" : ""} ${density === "large" ? "max-w-full truncate" : ""}`}
+            >
+              {getDisplayLabel(player)}
             </span>
 
-            {/* Score bar */}
-            <div className="w-full h-2 bg-secondary/50 rounded-sm overflow-hidden mt-0.5">
+            {showScoreDot && (
+              <span
+                className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary"
+                style={{ opacity: scoreOpacity }}
+              />
+            )}
+
+            {/* Stack pressure bar */}
+            <div
+              className={`w-full ${barHeightClass} bg-secondary/50 overflow-hidden ${density === "micro" ? "" : "rounded-sm"} mt-0.5`}
+            >
               <div
-                className={`h-full transition-all duration-300 ${getScoreBarColor(player, isSelf)}`}
-                style={{ width: `${Math.max(scorePercent, 8)}%` }}
+                className={`h-full transition-all duration-300 ${getPressureBarColor(player, isSelf, stackRatio)}`}
+                style={{ width: `${stackWidth}%` }}
               />
             </div>
 
-            {/* Score number */}
-            <span className="text-[8px] text-base-content/70 mt-0.5">
-              {player.score || 0}
-            </span>
+            {showScoreNumber && (
+              <span className="text-[8px] text-base-content/70 mt-0.5">
+                {player.score || 0}
+              </span>
+            )}
           </button>
         );
       })}
