@@ -157,8 +157,12 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [isHost]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Render players grid
-  // We want to fill 8 slots.
+  const playerCap = snapshot?.match.settings.playerCap ?? 99;
+  const stackLimit = snapshot?.match.settings.stackLimit ?? 10;
+  const playerCount = players.length;
+  const rosterDensity =
+    playerCount <= 12 ? "card" : playerCount <= 36 ? "compact" : "dense";
+
   // Sort players: me first, then host, then others.
   const sortedPlayers = [...players].sort((a, b) => {
     if (a.playerId === me?.playerId) return -1;
@@ -168,10 +172,14 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
     return 0;
   });
 
-  const slots = Array(8).fill(null);
-  sortedPlayers.forEach((p, i) => {
-    if (i < 8) slots[i] = p;
-  });
+  const rosterLayoutClass =
+    rosterDensity === "card"
+      ? "grid grid-cols-3 gap-3"
+      : rosterDensity === "compact"
+        ? "flex flex-col gap-2"
+        : "grid grid-cols-11 gap-2";
+  const rosterScrollClass =
+    rosterDensity === "card" ? "" : "max-h-[560px] overflow-y-auto pr-1";
 
   return (
     <main className="flex min-h-screen flex-col p-4">
@@ -189,7 +197,7 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
             {copied ? "Copied!" : "Copy Link"}
           </Button>
           <div className="text-sm font-mono text-muted">
-            {players.length} / 8 Players
+            {players.length} / {playerCap} Players
           </div>
         </div>
         <Button variant="ghost" onClick={handleLeaveRoom}>
@@ -202,11 +210,11 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
         {/* Left: Players & Settings */}
         <div className="flex-1 space-y-4">
           {/* Players Grid */}
-          <Panel title={`Players (${players.length}/8)`}>
-            <div className="grid grid-cols-4 gap-3 bg-base-300/50 p-4 rounded-lg min-h-[300px]">
-              {slots.map((p, i) => {
-                if (!p) return <Tile key={`empty-${i}`} variant="empty" />;
-
+          <Panel title={`Players (${players.length}/${playerCap})`}>
+            <div
+              className={`${rosterLayoutClass} ${rosterScrollClass} bg-base-300/50 p-4 rounded-lg min-h-[240px]`}
+            >
+              {sortedPlayers.map((p) => {
                 const isMe = p.playerId === me?.playerId;
                 let variant: "self" | "player" | "bot" | "empty" = "player";
                 if (isMe) variant = "self";
@@ -218,6 +226,10 @@ function LobbyContent({ roomId, auth }: LobbyContentProps) {
                     variant={variant}
                     username={p.username}
                     isHost={p.isHost}
+                    score={p.score}
+                    stackSize={p.stackSize}
+                    stackLimit={stackLimit}
+                    density={rosterDensity}
                     // onRemove={() => {}} // TODO: Kick functionality
                   />
                 );

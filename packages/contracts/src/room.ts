@@ -16,7 +16,7 @@ export type AttackIntensity = z.infer<typeof AttackIntensitySchema>;
 
 export const RoomSettingsSchema = z.object({
   matchDurationSec: z.number().int().min(3).max(600).default(120),
-  playerCap: z.number().int().min(2).max(99).default(8),
+  playerCap: z.number().int().min(2).max(99).default(99),
   stackLimit: z.number().int().min(5).max(20).default(10),
   startingQueued: z.number().int().min(1).max(5).default(2),
   difficultyProfile: DifficultyProfileSchema.default("moderate"),

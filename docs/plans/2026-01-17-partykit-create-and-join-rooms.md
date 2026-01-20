@@ -47,7 +47,7 @@ const res: PartyRegisterResponse = {
   roomId: "ABC123",
   settings: {
     matchDurationSec: 600,
-    playerCap: 8,
+    playerCap: 99,
     stackLimit: 10,
     startingQueued: 2,
     difficultyProfile: "moderate",
